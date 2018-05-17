@@ -1,4 +1,8 @@
 # C++ and MPI Compilers (minimum -std=c++14)
+
+BOOST=/ihome/rmelhem/moh18/boost/boost_1_67_0
+BOOST_LIB=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib
+
 CXX = g++
 MPI_CXX = mpicxx
 
@@ -62,8 +66,8 @@ apps: ga_all ir_all gs_all
 tools:
 	@mkdir -p bin/tools
 	$(CXX) -std=c++14 $(DNWARN) $(OPTIMIZE) $(DEBUG) src/tools/mtx2bin.cpp -o bin/tools/mtx2bin
-	$(MPI_CXX) -std=c++14 $(DNWARN) $(OPTIMIZE) $(DEBUG) src/tools/cw2bin.cpp \
-			-lboost_serialization -lboost_mpi -o bin/tools/cw2bin
+	#$(MPI_CXX) -std=c++14 $(DNWARN) $(OPTIMIZE) $(DEBUG) src/tools/cw2bin.cpp \
+	#		-lboost_serialization -lboost_mpi -o bin/tools/cw2bin
 
 run: #$(app)
 	export OMP_NUM_THREADS=$(tpp); \
@@ -72,4 +76,5 @@ run: #$(app)
 .DEFAULT:
 	@mkdir -p bin/$(tk)
 	$(MPI_CXX) -std=c++14 $(DNWARN) $(THREADED) $(OPTIMIZE) $(DEBUG) \
-		$(SRC_UTILS) src/apps/$(tk)/$@.cpp -lboost_serialization -I src -o bin/$(tk)/$@
+		$(SRC_UTILS) src/apps/$(tk)/$@.cpp -lboost_serialization -I $(BOOST) -L$(BOOST_LIB) -I src -o bin/$(tk)/$@
+
