@@ -51,7 +51,8 @@ clean:
 
 ga: $(eval tk=$(ga))
 	$(eval tk=$(ga))
-ga_all: ga degree pr sssp bfs cc tc
+ga_all: pr
+#ga_all: ga degree pr sssp bfs cc tc
 
 ir:
 	$(eval tk=$(ir))
@@ -61,7 +62,8 @@ gs:
 	$(eval tk=$(gs))
 gs_all: gs graphsim
 
-apps: ga_all ir_all gs_all
+apps: ga_all
+#apps: ga_all ir_all gs_all
 
 tools:
 	@mkdir -p bin/tools
