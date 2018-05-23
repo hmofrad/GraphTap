@@ -25,6 +25,7 @@ module load gcc/6.3.0
 echo "Starting mpirun"
 
 NP=$SLURM_NTASKS
+APP=proc2tile
 
-mpirun  -np ${NP} ./proc2tile
+mpirun  -np ${NP} ./${APP}
 
