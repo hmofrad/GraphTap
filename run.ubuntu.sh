@@ -1,5 +1,6 @@
-#!/bin/shbash
+#!/bin/bash
 # Ubuntu run script
 
-export PATH=/usr/local/openmpi/bin:$PATH
+#xport PATH=/usr/local/openmpi/bin:$PATH
+export PATH=/home/mohammad/mpich/mpich-install/bin:$PATH
 mpirun -np 2 bin/graph_analytics/pr data/graph_analytics/g1_8_8_13.bin 8 1
