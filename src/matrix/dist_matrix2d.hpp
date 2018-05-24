@@ -43,7 +43,10 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     rank_ncolgrps = ncolgrps / rowgrp_nranks;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
   }
-
+  else if (partitioning == Partitioning::_TEST)
+  {
+    LOG.fatal("TEST partitioning Not implemented! \n");
+  }
   /* A large MPI type to support buffers larger than INT_MAX. */
   MPI_Type_contiguous(many_triples_size * sizeof(Triple<Weight>), MPI_BYTE, &MANY_TRIPLES);
   MPI_Type_commit(&MANY_TRIPLES);

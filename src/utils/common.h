@@ -12,7 +12,8 @@ enum Partitioning
 {
   _1D_ROW,  /** Row-wise 1D (1 rank per tile-row) **/  // (not implemented)
   _1D_COL,  /** Column-wise 1D (1 rank per tile-column) **/
-  _2D       /** 2D (default) **/
+  _2D,       /** 2D (default) **/
+  _TEST
 };
 
 

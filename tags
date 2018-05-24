@@ -1,0 +1,1008 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+A	src/matrix/graph.h	/^  Matrix* A;$/;"	m	class:Graph
+A	src/vector/vertex_vector.h	/^  const Matrix* A;$/;"	m	class:VertexVector
+ACCUM_FINAL_SEGMENT_H	src/vector/accum_final_segment.h	2;"	d
+ACCUM_PARTIAL_SEGMENT_H	src/vector/accum_partial_segment.h	2;"	d
+ACCUM_VECTOR_H	src/vector/accum_vector.h	2;"	d
+ANNOTATED_MATRIX_H	src/matrix/annotated_matrix2d.h	2;"	d
+Accum	src/vprogram/types.h	/^struct Accum : Object { using Object::Object; };$/;"	s
+AccumFinalSegment	src/vector/accum_final_segment.h	/^  AccumFinalSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:AccumFinalSegment
+AccumFinalSegment	src/vector/accum_final_segment.h	/^  AccumFinalSegment(Dashboard* db, bool sink)$/;"	f	class:AccumFinalSegment
+AccumFinalSegment	src/vector/accum_final_segment.h	/^class AccumFinalSegment : public Array$/;"	c
+AccumPartialSegment	src/vector/accum_partial_segment.h	/^  AccumPartialSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:AccumPartialSegment
+AccumPartialSegment	src/vector/accum_partial_segment.h	/^  AccumPartialSegment(const RowGrp* rowgrp, bool sink)$/;"	f	class:AccumPartialSegment
+AccumPartialSegment	src/vector/accum_partial_segment.h	/^class AccumPartialSegment : public Array$/;"	c
+AccumVector	src/vector/accum_vector.h	/^  AccumVector(const Matrix* A)$/;"	f	class:AccumVector
+AccumVector	src/vector/accum_vector.h	/^class AccumVector$/;"	c
+AnnotatedColGrp	src/utils/colgrp.h	/^struct AnnotatedColGrp  \/* Local Column Group, with non-empty local tiles. *\/$/;"	s
+AnnotatedDashboard	src/utils/dashboard.h	/^  AnnotatedDashboard() {}  \/\/ for FixedVector allocation$/;"	f	struct:AnnotatedDashboard
+AnnotatedDashboard	src/utils/dashboard.h	/^struct AnnotatedDashboard$/;"	s
+AnnotatedMatrix2D	src/matrix/annotated_matrix2d.h	/^class AnnotatedMatrix2D : public DistMatrix2D<Weight, typename Annotation::Tile>$/;"	c
+AnnotatedMatrix2D	src/matrix/annotated_matrix2d.hpp	/^AnnotatedMatrix2D<Weight, Annotation>::AnnotatedMatrix2D($/;"	f	class:AnnotatedMatrix2D
+AnnotatedRowGrp	src/utils/rowgrp.h	/^struct AnnotatedRowGrp  \/* Local Row Group, with non-empty local tiles. *\/$/;"	s
+AnnotatedTile2D	src/utils/tile.h	/^struct AnnotatedTile2D : DistTile2D<Weight>$/;"	s
+BATCH_SIZE	src/apps/information_retrieval/tfidf_batch.h	/^static constexpr uint32_t BATCH_SIZE = 32;$/;"	v
+BFS_H	src/apps/graph_analytics/bfs.h	2;"	d
+BITS_PER_WORD	src/structures/static_bitvector.h	/^  static constexpr uint32_t BITS_PER_WORD = sizeof(word_t);$/;"	m	class:StaticBitVector
+BIT_VECTOR_H	src/structures/bitvector.h	2;"	d
+BP	src/apps/information_retrieval/tfidf.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	s
+BP	src/apps/information_retrieval/tfidf_batch.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	s
+BUCKET	src/matrix/graph.h	/^  BUCKET,  \/** SimpleBucketHasher (default) **\/$/;"	e	enum:Hashing
+BasicAnnotation	src/matrix/annotated_matrix2d.h	/^struct BasicAnnotation$/;"	s
+BfsState	src/apps/graph_analytics/bfs.h	/^struct BfsState : State$/;"	s
+BfsVertex	src/apps/graph_analytics/bfs.h	/^class BfsVertex : public VertexProgram<ew_t, Empty, vid_t, BfsState>  \/\/ <W, M, A, S>$/;"	c
+BitVector	src/structures/bitvector.h	/^  BitVector() {}  \/\/ for FixedVector allocation$/;"	f	class:BitVector
+BitVector	src/structures/bitvector.h	/^  BitVector(const BitVector& bv, bool deep = true)$/;"	f	class:BitVector
+BitVector	src/structures/bitvector.h	/^  BitVector(uint32_t n)$/;"	f	class:BitVector
+BitVector	src/structures/bitvector.h	/^class BitVector$/;"	c
+BvAccum	src/apps/information_retrieval/tfidf_batch.h	/^  BvAccum() {}$/;"	f	struct:BvAccum
+BvAccum	src/apps/information_retrieval/tfidf_batch.h	/^  BvAccum(const BV& bv, fp_t value) : bv(bv)$/;"	f	struct:BvAccum
+BvAccum	src/apps/information_retrieval/tfidf_batch.h	/^struct BvAccum : Accum$/;"	s
+BvMsg	src/apps/information_retrieval/tfidf_batch.h	/^  BvMsg() {}$/;"	f	struct:BvMsg
+BvMsg	src/apps/information_retrieval/tfidf_batch.h	/^  BvMsg(const BV& bv, fp_t value) : bv(bv), value(value) {}$/;"	f	struct:BvMsg
+BvMsg	src/apps/information_retrieval/tfidf_batch.h	/^struct BvMsg : Msg$/;"	s
+CC_H	src/apps/graph_analytics/cc.h	2;"	d
+COLGRP_H	src/utils/colgrp.h	6;"	d
+COMMON_H	src/utils/common.h	2;"	d
+COMMUNICABLE_H	src/structures/communicable.h	2;"	d
+CONSIDER_DANGLING_PRIMARY	src/matrix/processed_matrix2d.hpp	218;"	d
+CSC	src/utils/csc.h	/^  CSC(uint32_t ncols, uint32_t rowgrp_offset, int32_t colgrp_offset,$/;"	f	struct:CSC
+CSC	src/utils/csc.h	/^struct CSC$/;"	s
+CSCAnnotation	src/matrix/csc_matrix2d.h	/^struct CSCAnnotation : ProcessedAnnotation<Weight>$/;"	s
+CSCColGrp	src/utils/colgrp.h	/^struct CSCColGrp : ProcessedColGrp<Tile>$/;"	s
+CSCDashboard	src/utils/dashboard.h	/^  CSCDashboard() {}  \/\/ for FixedVector allocation$/;"	f	struct:CSCDashboard
+CSCDashboard	src/utils/dashboard.h	/^struct CSCDashboard : ProcessedDashboard<RowGrp, ColGrp>$/;"	s
+CSCEntry	src/utils/csc.h	/^  CSCEntry() {}$/;"	f	struct:CSCEntry
+CSCEntry	src/utils/csc.h	/^  CSCEntry(uint32_t global_idx, uint32_t idx, const Triple<Empty>& triple)$/;"	f	struct:CSCEntry
+CSCEntry	src/utils/csc.h	/^  CSCEntry(uint32_t global_idx, uint32_t idx, const Triple<Weight>& triple)$/;"	f	struct:CSCEntry
+CSCEntry	src/utils/csc.h	/^struct CSCEntry$/;"	s
+CSCEntry	src/utils/csc.h	/^struct CSCEntry<Empty>$/;"	s
+CSCMatrix2D	src/matrix/csc_matrix2d.h	/^class CSCMatrix2D : public ProcessedMatrix2D<Weight, Annotation>$/;"	c
+CSCMatrix2D	src/matrix/csc_matrix2d.hpp	/^CSCMatrix2D<Weight, Annotation>::CSCMatrix2D($/;"	f	class:CSCMatrix2D
+CSCRowGrp	src/utils/rowgrp.h	/^struct CSCRowGrp : ProcessedRowGrp<Tile>$/;"	s
+CSCTile2D	src/utils/tile.h	/^struct CSCTile2D : ProcessedTile2D<Weight>$/;"	s
+CSC_H	src/utils/csc.h	2;"	d
+CSC_MATRIX_H	src/matrix/csc_matrix2d.h	2;"	d
+CXX	Makefile	/^CXX = g++$/;"	m
+CXX	dev/Makefile	/^CXX = g++$/;"	m
+CcState	src/apps/graph_analytics/cc.h	/^struct CcState : State$/;"	s
+CcVertex	src/apps/graph_analytics/cc.h	/^class CcVertex : public VertexProgram<ew_t, vid_t, vid_t, CcState>  \/\/ <W, M, A, S>$/;"	c
+Communicable	src/structures/communicable.h	/^class Communicable : public Array$/;"	c
+CtState	src/apps/graph_analytics/tc.h	/^  CtState() {}$/;"	f	struct:CtState
+CtState	src/apps/graph_analytics/tc.h	/^  CtState(const std::vector<vid_t>&& other) : SerializableVector<vid_t>(other) {}$/;"	f	struct:CtState
+CtState	src/apps/graph_analytics/tc.h	/^struct CtState : State, SerializableVector<vid_t>$/;"	s
+CtVertex	src/apps/graph_analytics/tc.h	/^class CtVertex : public VertexProgram<ew_t, SerializableVector<vid_t>, uint32_t, CtState>$/;"	c
+DASHBOARD_H	src/utils/dashboard.h	6;"	d
+DEBUG	src/utils/log.h	/^  static const int DEBUG = 1;$/;"	m	class:LogLevel
+DEGREE_H	src/apps/graph_analytics/degree.h	2;"	d
+DIST_MATRIX2D_H	src/matrix/dist_matrix2d.h	2;"	d
+DIST_TIMER_H	src/utils/dist_timer.h	6;"	d
+DL	src/apps/information_retrieval/tfidf.h	/^class DL : public VertexProgram<ew_t, fp_t, fp_t, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+DL	src/apps/information_retrieval/tfidf_batch.h	/^class DL : public VertexProgram<ew_t, fp_t, fp_t, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+DNWARN	Makefile	/^DNWARN = -Wno-comment -Wno-literal-suffix -Wno-sign-compare \\$/;"	m
+DState	src/apps/information_retrieval/tfidf.h	/^struct DState { fp_t score = 0.0, length = 1.0; };$/;"	s
+DState	src/apps/information_retrieval/tfidf_batch.h	/^struct DState { fp_t scores[BATCH_SIZE] = {0.0}; fp_t length = 1.0; };$/;"	s
+DegState	src/apps/graph_analytics/degree.h	/^struct DegState : State$/;"	s
+DegVertex	src/apps/graph_analytics/degree.h	/^class DegVertex : public VertexProgram<ew_t, Empty, deg_t, DegState>  \/\/ <W, M, A, S>$/;"	c
+DistMatrix2D	src/matrix/dist_matrix2d.h	/^class DistMatrix2D : public Matrix2D<Weight, Tile>$/;"	c
+DistMatrix2D	src/matrix/dist_matrix2d.hpp	/^DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_t ntiles,$/;"	f	class:DistMatrix2D
+DistTile2D	src/utils/tile.h	/^struct DistTile2D : Tile2D<Weight>$/;"	s
+DistTimer	src/utils/dist_timer.h	/^  DistTimer(std::string name) : name(name), start(Env::now())$/;"	f	class:DistTimer
+DistTimer	src/utils/dist_timer.h	/^  DistTimer(std::string name, double start)$/;"	f	class:DistTimer
+DistTimer	src/utils/dist_timer.h	/^class DistTimer$/;"	c
+DtState	src/apps/information_retrieval/tfidf.h	/^struct DtState : DState, TState, State$/;"	s
+DtState	src/apps/information_retrieval/tfidf_batch.h	/^struct DtState : DState, TState, State$/;"	s
+EMPTY	src/utils/common.h	/^  static const Empty EMPTY;$/;"	m	struct:Empty
+EMPTY	src/utils/common.h	/^const Empty Empty::EMPTY = Empty();$/;"	m	class:Empty
+ENUM_H	src/utils/enum.h	2;"	d
+ENV_H	src/utils/env.h	2;"	d
+ERROR	src/utils/log.h	/^  static const int ERROR = 4;$/;"	m	class:LogLevel
+Edge	src/vprogram/vertex_program.h	/^  Edge() : src(0), dst(0), weight(Empty::EMPTY) {}$/;"	f	struct:Edge
+Edge	src/vprogram/vertex_program.h	/^  Edge() : src(0), dst(0), weight(Weight()) {}$/;"	f	struct:Edge
+Edge	src/vprogram/vertex_program.h	/^  Edge(const uint32_t src, const uint32_t dst, const Empty* weight)$/;"	f	struct:Edge
+Edge	src/vprogram/vertex_program.h	/^  Edge(const uint32_t src, const uint32_t dst, const Weight* weight)$/;"	f	struct:Edge
+Edge	src/vprogram/vertex_program.h	/^struct Edge$/;"	s
+Edge	src/vprogram/vertex_program.h	/^struct Edge<Empty>$/;"	s
+EdgeHash	src/utils/common.h	/^struct EdgeHash$/;"	s
+Empty	src/utils/common.h	/^struct Empty$/;"	s
+Enum	src/utils/enum.h	/^  Enum() {}$/;"	f	class:Enum
+Enum	src/utils/enum.h	/^  Enum(int v) : value(v) {}$/;"	f	class:Enum
+Enum	src/utils/enum.h	/^class Enum$/;"	c
+Env	src/utils/env.h	/^class Env$/;"	c
+Exception	src/utils/log.h	/^  Exception(const char* msg) : msg(msg) {}$/;"	f	class:Exception
+Exception	src/utils/log.h	/^  Exception(std::string msg) : msg(msg) {}$/;"	f	class:Exception
+Exception	src/utils/log.h	/^class Exception : public std::exception$/;"	c
+FATAL	src/utils/log.h	/^  static const int FATAL = 5;$/;"	m	class:LogLevel
+FIXED_SHUFFLE	src/utils/env.h	/^  static constexpr int FIXED_SHUFFLE  = 1;  \/\/ Default$/;"	m	class:RankOrder
+FIXED_VECTOR_	src/structures/fixed_vector.h	2;"	d
+FixedVector	src/structures/fixed_vector.h	/^  FixedVector() : capacity(0) {}$/;"	f	class:FixedVector
+FixedVector	src/structures/fixed_vector.h	/^class FixedVector$/;"	c
+G	src/vprogram/vertex_program.h	/^  const Graph<W>* G;$/;"	m	class:VertexProgram
+GRAPHSIM_H	src/apps/graph_simulation/graphsim.h	2;"	d
+GRAPHSIM_QUERY_H	src/apps/graph_simulation/graphsim_query.h	2;"	d
+GRAPH_HPP	src/matrix/graph.h	2;"	d
+GnState	src/apps/graph_analytics/tc.h	/^struct GnState : State$/;"	s
+GnVertex	src/apps/graph_analytics/tc.h	/^class GnVertex : public VertexProgram<ew_t, Empty, SerializableVector<vid_t>, GnState>$/;"	c
+Graph	src/matrix/graph.h	/^class Graph$/;"	c
+Graph	src/matrix/graph.hpp	/^Graph<Weight>::Graph() : A(nullptr) {}$/;"	f	class:Graph
+GsState	src/apps/graph_simulation/graphsim.h	/^struct GsState : State$/;"	s
+GsVertex	src/apps/graph_simulation/graphsim.h	/^class GsVertex : public VertexProgram<W, M, A, S>$/;"	c
+Hashing	src/matrix/graph.h	/^enum Hashing$/;"	g
+IDF	src/apps/information_retrieval/tfidf.h	/^class IDF : public VertexProgram<ew_t, Empty, fp_t, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+IDF	src/apps/information_retrieval/tfidf_batch.h	/^class IDF : public VertexProgram<ew_t, Empty, fp_t, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+INFO	src/utils/log.h	/^  static const int INFO = 2;$/;"	m	class:LogLevel
+IncomingSegments	src/vector/msg_vector.h	/^  struct IncomingSegments$/;"	s	class:MsgVector
+InitVertex	src/apps/graph_simulation/graphsim.h	/^class InitVertex : public VertexProgram<ew_t, Empty, int, GsState>  \/\/ <W, M, A, S>$/;"	c
+IntegerWrapper	src/utils/common.h	/^  IntegerWrapper() { value = default_value; }$/;"	f	struct:IntegerWrapper
+IntegerWrapper	src/utils/common.h	/^  IntegerWrapper(uint32_t value) : value(value) {}$/;"	f	struct:IntegerWrapper
+IntegerWrapper	src/utils/common.h	/^struct IntegerWrapper$/;"	s
+Isolated	src/utils/locator.h	/^    Regular = 0, Secondary, Tertiary, Isolated$/;"	e	enum:Locator::VertexType
+KEEP_ORIGINAL	src/utils/env.h	/^  static constexpr int KEEP_ORIGINAL  = 0;$/;"	m	class:RankOrder
+LOCATOR_H	src/utils/locator.h	13;"	d
+LOG	src/tools/cw2bin.cpp	/^string LOG;$/;"	v
+LOG	src/utils/log.h	10;"	d
+LOG_H	src/utils/log.h	2;"	d
+LOG_HPP	src/utils/log.hpp	2;"	d
+LOG_LINE_BUFFER_SIZE	src/utils/log.h	/^  static constexpr int LOG_LINE_BUFFER_SIZE = 4 * 1024;$/;"	m	class:Log
+Locator	src/utils/locator.h	/^  Locator(uint32_t range)$/;"	f	struct:Locator
+Locator	src/utils/locator.h	/^struct Locator$/;"	s
+Log	src/utils/log.cpp	/^Log::Log() {}$/;"	f	class:Log
+Log	src/utils/log.h	/^class Log$/;"	c
+LogLevel	src/utils/log.h	/^  LogLevel(const char* name) : Enum(name_to_value(name, NAMES, 6)) {}$/;"	f	class:LogLevel
+LogLevel	src/utils/log.h	/^class LogLevel : public Enum$/;"	c
+MANY_TRIPLES	src/matrix/dist_matrix2d.h	/^  MPI_Datatype MANY_TRIPLES;$/;"	m	class:DistMatrix2D
+MATRIX2D_H	src/matrix/matrix2d.h	2;"	d
+MODULO	src/matrix/graph.h	/^  MODULO   \/** ModuloArithmeticHasher **\/$/;"	e	enum:Hashing
+MPI_CXX	Makefile	/^MPI_CXX = mpicxx$/;"	m
+MPI_CXX	dev/Makefile	/^MPI_CXX = mpicxx$/;"	m
+MPI_WORLD	src/utils/env.cpp	/^MPI_Comm Env::MPI_WORLD;$/;"	m	class:Env	file:
+MPI_WORLD	src/utils/env.h	/^  static MPI_Comm MPI_WORLD;$/;"	m	class:Env
+MSG_INPUT_SEGMENT_H	src/vector/msg_input_segment.h	2;"	d
+MSG_OUTPUT_SEGMENT_H	src/vector/msg_output_segment.h	2;"	d
+MSG_VECTOR_H	src/vector/msg_vector.h	2;"	d
+Matrix2D	src/matrix/matrix2d.h	/^class Matrix2D$/;"	c
+Matrix2D	src/matrix/matrix2d.hpp	/^Matrix2D<Weight, Tile>::Matrix2D(uint32_t nrows, uint32_t ncols, uint32_t ntiles,$/;"	f	class:Matrix2D
+MirrorSegments	src/vector/vertex_vector.h	/^  struct MirrorSegments$/;"	s	class:VertexVector
+ModuloArithmeticHasher	src/matrix/hashers.h	/^  ModuloArithmeticHasher(long max_domain) : max_range(max_domain)$/;"	f	class:ModuloArithmeticHasher
+ModuloArithmeticHasher	src/matrix/hashers.h	/^class ModuloArithmeticHasher : public ReversibleHasher$/;"	c
+Msg	src/vprogram/types.h	/^struct Msg : public Object { using Object::Object; };$/;"	s
+MsgIncomingSegment	src/vector/msg_input_segment.h	/^  MsgIncomingSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:MsgIncomingSegment
+MsgIncomingSegment	src/vector/msg_input_segment.h	/^  MsgIncomingSegment(const ColGrp* colgrp, std::vector<MPI_Request>& recv_requests,$/;"	f	class:MsgIncomingSegment
+MsgIncomingSegment	src/vector/msg_input_segment.h	/^class MsgIncomingSegment : public Array$/;"	c
+MsgOutgoingSegment	src/vector/msg_output_segment.h	/^  MsgOutgoingSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:MsgOutgoingSegment
+MsgOutgoingSegment	src/vector/msg_output_segment.h	/^  MsgOutgoingSegment(Dashboard* db, bool source)$/;"	f	class:MsgOutgoingSegment
+MsgOutgoingSegment	src/vector/msg_output_segment.h	/^class MsgOutgoingSegment : public Array$/;"	c
+MsgVector	src/vector/msg_vector.h	/^  MsgVector(const Matrix* A)$/;"	f	class:MsgVector
+MsgVector	src/vector/msg_vector.h	/^class MsgVector$/;"	c
+NAMES	src/utils/log.cpp	/^const char* const LogLevel::NAMES[]$/;"	m	class:LogLevel	file:
+NAMES	src/utils/log.h	/^  static const char* const NAMES[];$/;"	m	class:LogLevel
+NONE	src/matrix/graph.h	/^  NONE,    \/** NullHasher **\/$/;"	e	enum:Hashing
+NWORDS	src/structures/static_bitvector.h	/^  static constexpr uint32_t NWORDS = (SIZE - 1) \/ BITS_PER_WORD + 1;$/;"	m	class:StaticBitVector
+NullHasher	src/matrix/hashers.h	/^  NullHasher() {}$/;"	f	class:NullHasher
+NullHasher	src/matrix/hashers.h	/^class NullHasher : public ReversibleHasher$/;"	c
+OPTIMIZE	Makefile	/^OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native$/;"	m
+Object	src/vprogram/types.h	/^  Object() {}$/;"	f	struct:Object
+Object	src/vprogram/types.h	/^struct Object$/;"	s
+Out	src/vector/vertex_master_segment.h	/^    Out(uint32_t count) : out(count) {}$/;"	f	struct:VertexMasterSegment::Out
+Out	src/vector/vertex_master_segment.h	/^  struct Out$/;"	s	class:VertexMasterSegment
+OutgoingSegments	src/vector/msg_vector.h	/^  struct OutgoingSegments$/;"	s	class:MsgVector
+PROCESSED_MATRIX_H	src/matrix/processed_matrix2d.h	2;"	d
+PR_H	src/apps/graph_analytics/pr.h	2;"	d
+Partitioning	src/utils/common.h	/^enum Partitioning$/;"	g
+PrState	src/apps/graph_analytics/pr.h	/^struct PrState : DegState$/;"	s
+PrVertex	src/apps/graph_analytics/pr.h	/^class PrVertex : public VertexProgram<ew_t, fp_t, fp_t, PrState>  \/\/ <W, M, A, S>$/;"	c
+ProcessedAnnotation	src/matrix/processed_matrix2d.h	/^struct ProcessedAnnotation : BasicAnnotation<Weight>$/;"	s
+ProcessedColGrp	src/utils/colgrp.h	/^struct ProcessedColGrp : AnnotatedColGrp<Tile>$/;"	s
+ProcessedDashboard	src/utils/dashboard.h	/^  ProcessedDashboard() {}  \/\/ for FixedVector allocation$/;"	f	struct:ProcessedDashboard
+ProcessedDashboard	src/utils/dashboard.h	/^struct ProcessedDashboard : AnnotatedDashboard<RowGrp, ColGrp>$/;"	s
+ProcessedMatrix2D	src/matrix/processed_matrix2d.h	/^class ProcessedMatrix2D : public AnnotatedMatrix2D<Weight, Annotation>$/;"	c
+ProcessedMatrix2D	src/matrix/processed_matrix2d.hpp	/^ProcessedMatrix2D<Weight, Annotation>::ProcessedMatrix2D($/;"	f	class:ProcessedMatrix2D
+ProcessedRowGrp	src/utils/rowgrp.h	/^struct ProcessedRowGrp : AnnotatedRowGrp<Tile>$/;"	s
+ProcessedTile2D	src/utils/tile.h	/^struct ProcessedTile2D : AnnotatedTile2D<Weight>$/;"	s
+QE	src/apps/information_retrieval/tfidf.h	/^class QE : public VertexProgram<ew_t, Empty, Empty, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+QE	src/apps/information_retrieval/tfidf_batch.h	/^class QE : public VertexProgram<ew_t, BV, BV, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+Query	src/apps/graph_simulation/graphsim_query.h	/^  Query(string& qgl_filepath, string& qgm_filepath)$/;"	f	struct:Query
+Query	src/apps/graph_simulation/graphsim_query.h	/^struct Query$/;"	s
+RANDOM_ACCESS_ARRAY_	src/structures/random_access_array.h	2;"	d
+RANDOM_SHUFFLE	src/utils/env.h	/^  static constexpr int RANDOM_SHUFFLE = 2;$/;"	m	class:RankOrder
+REORDER_LOCAL_SEGS	src/vector/accum_vector.h	9;"	d
+REVERSIBLE_HASHER_H	src/matrix/hashers.h	2;"	d
+ROWGRP_H	src/utils/rowgrp.h	6;"	d
+RandomAccessArray	src/structures/random_access_array.h	/^  RandomAccessArray() {}  \/\/ for FixedVector allocation$/;"	f	class:RandomAccessArray
+RandomAccessArray	src/structures/random_access_array.h	/^  RandomAccessArray(uint32_t n)$/;"	f	class:RandomAccessArray
+RandomAccessArray	src/structures/random_access_array.h	/^class RandomAccessArray$/;"	c
+RankOrder	src/utils/env.h	/^class RankOrder : public Enum {$/;"	c
+RanksMeta	src/utils/dashboard.h	/^    RanksMeta() {}  \/\/ for FixedVector allocation$/;"	f	struct:ProcessedDashboard::RanksMeta
+RanksMeta	src/utils/dashboard.h	/^    RanksMeta(uint32_t rank, uint32_t range)$/;"	f	struct:ProcessedDashboard::RanksMeta
+RanksMeta	src/utils/dashboard.h	/^  struct RanksMeta$/;"	s	struct:ProcessedDashboard
+Regular	src/utils/locator.h	/^    Regular = 0, Secondary, Tertiary, Isolated$/;"	e	enum:Locator::VertexType
+ReversibleHasher	src/matrix/hashers.h	/^class ReversibleHasher$/;"	c
+SERIALIZABLE_BIT_VECTOR_H	src/structures/serializable_bitvector.h	2;"	d
+SRC_UTILS	Makefile	/^SRC_UTILS = $(wildcard src\/utils\/*.cpp)$/;"	m
+SSSP_H	src/apps/graph_analytics/sssp.h	2;"	d
+STATIC_BITVECTOR_H	src/structures/static_bitvector.h	2;"	d
+STREAMING_ARRAY_	src/structures/streaming_array.h	2;"	d
+Secondary	src/utils/locator.h	/^    Regular = 0, Secondary, Tertiary, Isolated$/;"	e	enum:Locator::VertexType
+Serializable	src/utils/common.h	/^struct Serializable$/;"	s
+SerializableBitVector	src/structures/serializable_bitvector.h	/^  SerializableBitVector() {}  \/\/ for FixedVector allocation$/;"	f	class:SerializableBitVector
+SerializableBitVector	src/structures/serializable_bitvector.h	/^  SerializableBitVector(const SerializableBitVector& bv, bool deep = true)$/;"	f	class:SerializableBitVector
+SerializableBitVector	src/structures/serializable_bitvector.h	/^class SerializableBitVector : public BitVector$/;"	c
+SerializableVector	src/utils/common.h	/^  SerializableVector() {}$/;"	f	struct:SerializableVector
+SerializableVector	src/utils/common.h	/^  SerializableVector(const std::vector<T>& other) : std::vector<T>(other) {}$/;"	f	struct:SerializableVector
+SerializableVector	src/utils/common.h	/^  SerializableVector(const std::vector<T>&& other) : std::vector<T>(other) {}$/;"	f	struct:SerializableVector
+SerializableVector	src/utils/common.h	/^  SerializableVector(size_t size) : std::vector<T>(size) {}$/;"	f	struct:SerializableVector
+SerializableVector	src/utils/common.h	/^struct SerializableVector : std::vector<T>, Serializable$/;"	s
+SimpleBucketHasher	src/matrix/hashers.h	/^  SimpleBucketHasher(long max_domain, long nbuckets)$/;"	f	class:SimpleBucketHasher
+SimpleBucketHasher	src/matrix/hashers.h	/^class SimpleBucketHasher : public ReversibleHasher$/;"	c
+SpMV	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::SpMV($/;"	f	class:VertexProgram
+SpState	src/apps/graph_analytics/sssp.h	/^struct SpState : State$/;"	s
+SpVertex	src/apps/graph_analytics/sssp.h	/^class SpVertex : public VertexProgram<ew_t, dist_t, dist_t, SpState>  \/\/ <W, M, A, S>$/;"	c
+State	src/vprogram/types.h	/^struct State : Object { using Object::Object; };$/;"	s
+StaticBitVector	src/structures/static_bitvector.h	/^  StaticBitVector() {}$/;"	f	class:StaticBitVector
+StaticBitVector	src/structures/static_bitvector.h	/^  StaticBitVector(const StaticBitVector<SIZE>& other)$/;"	f	class:StaticBitVector
+StaticBitVector	src/structures/static_bitvector.h	/^class StaticBitVector$/;"	c
+StrHash	src/tools/cw2bin.cpp	/^struct StrHash$/;"	s	file:
+StreamingArray	src/structures/streaming_array.h	/^  StreamingArray() {}  \/\/ for FixedVector allocation$/;"	f	class:StreamingArray
+StreamingArray	src/structures/streaming_array.h	/^  StreamingArray(const StreamingArray& other, bool deep = false)$/;"	f	class:StreamingArray
+StreamingArray	src/structures/streaming_array.h	/^  StreamingArray(uint32_t n)$/;"	f	class:StreamingArray
+StreamingArray	src/structures/streaming_array.h	/^class StreamingArray$/;"	c
+TC_H	src/apps/graph_analytics/tc.h	2;"	d
+TFIDF	src/apps/information_retrieval/tfidf.h	/^class TFIDF : public VertexProgram<ew_t, fp_t, fp_t, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+TFIDF	src/apps/information_retrieval/tfidf_batch.h	/^class TFIDF : public VertexProgram<ew_t, BvMsg, BvAccum, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+TFIDF_BATCH_H	src/apps/information_retrieval/tfidf_batch.h	2;"	d
+TFIDF_H	src/apps/information_retrieval/tfidf.h	2;"	d
+THREADED	Makefile	/^THREADED = -fopenmp -D_GLIBCXX_PARALLEL$/;"	m
+TILE_H	src/utils/tile.h	6;"	d
+TRACE	src/utils/log.h	/^  static const int TRACE = 0;$/;"	m	class:LogLevel
+TState	src/apps/information_retrieval/tfidf.h	/^struct TState { fp_t idf = 0.0; };$/;"	s
+TState	src/apps/information_retrieval/tfidf_batch.h	/^struct TState { fp_t idf = 0.0; };$/;"	s
+TYPES_H	src/vprogram/types.h	2;"	d
+Tertiary	src/utils/locator.h	/^    Regular = 0, Secondary, Tertiary, Isolated$/;"	e	enum:Locator::VertexType
+Tile2D	src/utils/tile.h	/^  Tile2D() { allocate_triples(); }$/;"	f	struct:Tile2D
+Tile2D	src/utils/tile.h	/^struct Tile2D$/;"	s
+Triple	src/tools/cw2bin.cpp	/^  Triple(vid_t src = 0, vid_t dst = 0, ew_t weight = 0)$/;"	f	struct:Triple
+Triple	src/tools/cw2bin.cpp	/^struct Triple$/;"	s	file:
+Triple	src/utils/common.h	/^struct Triple$/;"	s
+Triple	src/utils/common.h	/^struct Triple<Empty>$/;"	s
+UNTIL_CONVERGENCE	src/vprogram/vertex_program.h	/^  static constexpr uint32_t UNTIL_CONVERGENCE = 0;$/;"	m	class:VertexProgram
+VERTEX_MASTER_SEGMENT_H	src/vector/vertex_master_segment.h	2;"	d
+VERTEX_MIRROR_SEGMENT_H	src/vector/vertex_mirror_segment.h	2;"	d
+VERTEX_PROGRAM_EXECUTE_HPP	src/vprogram/vertex_program_execute.hpp	6;"	d
+VERTEX_PROGRAM_H	src/vprogram/vertex_program.h	2;"	d
+VERTEX_PROGRAM_HPP	src/vprogram/vertex_program.hpp	6;"	d
+VERTEX_VECTOR_H	src/vector/vertex_vector.h	2;"	d
+VP	src/apps/information_retrieval/tfidf.h	/^class VP : public VertexProgram<ew_t, Empty, Empty, DtState>  \/\/ <Weight, Msg, Accum, State>$/;"	c
+VertexMasterSegment	src/vector/vertex_master_segment.h	/^  VertexMasterSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:VertexMasterSegment
+VertexMasterSegment	src/vector/vertex_master_segment.h	/^  VertexMasterSegment(Dashboard* db)$/;"	f	class:VertexMasterSegment
+VertexMasterSegment	src/vector/vertex_master_segment.h	/^class VertexMasterSegment : public Array$/;"	c
+VertexMirrorSegment	src/vector/vertex_mirror_segment.h	/^  VertexMirrorSegment() {}  \/\/ for FixedVector allocation$/;"	f	class:VertexMirrorSegment
+VertexMirrorSegment	src/vector/vertex_mirror_segment.h	/^  VertexMirrorSegment(const RowGrp* rowgrp, std::vector<MPI_Request>& recv_requests,$/;"	f	class:VertexMirrorSegment
+VertexMirrorSegment	src/vector/vertex_mirror_segment.h	/^class VertexMirrorSegment : public Array$/;"	c
+VertexProgram	src/vprogram/vertex_program.h	/^class VertexProgram$/;"	c
+VertexProgram	src/vprogram/vertex_program.hpp	/^VertexProgram<W, M, A, S>::VertexProgram(const Graph<W>* G, bool stationary)$/;"	f	class:VertexProgram
+VertexProgram	src/vprogram/vertex_program.hpp	/^VertexProgram<W, M, A, S>::VertexProgram(const VertexProgram<W, M2, A2, S>& other, bool stationary)$/;"	f	class:VertexProgram
+VertexType	src/utils/locator.h	/^  enum VertexType$/;"	g	struct:Locator
+VertexVector	src/vector/vertex_vector.h	/^  VertexVector(const Matrix* A) : A(A)$/;"	f	class:VertexVector
+VertexVector	src/vector/vertex_vector.h	/^class VertexVector$/;"	c
+WARN	src/utils/log.h	/^  static const int WARN = 3;$/;"	m	class:LogLevel
+_1D_COL	src/utils/common.h	/^  _1D_COL,  \/** Column-wise 1D (1 rank per tile-column) **\/$/;"	e	enum:Partitioning
+_1D_ROW	src/utils/common.h	/^  _1D_ROW,  \/** Row-wise 1D (1 rank per tile-row) **\/  \/\/ (not implemented)$/;"	e	enum:Partitioning
+_2D	src/utils/common.h	/^  _2D       \/** 2D (default) **\/$/;"	e	enum:Partitioning
+advance	src/structures/bitvector.h	/^  bool advance(uint32_t& idx)$/;"	f	class:BitVector
+advance	src/structures/random_access_array.h	/^  bool advance(uint32_t& idx, Value& val)$/;"	f	class:RandomAccessArray
+advance	src/structures/streaming_array.h	/^  bool advance(uint32_t& idx, Value& val)$/;"	f	class:StreamingArray
+all_timers	src/utils/dist_timer.cpp	/^std::vector<DistTimer> DistTimer::all_timers;$/;"	m	class:DistTimer	file:
+all_timers	src/utils/dist_timer.h	/^  static std::vector<DistTimer> all_timers;  \/\/ Currently statically allocated from cpp$/;"	m	class:DistTimer
+allocate_mirrors	src/vector/vertex_master_segment.h	/^  void allocate_mirrors()$/;"	f	class:VertexMasterSegment
+allocate_mirrors	src/vector/vertex_vector.h	/^  void allocate_mirrors()$/;"	f	class:VertexVector
+allocate_triples	src/utils/tile.h	/^  void allocate_triples()$/;"	f	struct:Tile2D
+already_distributed	src/matrix/processed_matrix2d.h	/^  bool already_distributed;$/;"	m	class:ProcessedMatrix2D
+apply	src/apps/graph_analytics/bfs.h	/^  bool apply(const A& y, BfsState& s, uint32_t iter)$/;"	f	class:BfsVertex
+apply	src/apps/graph_analytics/cc.h	/^  bool apply(const A& y, CcState& s)$/;"	f	class:CcVertex
+apply	src/apps/graph_analytics/degree.h	/^  bool apply(const A& y, DegState& s) { s.degree = y; return true; }$/;"	f	class:DegVertex
+apply	src/apps/graph_analytics/pr.h	/^  bool apply(const A& y, PrState& s)$/;"	f	class:PrVertex
+apply	src/apps/graph_analytics/sssp.h	/^  bool apply(const A& y, SpState& s)$/;"	f	class:SpVertex
+apply	src/apps/graph_analytics/tc.h	/^  bool apply(const A& y, CtState& s) { s.ntriangles = y; return false; }  \/\/ No need to scatter.$/;"	f	class:CtVertex
+apply	src/apps/graph_analytics/tc.h	/^  bool apply(const A& y, GnState& s)$/;"	f	class:GnVertex
+apply	src/apps/graph_simulation/graphsim.h	/^  bool apply(const A& y, GsState& s) { s.degree = y; return true; }$/;"	f	class:InitVertex
+apply	src/apps/graph_simulation/graphsim.h	/^  bool apply(const A& y, GsState& s, uint32_t iter)$/;"	f	class:GsVertex
+apply	src/apps/information_retrieval/tfidf.h	/^  bool apply(const A& y, DtState& s) { return true; }$/;"	f	class:QE
+apply	src/apps/information_retrieval/tfidf.h	/^  bool apply(const A& y, DtState& s) { s.idf = log10(BP::nd \/ y); return true; }$/;"	f	class:IDF
+apply	src/apps/information_retrieval/tfidf.h	/^  bool apply(const A& y, DtState& s) { s.length = sqrt(y); return true; }$/;"	f	class:DL
+apply	src/apps/information_retrieval/tfidf.h	/^  bool apply(const A& y, DtState& s) { s.score = y; return true; }$/;"	f	class:TFIDF
+apply	src/apps/information_retrieval/tfidf_batch.h	/^  bool apply(const A& y, DtState& s) { s.bv = y; return true; }$/;"	f	class:QE
+apply	src/apps/information_retrieval/tfidf_batch.h	/^  bool apply(const A& y, DtState& s) { s.idf = log10(BP::nd \/ y); return true; }$/;"	f	class:IDF
+apply	src/apps/information_retrieval/tfidf_batch.h	/^  bool apply(const A& y, DtState& s) { s.length = sqrt(y); return true; }$/;"	f	class:DL
+apply	src/apps/information_retrieval/tfidf_batch.h	/^  bool apply(const A& y, DtState& s)$/;"	f	class:TFIDF
+apply	src/vprogram/vertex_program.h	/^  virtual bool apply(const A& y, S& state)$/;"	f	class:VertexProgram
+apply	src/vprogram/vertex_program.h	/^  virtual bool apply(const A& y, S& state, uint32_t iter)$/;"	f	class:VertexProgram
+apply_and_scatter_messages	src/vprogram/vertex_program_execute.hpp	/^bool VertexProgram<W, M, A, S>::apply_and_scatter_messages($/;"	f	class:VertexProgram
+apply_depends_on_iter	src/vprogram/vertex_program.h	/^  bool apply_depends_on_iter = false;$/;"	m	class:VertexProgram
+array	src/utils/locator.h	/^  const uint32_t* array() const { return buffer + metasize; }$/;"	f	struct:Locator
+array	src/utils/locator.h	/^  uint32_t* array() { return buffer + metasize; }$/;"	f	struct:Locator
+assign_tiles	src/matrix/dist_matrix2d.hpp	/^void DistMatrix2D<Weight, Tile>::assign_tiles()$/;"	f	class:DistMatrix2D
+at_master_only_	src/utils/log.h	/^  bool at_master_only_ = true;  \/\/ log at master rank only$/;"	m	class:Log
+back	src/structures/fixed_vector.h	/^  Value& back() const { assert(position >= 1); return values[position - 1]; }$/;"	f	class:FixedVector
+barrier	src/utils/env.cpp	/^void Env::barrier()$/;"	f	class:Env
+bcast	src/vector/msg_output_segment.h	/^  void bcast()$/;"	f	class:MsgOutgoingSegment
+bcast	src/vector/vertex_master_segment.h	/^  void bcast()$/;"	f	class:VertexMasterSegment
+begin	src/structures/fixed_vector.h	/^  Value* begin() const { return values; }$/;"	f	class:FixedVector
+bitwidth	src/structures/bitvector.h	/^  constexpr static uint32_t bitwidth = 32;$/;"	m	class:BitVector
+bitwidth_mask	src/structures/bitvector.h	/^  constexpr static uint32_t bitwidth_mask = 0x1F;$/;"	m	class:BitVector
+blob	src/vector/accum_partial_segment.h	/^  void* blob;$/;"	m	class:AccumPartialSegment
+blob_nbytes	src/structures/communicable.h	/^  uint32_t blob_nbytes(uint32_t count)$/;"	f	class:Communicable
+blob_nbytes	src/structures/random_access_array.h	/^  uint32_t blob_nbytes(uint32_t count)$/;"	f	class:RandomAccessArray
+blob_nbytes	src/structures/serializable_bitvector.h	/^  uint32_t blob_nbytes(uint32_t count) { return blob_nbytes(count, this->size()); }$/;"	f	class:SerializableBitVector
+blob_nbytes	src/structures/serializable_bitvector.h	/^  uint32_t blob_nbytes(uint32_t count, uint32_t size)$/;"	f	class:SerializableBitVector
+blob_nbytes	src/structures/streaming_array.h	/^  uint32_t blob_nbytes(uint32_t count)$/;"	f	class:StreamingArray
+blob_nbytes_max	src/structures/communicable.h	/^  uint32_t blob_nbytes_max()$/;"	f	class:Communicable
+blob_nbytes_tight	src/structures/communicable.h	/^  uint32_t blob_nbytes_tight()$/;"	f	class:Communicable
+blob_values_offset	src/structures/random_access_array.hpp	/^Value* RandomAccessArray<Value>::blob_values_offset(const void* blob, uint32_t activity_nbytes,$/;"	f	class:RandomAccessArray
+blob_values_offset	src/structures/streaming_array.hpp	/^Value* StreamingArray<Value, ActivitySet>::blob_values_offset($/;"	f	class:StreamingArray
+blobs	src/vector/accum_final_segment.h	/^  std::vector<void*> blobs;$/;"	m	class:AccumFinalSegment
+blobs	src/vector/msg_output_segment.h	/^  std::vector<void*> blobs;$/;"	m	class:MsgOutgoingSegment
+blobs	src/vector/msg_vector.h	/^  std::vector<void*> blobs;$/;"	m	class:MsgVector
+blobs	src/vector/vertex_master_segment.h	/^    std::vector<void*> blobs;$/;"	m	struct:VertexMasterSegment::Out
+blobs	src/vector/vertex_vector.h	/^    std::vector<void*> blobs;$/;"	m	struct:VertexVector::MirrorSegments
+btopk	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::btopk(uint32_t k, std::vector<std::pair<I, V>>* topk,$/;"	f	class:VertexProgram
+buffer	src/structures/bitvector.h	/^  uint32_t* buffer() const$/;"	f	class:BitVector
+buffer_nbytes	src/structures/bitvector.h	/^  uint32_t buffer_nbytes() const$/;"	f	class:BitVector
+buffer_nwords	src/structures/bitvector.h	/^  uint32_t buffer_nwords() const$/;"	f	class:BitVector
+bv	src/apps/information_retrieval/tfidf_batch.h	/^  BV bv;  \/\/ to mark query IDs$/;"	m	struct:DtState
+bv	src/apps/information_retrieval/tfidf_batch.h	/^  BV bv; fp_t value;$/;"	m	struct:BvMsg
+bv	src/apps/information_retrieval/tfidf_batch.h	/^  BV bv; fp_t values[BATCH_SIZE] = {0.0};$/;"	m	struct:BvAccum
+cache	src/structures/bitvector.h	/^  uint32_t cache = 0;$/;"	m	class:BitVector
+capacity	src/structures/fixed_vector.h	/^  uint32_t capacity;$/;"	m	class:FixedVector
+cg	src/utils/colgrp.h	/^  uint32_t cg, jth;        \/\/ Index among all colgroups, index among local colgroups.$/;"	m	struct:AnnotatedColGrp
+cg	src/utils/dashboard.h	/^  uint32_t rg, cg, kth;  \/\/ Index among global rowgroups, global colgroups and local dashboards.$/;"	m	struct:AnnotatedDashboard
+cg	src/utils/tile.h	/^  uint32_t rg, cg;          \/\/ Global tile coordinates.$/;"	m	struct:DistTile2D
+cg	src/vector/msg_input_segment.h	/^  uint32_t cg;$/;"	m	class:MsgIncomingSegment
+check	src/structures/bitvector.h	/^  uint32_t check(uint32_t idx) const$/;"	f	class:BitVector
+children	src/apps/graph_simulation/graphsim_query.h	/^  vector<vector<int>> children;  \/\/ adjacency list$/;"	m	struct:Query
+clear	src/structures/bitvector.h	/^  void clear()$/;"	f	class:BitVector
+clear	src/structures/random_access_array.h	/^  void clear()$/;"	f	class:RandomAccessArray
+clear	src/structures/streaming_array.h	/^  void clear()$/;"	f	class:StreamingArray
+col	src/utils/common.h	/^  uint32_t row, col;$/;"	m	struct:Triple
+colgrp	src/utils/dashboard.h	/^  ColGrp* colgrp;$/;"	m	struct:AnnotatedDashboard
+colgrp_followers	src/utils/dashboard.h	/^  std::vector<int32_t> colgrp_followers; \/\/ Non-leader ranks in k'th colgroup.$/;"	m	struct:AnnotatedDashboard
+colgrp_inblobs	src/matrix/processed_matrix2d.h	/^  std::vector<void*> colgrp_inblobs, colgrp_outblobs;$/;"	m	class:ProcessedMatrix2D
+colgrp_inreqs	src/matrix/processed_matrix2d.h	/^  std::vector<MPI_Request> colgrp_inreqs, colgrp_outreqs;$/;"	m	class:ProcessedMatrix2D
+colgrp_nranks	src/matrix/dist_matrix2d.h	/^  uint32_t rowgrp_nranks, colgrp_nranks;$/;"	m	class:DistMatrix2D
+colgrp_outblobs	src/matrix/processed_matrix2d.h	/^  std::vector<void*> colgrp_inblobs, colgrp_outblobs;$/;"	m	class:ProcessedMatrix2D
+colgrp_outreqs	src/matrix/processed_matrix2d.h	/^  std::vector<MPI_Request> colgrp_inreqs, colgrp_outreqs;$/;"	m	class:ProcessedMatrix2D
+colgrp_ranks_meta	src/utils/dashboard.h	/^  FixedVector<RanksMeta> colgrp_ranks_meta;$/;"	m	struct:ProcessedDashboard
+colgrp_tag	src/utils/dashboard.h	/^  static uint32_t colgrp_tag(uint32_t uth, bool source = false)$/;"	f	struct:ProcessedDashboard
+colidxs	src/utils/csc.h	/^  uint32_t* colidxs;$/;"	m	struct:CSC
+collect	src/vector/msg_vector.h	/^  std::vector<int32_t>* collect()$/;"	f	class:MsgVector
+colptrs	src/utils/csc.h	/^  uint32_t* colptrs;$/;"	m	struct:CSC
+column_major_compare	src/utils/csc.h	/^  static bool column_major_compare(const Triple<Weight>& a, const Triple<Weight>& b)$/;"	f	struct:CSC
+combine	src/apps/graph_analytics/bfs.h	/^  void combine(const A& y1, A& y2) { y2 = y1; }  \/\/ just use the last parent's id$/;"	f	class:BfsVertex
+combine	src/apps/graph_analytics/cc.h	/^  void combine(const A& y1, A& y2) { y2 = y2 == 0 ? y1 : std::min(y1, y2); }$/;"	f	class:CcVertex
+combine	src/apps/graph_analytics/degree.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:DegVertex
+combine	src/apps/graph_analytics/pr.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:PrVertex
+combine	src/apps/graph_analytics/sssp.h	/^  void combine(const A& y1, A& y2) { y2 = std::min(y1, y2); }$/;"	f	class:SpVertex
+combine	src/apps/graph_analytics/tc.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:CtVertex
+combine	src/apps/graph_analytics/tc.h	/^  void combine(const A& y1, A& y2) { y2.insert(y2.end(), y1.cbegin(), y1.cend()); }$/;"	f	class:GnVertex
+combine	src/apps/graph_simulation/graphsim.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:InitVertex
+combine	src/apps/graph_simulation/graphsim.h	/^  void combine(const A& y1, A& y2)$/;"	f	class:GsVertex
+combine	src/apps/information_retrieval/tfidf.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:DL
+combine	src/apps/information_retrieval/tfidf.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:IDF
+combine	src/apps/information_retrieval/tfidf.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:TFIDF
+combine	src/apps/information_retrieval/tfidf.h	/^  void combine(const A& y1, A& y2) {}$/;"	f	class:QE
+combine	src/apps/information_retrieval/tfidf_batch.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:DL
+combine	src/apps/information_retrieval/tfidf_batch.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:IDF
+combine	src/apps/information_retrieval/tfidf_batch.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:QE
+combine	src/apps/information_retrieval/tfidf_batch.h	/^  void combine(const A& y1, A& y2) { y2 += y1; }$/;"	f	class:TFIDF
+combine	src/vprogram/vertex_program.h	/^  virtual void combine(const A& y1, A& y2)$/;"	f	class:VertexProgram
+combine_accumulators	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::combine_accumulators($/;"	f	class:VertexProgram
+count	src/structures/bitvector.h	/^  uint32_t count() const { return *nnzs; };$/;"	f	class:BitVector
+count	src/structures/random_access_array.h	/^  uint32_t count() { return activity->count(); }$/;"	f	class:RandomAccessArray
+count	src/structures/static_bitvector.h	/^  size_t count() const  \/* num of set bits *\/$/;"	f	class:StaticBitVector
+count	src/structures/streaming_array.h	/^  uint32_t count() { return activity->count(); }$/;"	f	class:StreamingArray
+count_lines	src/apps/information_retrieval/tfidf.cpp	/^size_t count_lines(string& filepath)$/;"	f
+create_colgrps_locators	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::create_colgrps_locators()$/;"	f	class:ProcessedMatrix2D
+create_rowgrps_locators	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::create_rowgrps_locators()$/;"	f	class:ProcessedMatrix2D
+csc	src/utils/tile.h	/^  CSC<Weight>* csc, * sink_csc;$/;"	m	struct:CSCTile2D
+dashboards	src/matrix/annotated_matrix2d.h	/^  FixedVector<Dashboard> dashboards;$/;"	m	class:AnnotatedMatrix2D
+data	src/structures/fixed_vector.h	/^  Value* data() const { return begin(); }$/;"	f	class:FixedVector
+data	src/structures/static_bitvector.h	/^  word_t* data() const { return words; };  \/* words (raw dump) *\/$/;"	f	class:StaticBitVector
+debug	src/utils/log.hpp	/^void Log::debug(const char* fmt, ...) const$/;"	f	class:Log
+degree	src/apps/graph_analytics/degree.h	/^  deg_t degree = 0;$/;"	m	struct:DegState
+degree	src/apps/graph_simulation/graphsim.h	/^  int degree = 0;    \/\/ out degree$/;"	m	struct:GsState
+delete_blob	src/structures/communicable.h	/^  void delete_blob(void* blob)$/;"	f	class:Communicable
+delete_blob	src/structures/random_access_array.h	/^  void delete_blob(void* blob) { delete[] ((char*) blob); }$/;"	f	class:RandomAccessArray
+delete_blob	src/structures/serializable_bitvector.h	/^  void delete_blob(void* blob) { delete[] ((char*) blob); }$/;"	f	class:SerializableBitVector
+delete_blob	src/structures/streaming_array.h	/^  void delete_blob(void* blob) { delete[] ((char*) blob); }$/;"	f	class:StreamingArray
+deps	src/apps/graph_simulation/graphsim.h	/^  int deps = 0;      \/\/ dependencies$/;"	m	struct:GsState
+deserialize_from	src/structures/random_access_array.hpp	/^void RandomAccessArray<Value>::deserialize_from(const void* blob)$/;"	f	class:RandomAccessArray
+deserialize_from	src/structures/serializable_bitvector.hpp	/^uint32_t SerializableBitVector::deserialize_from(const void* blob)$/;"	f	class:SerializableBitVector
+deserialize_from	src/structures/serializable_bitvector.hpp	/^uint32_t SerializableBitVector::deserialize_from(const void* blob, uint32_t sub_size)$/;"	f	class:SerializableBitVector
+deserialize_from	src/structures/streaming_array.hpp	/^void StreamingArray<Value, ActivitySet>::deserialize_from(const void* blob)$/;"	f	class:StreamingArray
+deserialize_from	src/structures/streaming_array.hpp	/^void StreamingArray<Value, ActivitySet>::deserialize_from(const void* blob, uint32_t sub_size)$/;"	f	class:StreamingArray
+deserialize_from_dynamic	src/structures/random_access_array.hpp	/^void RandomAccessArray<Value>::deserialize_from_dynamic(const void* blob)$/;"	f	class:RandomAccessArray
+deserialize_from_dynamic	src/structures/streaming_array.hpp	/^void StreamingArray<Value, ActivitySet>::deserialize_from_dynamic($/;"	f	class:StreamingArray
+determine_size	src/vector/accum_final_segment.h	/^  uint32_t determine_size(Dashboard* db, bool sink)$/;"	f	class:AccumFinalSegment
+determine_size	src/vector/accum_partial_segment.h	/^  uint32_t determine_size(const RowGrp* rowgrp, bool sink)$/;"	f	class:AccumPartialSegment
+difference_with	src/structures/bitvector.hpp	/^void BitVector::difference_with(BitVector const& bv)$/;"	f	class:BitVector
+directed	src/matrix/graph.h	/^  bool directed;$/;"	m	class:Graph
+display	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::display(uint32_t nvertices)$/;"	f	class:VertexProgram
+distance	src/apps/graph_analytics/sssp.h	/^  dist_t distance = INF;$/;"	m	struct:SpState
+distribute	src/matrix/csc_matrix2d.hpp	/^void CSCMatrix2D<Weight, Annotation>::distribute()$/;"	f	class:CSCMatrix2D
+distribute	src/matrix/dist_matrix2d.hpp	/^void DistMatrix2D<Weight, Tile>::distribute()$/;"	f	class:DistMatrix2D
+distribute	src/matrix/processed_matrix2d.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::distribute()$/;"	f	class:ProcessedMatrix2D
+docs	src/apps/information_retrieval/tfidf.h	/^  const std::set<vid_t>* docs = nullptr;$/;"	m	class:QE
+docs	src/apps/information_retrieval/tfidf_batch.h	/^  const std::set<uint32_t>* docs[BATCH_SIZE] = {nullptr};$/;"	m	class:QE
+dst	src/tools/cw2bin.cpp	/^  vid_t src, dst;$/;"	m	struct:Triple	file:
+dst	src/vprogram/vertex_program.h	/^  const uint32_t src, dst;$/;"	m	struct:Edge
+edge_ptr	src/utils/csc.h	/^  const Empty* edge_ptr() { return &(Empty::EMPTY); }$/;"	f	struct:CSCEntry
+edge_ptr	src/utils/csc.h	/^  const Weight* edge_ptr() { return &val; }$/;"	f	struct:CSCEntry
+elapsed	src/utils/dist_timer.h	/^  double elapsed;$/;"	m	class:DistTimer
+emplace_back	src/structures/fixed_vector.h	/^  void emplace_back(Args&& ... args)$/;"	f	class:FixedVector
+end	src/structures/fixed_vector.h	/^  Value* end() const { return values + capacity; }$/;"	f	class:FixedVector
+endpos	src/utils/colgrp.h	/^  uint32_t offset, endpos;  \/\/ Start column, end column.$/;"	m	struct:AnnotatedColGrp
+endpos	src/utils/rowgrp.h	/^  uint32_t offset, endpos;  \/\/ Start row, end row.$/;"	m	struct:AnnotatedRowGrp
+entries	src/utils/csc.h	/^  Entry* entries;$/;"	m	struct:CSC
+error	src/utils/log.hpp	/^void Log::error(const char* fmt, ...) const$/;"	f	class:Log
+execute	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute(uint32_t max_iters)$/;"	f	class:VertexProgram
+execute_1d_col	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_1d_col(uint32_t max_iters)$/;"	f	class:VertexProgram
+execute_1d_col_non_opt	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_1d_col_non_opt(uint32_t max_iters)$/;"	f	class:VertexProgram
+execute_2d	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_2d(uint32_t max_iters)$/;"	f	class:VertexProgram
+execute_2d_non_opt	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_2d_non_opt(uint32_t max_iters)$/;"	f	class:VertexProgram
+execute_single_1d_col	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_single_1d_col()$/;"	f	class:VertexProgram
+execute_single_2d	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::execute_single_2d()$/;"	f	class:VertexProgram
+exit	src/utils/env.cpp	/^void Env::exit(int code)$/;"	f	class:Env
+fatal	src/utils/log.hpp	/^inline void Log::fatal(const char* fmt, ...) const$/;"	f	class:Log
+filepath	src/matrix/graph.h	/^  std::string filepath;$/;"	m	class:Graph
+fill	src/structures/bitvector.h	/^  void fill()$/;"	f	class:BitVector
+fill	src/structures/bitvector.h	/^  void fill(uint32_t from_word, uint32_t nwords_to_fill)$/;"	f	class:BitVector
+fill	src/structures/random_access_array.h	/^  void fill(const Value& val) { std::fill(vals, vals + n, val); }$/;"	f	class:RandomAccessArray
+finalize	src/utils/env.cpp	/^void Env::finalize()$/;"	f	class:Env
+for_dashboard	src/utils/locator.h	/^  void for_dashboard(BV& regular, BV& sink, BV& source)$/;"	f	struct:Locator
+free	src/matrix/graph.hpp	/^void Graph<Weight>::free()$/;"	f	class:Graph
+free	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::free()$/;"	f	class:VertexProgram
+free_triples	src/utils/tile.h	/^  void free_triples()$/;"	f	struct:Tile2D
+from_bitvectors	src/utils/locator.h	/^  void from_bitvectors(BV& local, BV& regular, BV& secondary)$/;"	f	struct:Locator
+ga	Makefile	/^ga = graph_analytics$/;"	m
+gather	src/apps/graph_analytics/bfs.h	/^  A gather(const Edge<W>& edge, const M& msg) { return edge.src; }  \/\/ parent's id$/;"	f	class:BfsVertex
+gather	src/apps/graph_analytics/cc.h	/^  A gather(const Edge<W>& edge, const M& msg) { return msg; }$/;"	f	class:CcVertex
+gather	src/apps/graph_analytics/degree.h	/^  A gather(const Edge<W>& edge, const M& msg) { return 1; }$/;"	f	class:DegVertex
+gather	src/apps/graph_analytics/pr.h	/^  A gather(const Edge<W>& edge, const M& msg) { return msg; }$/;"	f	class:PrVertex
+gather	src/apps/graph_analytics/sssp.h	/^  A gather(const Edge<W>& edge, const M& msg) { return msg.value + edge.weight; }$/;"	f	class:SpVertex
+gather	src/apps/graph_analytics/tc.h	/^  A gather(const Edge<W>& edge, const M& msg) { A tmp; tmp.push_back(edge.src); return tmp; }$/;"	f	class:GnVertex
+gather	src/apps/graph_analytics/tc.h	/^  A gather(const Edge<W>& edge, const M& msg, const CtState& s)$/;"	f	class:CtVertex
+gather	src/apps/graph_simulation/graphsim.h	/^  A gather(const Edge<W>& edge, const M& msg) { return 1; }$/;"	f	class:InitVertex
+gather	src/apps/graph_simulation/graphsim.h	/^  A gather(const Edge<W>& edge, const M& msg)$/;"	f	class:GsVertex
+gather	src/apps/information_retrieval/tfidf.h	/^  A gather(const Edge<W>& edge, const M& msg)  { return log10(1 + edge.weight) * msg; }$/;"	f	class:DL
+gather	src/apps/information_retrieval/tfidf.h	/^  A gather(const Edge<W>& edge, const M& msg)  { return log10(1 + edge.weight) * msg; }$/;"	f	class:TFIDF
+gather	src/apps/information_retrieval/tfidf.h	/^  A gather(const Edge<W>& edge, const M& msg) { return 1.0; }$/;"	f	class:IDF
+gather	src/apps/information_retrieval/tfidf.h	/^  A gather(const Edge<W>& edge, const M& msg) { return A(); }$/;"	f	class:QE
+gather	src/apps/information_retrieval/tfidf_batch.h	/^  A gather(const Edge<W>& edge, const M& msg)  { return log10(1 + edge.weight) * msg; }$/;"	f	class:DL
+gather	src/apps/information_retrieval/tfidf_batch.h	/^  A gather(const Edge<W>& edge, const M& msg) { return 1.0; }$/;"	f	class:IDF
+gather	src/apps/information_retrieval/tfidf_batch.h	/^  A gather(const Edge<W>& edge, const M& msg) { return msg; }$/;"	f	class:QE
+gather	src/apps/information_retrieval/tfidf_batch.h	/^  A gather(const Edge<W>& edge, const M& msg)$/;"	f	class:TFIDF
+gather	src/vector/accum_final_segment.h	/^  void gather()$/;"	f	class:AccumFinalSegment
+gather	src/vprogram/vertex_program.h	/^  virtual A gather(const Edge<W>& edge, const M& msg)$/;"	f	class:VertexProgram
+gather	src/vprogram/vertex_program.h	/^  virtual A gather(const Edge<W>& edge, const M& msg, const S& state)$/;"	f	class:VertexProgram
+gather_colgrps_bvs	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::gather_colgrps_bvs()$/;"	f	class:ProcessedMatrix2D
+gather_dashboard_colgrp_bvs	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::gather_dashboard_colgrp_bvs()$/;"	f	class:ProcessedMatrix2D
+gather_dashboard_rowgrp_bvs	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::gather_dashboard_rowgrp_bvs()$/;"	f	class:ProcessedMatrix2D
+gather_depends_on_state	src/vprogram/vertex_program.h	/^  bool gather_depends_on_state = false;$/;"	m	class:VertexProgram
+gather_rowgrps_bvs	src/matrix/processed_matrix2d_details.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::gather_rowgrps_bvs()$/;"	f	class:ProcessedMatrix2D
+gcd	src/matrix/hashers.h	/^  long gcd(long a, long b, long& bi)$/;"	f	class:ModuloArithmeticHasher
+generate_sub_regular	src/utils/dashboard.h	/^    void generate_sub_regular(BV& db_regular, BV& db_other)$/;"	f	struct:ProcessedDashboard::RanksMeta
+generated_sub_regular	src/utils/dashboard.h	/^    bool generated_sub_regular;$/;"	m	struct:ProcessedDashboard::RanksMeta
+getCount	dev/proc2tile.cpp	/^int getCount(const char *description, int split_type) {$/;"	f
+get_bitwidth	src/structures/bitvector.h	/^  static uint32_t get_bitwidth() { return bitwidth; }$/;"	f	class:BitVector
+get_graph	src/vprogram/vertex_program.h	/^  const Graph<W>* get_graph() const { return G; }$/;"	f	class:VertexProgram
+get_hasher	src/matrix/graph.h	/^  const ReversibleHasher* get_hasher() const { return hasher; }$/;"	f	class:Graph
+get_log_level	src/utils/log.cpp	/^LogLevel Log::get_log_level()$/;"	f	class:Log
+get_matrix	src/matrix/graph.h	/^  const Matrix* get_matrix() const { return A; }$/;"	f	class:Graph
+get_mvertices	src/matrix/graph.h	/^  uint32_t get_mvertices() const { return mvertices; }$/;"	f	class:Graph
+get_nvertices	src/matrix/graph.h	/^  uint32_t get_nvertices() const { return nvertices; }$/;"	f	class:Graph
+get_nwords	src/structures/bitvector.h	/^  uint32_t get_nwords() const { return vector_nwords(); }$/;"	f	class:BitVector
+get_partitioning	src/matrix/graph.h	/^  Partitioning get_partitioning() const { return partitioning; }$/;"	f	class:Graph
+get_vector_v	src/vprogram/vertex_program.h	/^  VectorV* get_vector_v() const { return v; }$/;"	f	class:VertexProgram
+global_colgrps	src/matrix/annotated_matrix2d.h	/^  std::vector<ColGrp*> global_colgrps;  \/\/ nullptr indicates non-local.$/;"	m	class:AnnotatedMatrix2D
+global_idx	src/utils/csc.h	/^  uint32_t global_idx;$/;"	m	struct:CSCEntry
+global_locator	src/utils/rowgrp.h	/^  Locator* global_locator;$/;"	m	struct:ProcessedRowGrp
+global_rowgrps	src/matrix/annotated_matrix2d.h	/^  std::vector<RowGrp*> global_rowgrps;  \/\/ nullptr indicates non-local.$/;"	m	class:AnnotatedMatrix2D
+globally_regular	src/utils/rowgrp.h	/^  BV* globally_regular;$/;"	m	struct:ProcessedRowGrp
+globally_sink	src/utils/rowgrp.h	/^  BV* globally_sink;$/;"	m	struct:ProcessedRowGrp
+gs	Makefile	/^gs = graph_simulation$/;"	m
+h1	src/matrix/hashers.h	/^  long h1 = 0;  \/\/ gcd(nd, h1) == 1;$/;"	m	class:ModuloArithmeticHasher
+h2	src/matrix/hashers.h	/^  long h2 = 0;  \/\/ h2 = h1^-1 (mod nd)$/;"	m	class:ModuloArithmeticHasher
+has_converged_globally	src/vprogram/vertex_program_execute.hpp	/^bool VertexProgram<W, M, A, S>::has_converged_globally($/;"	f	class:VertexProgram
+hash	src/matrix/hashers.h	/^  long hash(long v) const { return v * h1 % max_range; }$/;"	f	class:ModuloArithmeticHasher
+hash	src/matrix/hashers.h	/^  long hash(long v) const { return v; }$/;"	f	class:NullHasher
+hash	src/matrix/hashers.h	/^  long hash(long v) const {$/;"	f	class:SimpleBucketHasher
+hasher	src/matrix/graph.h	/^  ReversibleHasher* hasher = nullptr;$/;"	m	class:Graph
+hashing	src/matrix/graph.h	/^  Hashing hashing;$/;"	m	class:Graph
+height	src/matrix/hashers.h	/^  long height = 0;$/;"	m	class:SimpleBucketHasher
+hops	src/apps/graph_analytics/bfs.h	/^  dist_t hops = INF;$/;"	m	struct:BfsState
+idf	src/apps/information_retrieval/tfidf.h	/^struct TState { fp_t idf = 0.0; };$/;"	m	struct:TState
+idf	src/apps/information_retrieval/tfidf_batch.h	/^struct TState { fp_t idf = 0.0; };$/;"	m	struct:TState
+idx	src/utils/csc.h	/^  uint32_t idx;$/;"	m	struct:CSCEntry
+idx_compare	src/utils/csc.h	/^  static bool idx_compare(const Entry& a, const Entry& b)$/;"	f	struct:CSC
+incoming	src/vector/msg_vector.h	/^  IncomingSegments incoming;$/;"	m	class:MsgVector
+indices	src/vector/accum_final_segment.h	/^  std::vector<int32_t> indices;$/;"	m	class:AccumFinalSegment
+indices	src/vector/msg_vector.h	/^  std::vector<int32_t> indices;$/;"	m	class:MsgVector
+indices	src/vector/vertex_vector.h	/^    std::vector<int32_t> indices;$/;"	m	struct:VertexVector::MirrorSegments
+info	src/utils/log.hpp	/^void Log::info(const char* fmt, ...) const$/;"	f	class:Log
+init	src/apps/graph_analytics/bfs.h	/^  bool init(uint32_t vid, BfsState& s)$/;"	f	class:BfsVertex
+init	src/apps/graph_analytics/cc.h	/^  bool init(uint32_t vid, CcState& s) { s.label = vid; return true; }$/;"	f	class:CcVertex
+init	src/apps/graph_analytics/pr.h	/^  bool init(uint32_t vid, const State& other, PrState& s)$/;"	f	class:PrVertex
+init	src/apps/graph_analytics/sssp.h	/^  bool init(uint32_t vid, SpState& s)$/;"	f	class:SpVertex
+init	src/apps/graph_analytics/tc.h	/^  bool init(uint32_t vid, const State& other, CtState& s)$/;"	f	class:CtVertex
+init	src/apps/graph_simulation/graphsim.h	/^  bool init(uint32_t vid, GsState& s)$/;"	f	class:GsVertex
+init	src/apps/graph_simulation/graphsim.h	/^  bool init(uint32_t vid, GsState& s)$/;"	f	class:InitVertex
+init	src/apps/information_retrieval/tfidf.h	/^  bool init(vid_t vid, DtState& s)  \/\/ activate query terms only$/;"	f	class:TFIDF
+init	src/apps/information_retrieval/tfidf.h	/^  bool init(vid_t vid, DtState& s)  \/\/ activate top-k docs only$/;"	f	class:QE
+init	src/apps/information_retrieval/tfidf.h	/^  bool init(vid_t vid, DtState& s)$/;"	f	class:DL
+init	src/apps/information_retrieval/tfidf.h	/^  bool init(vid_t vid, DtState& s)$/;"	f	class:IDF
+init	src/apps/information_retrieval/tfidf.h	/^  bool init(vid_t vid, DtState& s)$/;"	f	class:VP
+init	src/apps/information_retrieval/tfidf_batch.h	/^  bool init(uint32_t vid, DtState& s)  \/\/ activate query terms only$/;"	f	class:TFIDF
+init	src/apps/information_retrieval/tfidf_batch.h	/^  bool init(uint32_t vid, DtState& s)  \/\/ activate top-k docs only$/;"	f	class:QE
+init	src/apps/information_retrieval/tfidf_batch.h	/^  bool init(uint32_t vid, DtState& s)$/;"	f	class:DL
+init	src/apps/information_retrieval/tfidf_batch.h	/^  bool init(uint32_t vid, DtState& s)$/;"	f	class:IDF
+init	src/utils/env.cpp	/^void Env::init(RankOrder order)$/;"	f	class:Env
+init	src/vprogram/vertex_program.h	/^  virtual bool init(uint32_t vid, S& state)$/;"	f	class:VertexProgram
+init	src/vprogram/vertex_program.h	/^  virtual bool init(uint32_t vid, const State& other, S& state)$/;"	f	class:VertexProgram
+init_colgrps	src/matrix/annotated_matrix2d.hpp	/^void AnnotatedMatrix2D<Weight, Annotation>::init_colgrps(std::set<uint32_t>& local_colgrp_indices)$/;"	f	class:AnnotatedMatrix2D
+init_dashboards	src/matrix/annotated_matrix2d.hpp	/^void AnnotatedMatrix2D<Weight, Annotation>::init_dashboards()$/;"	f	class:AnnotatedMatrix2D
+init_rowgrps	src/matrix/annotated_matrix2d.hpp	/^void AnnotatedMatrix2D<Weight, Annotation>::init_rowgrps(std::set<uint32_t>& local_rowgrp_indices)$/;"	f	class:AnnotatedMatrix2D
+initialize	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::initialize()$/;"	f	class:VertexProgram
+initialize	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::initialize(const VertexProgram<W2, M2, A2, S2>& other)$/;"	f	class:VertexProgram
+initialize_flags	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::initialize_flags()$/;"	f	class:VertexProgram
+initialized	src/vprogram/vertex_program.h	/^  bool initialized = false;$/;"	m	class:VertexProgram
+insert	src/matrix/matrix2d.hpp	/^void Matrix2D<Weight, Tile>::insert(const Triple<Weight>& triple)$/;"	f	class:Matrix2D
+instance	src/utils/log.cpp	/^Log& Log::instance()$/;"	f	class:Log
+integer_factorize	src/matrix/dist_matrix2d.hpp	/^void DistMatrix2D<Weight, Tile>::integer_factorize(uint32_t n, uint32_t& a, uint32_t& b)$/;"	f	class:DistMatrix2D
+internal_from_original	src/vector/vertex_master_segment.h	/^  uint32_t internal_from_original(uint32_t idx)$/;"	f	class:VertexMasterSegment
+intersect_with	src/structures/bitvector.hpp	/^void BitVector::intersect_with(BitVector const& bv)$/;"	f	class:BitVector
+ir	Makefile	/^ir = information_retrieval$/;"	m
+irecv	src/structures/communicable.h	/^  void* irecv(int32_t rank, int32_t tag, MPI_Comm comm, MPI_Request* request)$/;"	f	class:Communicable
+irecv_dynamic_all	src/structures/communicable.h	/^  irecv_dynamic_all(std::vector<void*>& the_blobs, std::vector<MPI_Request>& the_requests)$/;"	f	class:Communicable
+irecv_dynamic_one	src/structures/communicable.h	/^  static void irecv_dynamic_one(void*& blob, MPI_Request*& request)$/;"	f	class:Communicable
+irecv_dynamic_some	src/structures/communicable.h	/^  irecv_dynamic_some(std::vector<void*>& the_blobs, std::vector<MPI_Request>& the_requests)$/;"	f	class:Communicable
+irecv_postprocess	src/structures/communicable.h	/^  void irecv_postprocess(void* blob)$/;"	f	class:Communicable
+irecv_postprocess	src/structures/communicable.h	/^  void irecv_postprocess(void* blob, uint32_t sub_size)$/;"	f	class:Communicable
+irecv_postprocess	src/vector/accum_final_segment.h	/^  void irecv_postprocess(uint32_t jth)$/;"	f	class:AccumFinalSegment
+irecv_postprocess	src/vector/msg_vector.h	/^  void irecv_postprocess(uint32_t jth)$/;"	f	class:MsgVector
+is_dense	src/structures/serializable_bitvector.h	/^  bool is_dense() { return is_dense(this->count()); }$/;"	f	class:SerializableBitVector
+is_dense	src/structures/serializable_bitvector.h	/^  bool is_dense(uint32_t count) { return is_dense(count, this->size()); }$/;"	f	class:SerializableBitVector
+is_dense	src/structures/serializable_bitvector.h	/^  bool is_dense(uint32_t count, uint32_t size)$/;"	f	class:SerializableBitVector
+is_directed	src/matrix/graph.h	/^  bool is_directed() const { return directed; }$/;"	f	class:Graph
+is_master	src/utils/env.cpp	/^bool Env::is_master;  \/\/ rank == 0?$/;"	m	class:Env	file:
+is_master	src/utils/env.h	/^  static bool is_master;  \/\/ rank == 0?$/;"	m	class:Env
+is_trace_enabled	src/utils/log.cpp	/^bool Log::is_trace_enabled() const$/;"	f	class:Log
+isend	src/structures/communicable.h	/^  void* isend(int32_t rank, int32_t tag, MPI_Comm comm, MPI_Request* request)$/;"	f	class:Communicable
+isend_postprocess	src/structures/communicable.h	/^  void isend_postprocess(void* blob)$/;"	f	class:Communicable
+ith	src/utils/rowgrp.h	/^  uint32_t rg, ith;        \/\/ Index among all rowgroups, index among local rowgroups.$/;"	m	struct:AnnotatedRowGrp
+ith	src/utils/tile.h	/^  uint32_t ith, jth, nth;   \/\/ Local Info: ith local rowgrp, jth local colgrp, nth local tile.$/;"	m	struct:DistTile2D
+ith	src/vector/accum_partial_segment.h	/^  uint32_t ith;$/;"	m	class:AccumPartialSegment
+jth	src/utils/colgrp.h	/^  uint32_t cg, jth;        \/\/ Index among all colgroups, index among local colgroups.$/;"	m	struct:AnnotatedColGrp
+jth	src/utils/tile.h	/^  uint32_t ith, jth, nth;   \/\/ Local Info: ith local rowgrp, jth local colgrp, nth local tile.$/;"	m	struct:DistTile2D
+kth	src/utils/colgrp.h	/^  uint32_t kth;             \/\/ Index among local dashboards; valid only if leader == rank.$/;"	m	struct:AnnotatedColGrp
+kth	src/utils/dashboard.h	/^  uint32_t rg, cg, kth;  \/\/ Index among global rowgroups, global colgroups and local dashboards.$/;"	m	struct:AnnotatedDashboard
+kth	src/utils/rowgrp.h	/^  uint32_t kth;             \/\/ Index among local dashboards; valid only if leader == rank.$/;"	m	struct:AnnotatedRowGrp
+label	src/apps/graph_analytics/cc.h	/^  vid_t label = 0;$/;"	m	struct:CcState
+label	src/apps/graph_simulation/graphsim.h	/^  string label;      \/\/ vertex label$/;"	m	struct:GsState
+label	src/apps/information_retrieval/tfidf.h	/^  std::string label;$/;"	m	struct:DtState
+label_data	src/apps/information_retrieval/tfidf.h	/^  const std::string* label_data = nullptr;$/;"	m	class:VP
+label_ptrs	src/apps/information_retrieval/tfidf.h	/^  const std::vector<size_t>* label_ptrs = nullptr;$/;"	m	class:VP
+labels	src/apps/graph_simulation/graphsim_query.h	/^  vector<string> labels;         \/\/ vertex labels$/;"	m	struct:Query
+leader	src/utils/colgrp.h	/^  int32_t leader;          \/\/ Rank of leader of the x'th colgroup.$/;"	m	struct:AnnotatedColGrp
+leader	src/utils/rowgrp.h	/^  int32_t leader;          \/\/ Rank of leader of the y'th group.$/;"	m	struct:AnnotatedRowGrp
+length	src/apps/information_retrieval/tfidf.h	/^struct DState { fp_t score = 0.0, length = 1.0; };$/;"	m	struct:DState
+length	src/apps/information_retrieval/tfidf_batch.h	/^struct DState { fp_t scores[BATCH_SIZE] = {0.0}; fp_t length = 1.0; };$/;"	m	struct:DState
+level_	src/utils/log.h	/^  LogLevel level_ = LogLevel::INFO;$/;"	m	class:Log
+lg_bitwidth	src/structures/bitvector.h	/^  constexpr static uint32_t lg_bitwidth = 5;$/;"	m	class:BitVector
+load_binary	src/matrix/graph.hpp	/^void Graph<Weight>::load_binary($/;"	f	class:Graph
+load_bipartite	src/matrix/graph.hpp	/^void Graph<Weight>::load_bipartite($/;"	f	class:Graph
+load_directed	src/matrix/graph.hpp	/^void Graph<Weight>::load_directed($/;"	f	class:Graph
+load_labels	src/apps/information_retrieval/tfidf.cpp	/^void load_labels(string& filepath, size_t nvertices,$/;"	f
+load_labels	src/matrix/graph.hpp	/^void Graph<Weight>::load_labels(std::string& filepath_)$/;"	f	class:Graph
+load_queries	src/apps/information_retrieval/tfidf.cpp	/^void load_queries(string& filepath, vector<unordered_set<string>>& queries)$/;"	f
+load_text	src/matrix/graph.hpp	/^void Graph<Weight>::load_text($/;"	f	class:Graph
+load_undirected	src/matrix/graph.hpp	/^void Graph<Weight>::load_undirected($/;"	f	class:Graph
+local	src/utils/colgrp.h	/^  BV* local;    \/\/ Non-empty rows.$/;"	m	struct:ProcessedColGrp
+local	src/utils/rowgrp.h	/^  BV* local;     \/\/ Non-empty rows.$/;"	m	struct:ProcessedRowGrp
+local_colgrps	src/matrix/annotated_matrix2d.h	/^  std::vector<ColGrp> local_colgrps;$/;"	m	class:AnnotatedMatrix2D
+local_rowgrps	src/matrix/annotated_matrix2d.h	/^  std::vector<RowGrp> local_rowgrps;$/;"	m	class:AnnotatedMatrix2D
+local_segs_sink	src/vector/accum_vector.h	/^  FixedVector<PartialSegment> local_segs_sink;$/;"	m	class:AccumVector
+local_tiles	src/matrix/annotated_matrix2d.h	/^  std::vector<Tile*> local_tiles;$/;"	m	class:AnnotatedMatrix2D
+local_tiles	src/utils/colgrp.h	/^  std::vector<Tile*> local_tiles;$/;"	m	struct:AnnotatedColGrp
+local_tiles	src/utils/rowgrp.h	/^  std::vector<Tile*> local_tiles;$/;"	m	struct:AnnotatedRowGrp
+locate	src/vector/vertex_master_segment.h	/^  uint32_t locate(uint32_t idx)$/;"	f	class:VertexMasterSegment
+locator	src/utils/dashboard.h	/^  Locator* locator;$/;"	m	struct:ProcessedDashboard
+locator	src/vector/vertex_master_segment.h	/^  Locator* locator;$/;"	m	class:VertexMasterSegment
+main	dev/proc2tile.cpp	/^int main(int argc, char **argv) {$/;"	f
+main	src/apps/graph_analytics/bfs.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_analytics/cc.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_analytics/degree.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_analytics/pr.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_analytics/sssp.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_analytics/tc.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/graph_simulation/graphsim.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/apps/information_retrieval/tfidf.cpp	/^int main(int argc, char** argv)$/;"	f
+main	src/apps/information_retrieval/tfidf_batch.cpp	/^int main(int argc, char** argv)$/;"	f
+main	src/tools/cw2bin.cpp	/^int main(int argc, char* argv[])$/;"	f
+main	src/tools/mtx2bin.cpp	/^int main(int argc, char* argv[])$/;"	f
+many_triples_size	src/matrix/dist_matrix2d.h	/^  const uint32_t many_triples_size = 1;  \/\/ TODO: Make this non const, set to 1 iff small.$/;"	m	class:DistMatrix2D
+map	src/utils/locator.h	/^  std::pair<VertexType, uint32_t> map(uint32_t idx) const$/;"	f	struct:Locator
+max_range	src/matrix/hashers.h	/^  long max_range = 0;  \/\/ (mod nd)$/;"	m	class:ModuloArithmeticHasher
+max_range	src/matrix/hashers.h	/^  long max_range = 0;$/;"	m	class:SimpleBucketHasher
+metasize	src/utils/locator.h	/^  static constexpr uint32_t metasize = 4;$/;"	m	struct:Locator
+mf	Makefile	/^mf ?= .\/machinefile$/;"	m
+mir_segs_reg	src/vector/vertex_vector.h	/^  MirrorSegments* mir_segs_reg = nullptr;$/;"	m	class:VertexVector
+mir_segs_snk	src/vector/vertex_vector.h	/^  MirrorSegments* mir_segs_snk = nullptr;$/;"	m	class:VertexVector
+mirrored	src/vector/vertex_vector.h	/^  bool mirrored = false;$/;"	m	class:VertexVector
+mm	src/apps/graph_simulation/graphsim.h	/^  svector_bool mm;   \/\/ temp mismatches vector$/;"	m	struct:GsState
+msg	src/utils/log.h	/^  std::string msg;$/;"	m	class:Exception
+multiplier	src/matrix/hashers.h	/^  const long multiplier = 128u; \/\/ For fine-granular load balance$/;"	m	class:SimpleBucketHasher
+mvertices	src/matrix/graph.h	/^  uint32_t mvertices;  \/** For bipartite graphs **\/$/;"	m	class:Graph
+n	src/structures/bitvector.h	/^  uint32_t n;$/;"	m	class:BitVector
+n	src/structures/random_access_array.h	/^  uint32_t n;$/;"	m	class:RandomAccessArray
+n	src/structures/streaming_array.h	/^  uint32_t n;$/;"	m	class:StreamingArray
+name	src/utils/dist_timer.h	/^  std::string name;$/;"	m	class:DistTimer
+name	src/utils/log.h	/^  const char* name() const { return NAMES[value]; }$/;"	f	class:LogLevel
+name_to_value	src/utils/enum.h	/^static int name_to_value(const char* name, const char* const NAMES[], int count)$/;"	f
+ncolgrps	src/matrix/matrix2d.h	/^  const uint32_t ntiles, nrowgrps, ncolgrps;$/;"	m	class:Matrix2D
+ncols	src/matrix/matrix2d.h	/^  const uint32_t nrows, ncols;$/;"	m	class:Matrix2D
+ncombined	src/vector/accum_partial_segment.h	/^  uint32_t ncombined;$/;"	m	class:AccumPartialSegment
+nd	src/apps/information_retrieval/tfidf.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	m	struct:BP
+nd	src/apps/information_retrieval/tfidf.h	/^vid_t BP::nd = 0, BP::nt = 0;  \/\/ Must initialize static members$/;"	m	class:BP
+nd	src/apps/information_retrieval/tfidf_batch.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	m	struct:BP
+nd	src/apps/information_retrieval/tfidf_batch.h	/^vid_t BP::nd = 0, BP::nt = 0;  \/\/ Must initialize static members$/;"	m	class:BP
+ndashboards	src/matrix/annotated_matrix2d.h	/^  uint32_t ndashboards;$/;"	m	class:AnnotatedMatrix2D
+nedges	src/matrix/graph.h	/^  uint64_t nedges;$/;"	m	class:Graph
+neighbors	src/apps/graph_analytics/tc.h	/^  std::vector<vid_t> neighbors;$/;"	m	struct:GnState
+nentries	src/utils/csc.h	/^  uint32_t nentries;$/;"	m	struct:CSC
+new_blob	src/structures/communicable.h	/^  void* new_blob()$/;"	f	class:Communicable
+new_blob	src/structures/random_access_array.h	/^  void* new_blob(uint32_t nbytes) { return new char[nbytes]; }$/;"	f	class:RandomAccessArray
+new_blob	src/structures/serializable_bitvector.h	/^  void* new_blob(uint32_t nbytes) { return new char[nbytes]; }$/;"	f	class:SerializableBitVector
+new_blob	src/structures/streaming_array.h	/^  void* new_blob(uint32_t nbytes) { return new char[nbytes]; }$/;"	f	class:StreamingArray
+next	src/structures/bitvector.hpp	/^bool BitVector::next(uint32_t& idx)$/;"	f	class:BitVector
+next	src/structures/random_access_array.h	/^  bool next(uint32_t& idx, Value& val)$/;"	f	class:RandomAccessArray
+next	src/structures/streaming_array.h	/^  bool next(uint32_t& idx, Value& val)$/;"	f	class:StreamingArray
+nnzs	src/structures/bitvector.h	/^  uint32_t* nnzs;$/;"	m	class:BitVector
+no_more_segs	src/vector/accum_final_segment.h	/^  bool no_more_segs() { return num_outstanding == 0; }$/;"	f	class:AccumFinalSegment
+no_more_segs	src/vector/msg_vector.h	/^  bool no_more_segs() const { return (num_outstanding == 0); }$/;"	f	class:MsgVector
+no_more_segs_then_clear	src/vector/msg_vector.h	/^  bool no_more_segs_then_clear()$/;"	f	class:MsgVector
+now	src/utils/env.cpp	/^double Env::now()$/;"	f	class:Env
+np	Makefile	/^np ?= 1$/;"	m
+nparts	src/matrix/hashers.h	/^  long nparts = 0;$/;"	m	class:SimpleBucketHasher
+nranks	src/matrix/dist_matrix2d.h	/^  uint32_t nranks, rank;$/;"	m	class:DistMatrix2D
+nranks	src/utils/env.cpp	/^int Env::nranks;  \/\/ num of ranks$/;"	m	class:Env	file:
+nranks	src/utils/env.h	/^  static int nranks;  \/\/ num of ranks$/;"	m	class:Env
+nregular	src/utils/locator.h	/^  uint32_t nregular() const { return buffer[0]; }$/;"	f	struct:Locator
+nregular	src/utils/locator.h	/^  uint32_t& nregular() { return buffer[0]; }$/;"	f	struct:Locator
+nrowgrps	src/matrix/matrix2d.h	/^  const uint32_t ntiles, nrowgrps, ncolgrps;$/;"	m	class:Matrix2D
+nrows	src/matrix/matrix2d.h	/^  const uint32_t nrows, ncols;$/;"	m	class:Matrix2D
+nsecondary	src/utils/locator.h	/^  uint32_t nsecondary() const { return buffer[1]; }$/;"	f	struct:Locator
+nsecondary	src/utils/locator.h	/^  uint32_t& nsecondary() { return buffer[1]; }$/;"	f	struct:Locator
+nsink	src/utils/locator.h	/^  uint32_t nsink() const { return buffer[1]; }$/;"	f	struct:Locator
+nsink	src/utils/locator.h	/^  uint32_t& nsink() { return buffer[1]; }$/;"	f	struct:Locator
+nsource	src/utils/locator.h	/^  uint32_t nsource() const { return buffer[2]; }$/;"	f	struct:Locator
+nsource	src/utils/locator.h	/^  uint32_t& nsource() { return buffer[2]; }$/;"	f	struct:Locator
+nt	src/apps/information_retrieval/tfidf.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	m	struct:BP
+nt	src/apps/information_retrieval/tfidf.h	/^vid_t BP::nd = 0, BP::nt = 0;  \/\/ Must initialize static members$/;"	m	class:BP
+nt	src/apps/information_retrieval/tfidf_batch.h	/^struct BP { static vid_t nd, nt; };  \/\/ Bipartite graph: docs, terms$/;"	m	struct:BP
+nt	src/apps/information_retrieval/tfidf_batch.h	/^vid_t BP::nd = 0, BP::nt = 0;  \/\/ Must initialize static members$/;"	m	class:BP
+ntertiary	src/utils/locator.h	/^  uint32_t ntertiary() const { return buffer[2]; }$/;"	f	struct:Locator
+ntertiary	src/utils/locator.h	/^  uint32_t& ntertiary() { return buffer[2]; }$/;"	f	struct:Locator
+nth	src/utils/tile.h	/^  uint32_t ith, jth, nth;   \/\/ Local Info: ith local rowgrp, jth local colgrp, nth local tile.$/;"	m	struct:DistTile2D
+ntiles	src/matrix/matrix2d.h	/^  const uint32_t ntiles, nrowgrps, ncolgrps;$/;"	m	class:Matrix2D
+ntiles	src/vector/accum_partial_segment.h	/^  uint32_t ntiles;$/;"	m	class:AccumPartialSegment
+ntriangles	src/apps/graph_analytics/tc.h	/^  uint32_t ntriangles = 0;$/;"	m	struct:CtState
+num_outstanding	src/vector/accum_final_segment.h	/^  uint32_t num_outstanding;$/;"	m	class:AccumFinalSegment
+num_outstanding	src/vector/msg_input_segment.h	/^  uint32_t* num_outstanding;$/;"	m	class:MsgIncomingSegment
+num_outstanding	src/vector/msg_vector.h	/^  uint32_t num_outstanding;$/;"	m	class:MsgVector
+num_outstanding	src/vector/vertex_mirror_segment.h	/^  uint32_t* num_outstanding;$/;"	m	class:VertexMirrorSegment
+num_outstanding	src/vector/vertex_vector.h	/^    uint32_t num_outstanding;$/;"	m	struct:VertexVector::MirrorSegments
+nvertices	src/matrix/graph.h	/^  uint32_t nvertices;$/;"	m	class:Graph
+obj	dev/Makefile	/^obj=proc2tile$/;"	m
+offset	src/utils/colgrp.h	/^  uint32_t offset, endpos;  \/\/ Start column, end column.$/;"	m	struct:AnnotatedColGrp
+offset	src/utils/rowgrp.h	/^  uint32_t offset, endpos;  \/\/ Start row, end row.$/;"	m	struct:AnnotatedRowGrp
+offset	src/vector/vertex_master_segment.h	/^  uint32_t offset;$/;"	m	class:VertexMasterSegment
+operator !=	src/utils/common.h	/^  bool operator!=(const IntegerWrapper& other) const { return value != other.value; }$/;"	f	struct:IntegerWrapper
+operator !=	src/utils/common.h	/^  bool operator!=(uint32_t other) const { return value != other; }$/;"	f	struct:IntegerWrapper
+operator ()	src/tools/cw2bin.cpp	/^  size_t operator()(std::string const& s) const$/;"	f	struct:StrHash
+operator ()	src/utils/common.h	/^  std::size_t operator()(const Triple<Weight>& x) const$/;"	f	struct:EdgeHash
+operator *=	src/structures/static_bitvector.h	/^  StaticBitVector& operator*=(const StaticBitVector& other)  \/\/ intersection$/;"	f	class:StaticBitVector
+operator +=	src/apps/information_retrieval/tfidf_batch.h	/^  BvAccum& operator+=(const BvAccum& other)$/;"	f	struct:BvAccum
+operator +=	src/structures/static_bitvector.h	/^  StaticBitVector& operator+=(const StaticBitVector& other)  \/\/ union$/;"	f	class:StaticBitVector
+operator <	src/utils/common.h	/^  bool operator<(const IntegerWrapper& other) const { return value < other.value; }$/;"	f	struct:IntegerWrapper
+operator <	src/utils/common.h	/^  bool operator<(uint32_t other) const { return value < other; }$/;"	f	struct:IntegerWrapper
+operator =	src/utils/common.h	/^  IntegerWrapper& operator=(const IntegerWrapper& other) { value = other.value; return *this; }$/;"	f	struct:IntegerWrapper
+operator =	src/utils/common.h	/^  Triple& operator=(const Triple<Empty>& other)$/;"	f	struct:Triple
+operator =	src/utils/common.h	/^  Triple& operator=(const Triple<Weight>& other)$/;"	f	struct:Triple
+operator =	src/utils/enum.h	/^  void operator=(int v) { value = v; }$/;"	f	class:Enum
+operator ==	src/utils/common.h	/^  bool operator==(const IntegerWrapper& other) const { return not operator!=(other); }$/;"	f	struct:IntegerWrapper
+operator ==	src/utils/common.h	/^  bool operator==(const Triple<Empty>& other) const$/;"	f	struct:Triple
+operator ==	src/utils/common.h	/^  bool operator==(const Triple<Weight>& other) const$/;"	f	struct:Triple
+operator ==	src/utils/common.h	/^  bool operator==(uint32_t other) const { return not operator!=(other); }$/;"	f	struct:IntegerWrapper
+operator ==	src/utils/enum.h	/^  bool operator==(const int v) const { return value == v; }$/;"	f	class:Enum
+operator []	src/structures/fixed_vector.h	/^  Value& operator[](uint32_t idx) const { return values[idx]; }$/;"	f	class:FixedVector
+operator []	src/structures/random_access_array.h	/^  Value& operator[](uint32_t idx) { return vals[idx]; }$/;"	f	class:RandomAccessArray
+operator []	src/utils/locator.h	/^  const uint32_t& operator[](uint32_t idx) const$/;"	f	struct:Locator
+operator int	src/utils/enum.h	/^  operator int() const { return value; }$/;"	f	class:Enum
+optimizable	src/vprogram/vertex_program.h	/^  bool optimizable = true;$/;"	m	class:VertexProgram
+original_from_internal_map	src/vector/vertex_master_segment.h	/^  uint32_t* original_from_internal_map;$/;"	m	class:VertexMasterSegment
+other	src/utils/dashboard.h	/^    BV other;$/;"	m	struct:ProcessedDashboard::RanksMeta
+out	src/vector/msg_output_segment.h	/^  SendArray* out;$/;"	m	class:MsgOutgoingSegment
+out	src/vector/vertex_master_segment.h	/^    Array out;$/;"	m	struct:VertexMasterSegment::Out
+out_reg	src/vector/vertex_master_segment.h	/^  Out* out_reg = nullptr;$/;"	m	class:VertexMasterSegment
+out_snk	src/vector/vertex_master_segment.h	/^  Out* out_snk = nullptr;$/;"	m	class:VertexMasterSegment
+outgoing	src/vector/msg_vector.h	/^  OutgoingSegments outgoing;$/;"	m	class:MsgVector
+own_segs	src/vector/accum_vector.h	/^  FixedVector<FinalSegment> own_segs;$/;"	m	class:AccumVector
+own_segs	src/vector/vertex_vector.h	/^  FixedVector<VertexMasterSegment<Matrix, Array>> own_segs;$/;"	m	class:VertexVector
+own_segs_sink	src/vector/accum_vector.h	/^  FixedVector<FinalSegment> own_segs_sink;$/;"	m	class:AccumVector
+owner	src/vector/accum_partial_segment.h	/^  int32_t owner;$/;"	m	class:AccumPartialSegment
+owner	src/vector/msg_input_segment.h	/^  int32_t owner;$/;"	m	class:MsgIncomingSegment
+owner	src/vector/vertex_mirror_segment.h	/^  int32_t owner;$/;"	m	class:VertexMirrorSegment
+owner_of_segment	src/matrix/annotated_matrix2d.hpp	/^int32_t AnnotatedMatrix2D<Weight, Annotation>::owner_of_segment(uint32_t id)$/;"	f	class:AnnotatedMatrix2D
+owns_vals	src/structures/streaming_array.h	/^  bool owns_vals = true;$/;"	m	class:StreamingArray
+owns_vertices	src/vprogram/vertex_program.h	/^  const bool owns_vertices = true;$/;"	m	class:VertexProgram
+owns_words	src/structures/bitvector.h	/^  bool owns_words = true;$/;"	m	class:BitVector
+parent	src/apps/graph_analytics/bfs.h	/^  vid_t parent = 0;$/;"	m	struct:BfsState
+partials	src/vector/accum_final_segment.h	/^  FixedVector<PartialArray>* partials;$/;"	m	class:AccumFinalSegment
+partitioning	src/matrix/graph.h	/^  Partitioning partitioning;$/;"	m	class:Graph
+partitioning	src/matrix/matrix2d.h	/^  const Partitioning partitioning;$/;"	m	class:Matrix2D
+pm	src/apps/graph_simulation/graphsim.h	/^  svector_int pm;    \/\/ potential matches vector$/;"	m	struct:GsState
+pop	src/structures/bitvector.hpp	/^bool BitVector::pop(uint32_t& idx)$/;"	f	class:BitVector
+pop	src/structures/random_access_array.h	/^  bool pop(uint32_t& idx, Value& val)$/;"	f	class:RandomAccessArray
+pop	src/structures/streaming_array.h	/^  bool pop(uint32_t& idx, Value& val)$/;"	f	class:StreamingArray
+pos	src/structures/bitvector.h	/^  uint32_t pos = 0;$/;"	m	class:BitVector
+pos	src/structures/streaming_array.h	/^  uint32_t pos;$/;"	m	class:StreamingArray
+pos	src/utils/dist_timer.h	/^  uint64_t pos;$/;"	m	class:DistTimer
+position	src/structures/fixed_vector.h	/^  uint32_t position;  \/\/ returned by size()$/;"	m	class:FixedVector
+postprocess	src/vector/accum_partial_segment.h	/^  void postprocess()$/;"	f	class:AccumPartialSegment
+postprocess	src/vector/msg_output_segment.h	/^  void postprocess()$/;"	f	class:MsgOutgoingSegment
+postprocess	src/vector/vertex_master_segment.h	/^  void postprocess()$/;"	f	class:VertexMasterSegment
+preprocess	src/matrix/processed_matrix2d.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::preprocess()$/;"	f	class:ProcessedMatrix2D
+print	src/utils/log.hpp	/^void Log::print(const char* fmt, va_list args) const$/;"	f	class:Log
+print_info	src/matrix/dist_matrix2d.hpp	/^void DistMatrix2D<Weight, Tile>::print_info()$/;"	f	class:DistMatrix2D
+print_info	src/matrix/matrix2d.hpp	/^void Matrix2D<Weight, Tile>::print_info()$/;"	f	class:Matrix2D
+process_dashboard_bvs	src/matrix/processed_matrix2d.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::process_dashboard_bvs()$/;"	f	class:ProcessedMatrix2D
+process_messages	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::process_messages(uint32_t iter)$/;"	f	class:VertexProgram
+process_ready_messages	src/vprogram/vertex_program_execute.hpp	/^bool VertexProgram<W, M, A, S>::process_ready_messages($/;"	f	class:VertexProgram
+produce_messages	src/vprogram/vertex_program_execute.hpp	/^bool VertexProgram<W, M, A, S>::produce_messages(uint32_t iter)$/;"	f	class:VertexProgram
+progress	src/vector/accum_partial_segment.h	/^  MPI_Request progress;$/;"	m	class:AccumPartialSegment
+push	src/structures/bitvector.hpp	/^void BitVector::push(uint32_t idx)$/;"	f	class:BitVector
+push	src/structures/random_access_array.h	/^  void push(uint32_t idx, const Value& val)$/;"	f	class:RandomAccessArray
+push	src/structures/streaming_array.h	/^  void push(uint32_t idx, const Value& val)$/;"	f	class:StreamingArray
+queries	src/apps/information_retrieval/tfidf_batch.h	/^  const std::set<uint32_t>* queries[BATCH_SIZE] = {nullptr};$/;"	m	class:TFIDF
+query_terms	src/apps/information_retrieval/tfidf.h	/^  const std::unordered_set<std::string>* query_terms = nullptr;$/;"	m	class:TFIDF
+range	src/utils/colgrp.h	/^  uint32_t range()$/;"	f	struct:AnnotatedColGrp
+range	src/utils/rowgrp.h	/^  uint32_t range()$/;"	f	struct:AnnotatedRowGrp
+rank	src/apps/graph_analytics/pr.h	/^  fp_t rank = alpha;$/;"	m	struct:PrState
+rank	src/matrix/dist_matrix2d.h	/^  uint32_t nranks, rank;$/;"	m	class:DistMatrix2D
+rank	src/utils/dashboard.h	/^    uint32_t rank;$/;"	m	struct:ProcessedDashboard::RanksMeta
+rank	src/utils/env.cpp	/^int Env::rank  ;  \/\/ my rank$/;"	m	class:Env	file:
+rank	src/utils/env.h	/^  static int rank;    \/\/ my rank$/;"	m	class:Env
+rank	src/utils/tile.h	/^  int32_t rank;            \/\/ Rank of the process to which the tile belongs.$/;"	m	struct:DistTile2D
+rank_ncolgrps	src/matrix/dist_matrix2d.h	/^  uint32_t rank_ntiles, rank_nrowgrps, rank_ncolgrps;$/;"	m	class:DistMatrix2D
+rank_nrowgrps	src/matrix/dist_matrix2d.h	/^  uint32_t rank_ntiles, rank_nrowgrps, rank_ncolgrps;$/;"	m	class:DistMatrix2D
+rank_ntiles	src/matrix/dist_matrix2d.h	/^  uint32_t rank_ntiles, rank_nrowgrps, rank_ncolgrps;$/;"	m	class:DistMatrix2D
+ranks_meta	src/vector/accum_final_segment.h	/^  FixedVector<RanksMeta>* ranks_meta;$/;"	m	class:AccumFinalSegment
+ranks_meta	src/vector/msg_output_segment.h	/^  FixedVector<RanksMeta>* ranks_meta;$/;"	m	class:MsgOutgoingSegment
+ranks_meta	src/vector/vertex_master_segment.h	/^  FixedVector<RanksMeta>* ranks_meta;$/;"	m	class:VertexMasterSegment
+read_labels	src/apps/graph_simulation/graphsim_query.h	/^void read_labels(string& filepath, vector<string>& labels)$/;"	f
+read_labels_json	src/apps/graph_simulation/graphsim.cpp	/^void read_labels_json(string& filepath, vector<string>& labels)$/;"	f
+ready	src/vector/accum_partial_segment.h	/^  bool ready() { return ncombined == ntiles; }$/;"	f	class:AccumPartialSegment
+receive_jth_xseg	src/vprogram/vertex_program_execute.hpp	/^StreamingArray<M>& VertexProgram<W, M, A, S>::receive_jth_xseg(uint32_t jth)$/;"	f	class:VertexProgram
+recv	src/vector/msg_input_segment.h	/^  void recv()$/;"	f	class:MsgIncomingSegment
+recv	src/vector/vertex_mirror_segment.h	/^  void recv()$/;"	f	class:VertexMirrorSegment
+recv_blobs	src/vector/msg_input_segment.h	/^  std::vector<void*>* recv_blobs;$/;"	m	class:MsgIncomingSegment
+recv_blobs	src/vector/vertex_mirror_segment.h	/^  std::vector<void*>* recv_blobs;$/;"	m	class:VertexMirrorSegment
+recv_requests	src/vector/msg_input_segment.h	/^  std::vector<MPI_Request>* recv_requests;$/;"	m	class:MsgIncomingSegment
+recv_requests	src/vector/vertex_mirror_segment.h	/^  std::vector<MPI_Request>* recv_requests;$/;"	m	class:VertexMirrorSegment
+reduce	src/vprogram/vertex_program.hpp	/^Value VertexProgram<W, M, A, S>::reduce(Mapper map, Reducer reduce, bool active_only)$/;"	f	class:VertexProgram
+regular	src/utils/colgrp.h	/^  BV* regular;  \/\/ Non-empty column, with a corresponding non-empty row -- to be recv'd.$/;"	m	struct:ProcessedColGrp
+regular	src/utils/dashboard.h	/^    BV regular;$/;"	m	struct:ProcessedDashboard::RanksMeta
+regular	src/utils/dashboard.h	/^  BV* regular;$/;"	m	struct:ProcessedDashboard
+regular	src/utils/rowgrp.h	/^  BV* regular;   \/\/ Non-empty row, with a corresponding non-empty col -- to be sent.$/;"	m	struct:ProcessedRowGrp
+regular	src/vector/msg_vector.h	/^    FixedVector<MsgIncomingSegment<Matrix, Array>> regular;$/;"	m	struct:MsgVector::IncomingSegments
+regular	src/vector/msg_vector.h	/^    FixedVector<MsgOutgoingSegment<Matrix, Array>> regular;$/;"	m	struct:MsgVector::OutgoingSegments
+report	src/utils/dist_timer.h	/^  double report(bool print = true)$/;"	f	class:DistTimer
+report_all	src/utils/dist_timer.h	/^  static void report_all()$/;"	f	class:DistTimer
+requests	src/vector/accum_final_segment.h	/^  std::vector<int32_t> requests;$/;"	m	class:AccumFinalSegment
+requests	src/vector/msg_output_segment.h	/^  std::vector<MPI_Request> requests;$/;"	m	class:MsgOutgoingSegment
+requests	src/vector/msg_vector.h	/^  std::vector<MPI_Request> requests;$/;"	m	class:MsgVector
+requests	src/vector/vertex_master_segment.h	/^    std::vector<MPI_Request> requests;$/;"	m	struct:VertexMasterSegment::Out
+requests	src/vector/vertex_vector.h	/^    std::vector<MPI_Request> requests;$/;"	m	struct:VertexVector::MirrorSegments
+res	src/apps/graph_simulation/graphsim.h	/^  vector<char> res;  \/\/ result vector <'U'|'0'|'1'>$/;"	m	struct:GsState
+reserve	src/structures/fixed_vector.h	/^  void reserve(uint32_t capacity_)$/;"	f	class:FixedVector
+reset	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::reset()$/;"	f	class:VertexProgram
+reset_activity	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::reset_activity()$/;"	f	class:VertexProgram
+resize	src/structures/fixed_vector.h	/^  void resize(uint32_t capacity_)$/;"	f	class:FixedVector
+rewind	src/structures/bitvector.hpp	/^void BitVector::rewind()$/;"	f	class:BitVector
+rewind	src/structures/random_access_array.h	/^  void rewind() { activity->rewind(); }$/;"	f	class:RandomAccessArray
+rewind	src/structures/streaming_array.h	/^  void rewind()$/;"	f	class:StreamingArray
+rg	src/utils/dashboard.h	/^  uint32_t rg, cg, kth;  \/\/ Index among global rowgroups, global colgroups and local dashboards.$/;"	m	struct:AnnotatedDashboard
+rg	src/utils/rowgrp.h	/^  uint32_t rg, ith;        \/\/ Index among all rowgroups, index among local rowgroups.$/;"	m	struct:AnnotatedRowGrp
+rg	src/utils/tile.h	/^  uint32_t rg, cg;          \/\/ Global tile coordinates.$/;"	m	struct:DistTile2D
+rg	src/vector/accum_final_segment.h	/^  uint32_t rg;$/;"	m	class:AccumFinalSegment
+rg	src/vector/vertex_master_segment.h	/^  uint32_t rg;$/;"	m	class:VertexMasterSegment
+rg	src/vector/vertex_mirror_segment.h	/^  uint32_t rg;$/;"	m	class:VertexMirrorSegment
+rg_reg_size	src/vector/vertex_master_segment.h	/^  uint32_t rg_reg_size;   \/\/ global nregular in rowgrp (for mirroring)$/;"	m	class:VertexMasterSegment
+rg_sink_size	src/vector/vertex_master_segment.h	/^  uint32_t rg_sink_size;  \/\/ global nsink in rowgrp (for mirroring)$/;"	m	class:VertexMasterSegment
+row	src/utils/common.h	/^  uint32_t row, col;$/;"	m	struct:Triple
+rowgrp	src/utils/dashboard.h	/^  RowGrp* rowgrp;$/;"	m	struct:AnnotatedDashboard
+rowgrp_followers	src/utils/dashboard.h	/^  std::vector<int32_t> rowgrp_followers; \/\/ Non-leader ranks in k'th rowgroup.$/;"	m	struct:AnnotatedDashboard
+rowgrp_inblobs	src/matrix/processed_matrix2d.h	/^  std::vector<void*> rowgrp_inblobs, rowgrp_outblobs;$/;"	m	class:ProcessedMatrix2D
+rowgrp_inreqs	src/matrix/processed_matrix2d.h	/^  std::vector<MPI_Request> rowgrp_inreqs, rowgrp_outreqs;$/;"	m	class:ProcessedMatrix2D
+rowgrp_nranks	src/matrix/dist_matrix2d.h	/^  uint32_t rowgrp_nranks, colgrp_nranks;$/;"	m	class:DistMatrix2D
+rowgrp_outblobs	src/matrix/processed_matrix2d.h	/^  std::vector<void*> rowgrp_inblobs, rowgrp_outblobs;$/;"	m	class:ProcessedMatrix2D
+rowgrp_outreqs	src/matrix/processed_matrix2d.h	/^  std::vector<MPI_Request> rowgrp_inreqs, rowgrp_outreqs;$/;"	m	class:ProcessedMatrix2D
+rowgrp_ranks_meta	src/utils/dashboard.h	/^  FixedVector<RanksMeta> rowgrp_ranks_meta;$/;"	m	struct:ProcessedDashboard
+rowgrp_tag	src/utils/dashboard.h	/^  static uint32_t rowgrp_tag(uint32_t uth, bool sink = false)$/;"	f	struct:ProcessedDashboard
+run	src/apps/graph_analytics/bfs.cpp	/^void run(std::string filepath, vid_t nvertices, vid_t root)$/;"	f
+run	src/apps/graph_analytics/cc.cpp	/^void run(std::string filepath, vid_t nvertices)$/;"	f
+run	src/apps/graph_analytics/degree.cpp	/^void run(std::string filepath, vid_t nvertices, bool out_degree = false)$/;"	f
+run	src/apps/graph_analytics/pr.cpp	/^void run(std::string filepath, vid_t nvertices, uint32_t niters)$/;"	f
+run	src/apps/graph_analytics/sssp.cpp	/^void run(std::string filepath, vid_t nvertices, vid_t root)$/;"	f
+run	src/apps/graph_analytics/tc.cpp	/^void run(std::string filepath, vid_t nvertices)$/;"	f
+run	src/apps/graph_simulation/graphsim.cpp	/^void run(string& dgl_filepath, string& dgm_filepath, vid_t nvertices,$/;"	f
+run	src/apps/information_retrieval/tfidf.cpp	/^void run(string& filepath_graph, string& filepath_labels, string& filepath_queries,$/;"	f
+run	src/apps/information_retrieval/tfidf_batch.cpp	/^void run(std::string filepath, vid_t num_docs, vid_t num_terms, uint32_t k, uint32_t r,$/;"	f
+scatter	src/apps/graph_analytics/bfs.h	/^  M scatter(const BfsState& s) { return M(); }$/;"	f	class:BfsVertex
+scatter	src/apps/graph_analytics/cc.h	/^  M scatter(const CcState& s) { return s.label; }$/;"	f	class:CcVertex
+scatter	src/apps/graph_analytics/degree.h	/^  M scatter(const DegState& s) { return M(); }$/;"	f	class:DegVertex
+scatter	src/apps/graph_analytics/pr.h	/^  M scatter(const PrState& s) { return s.rank \/ s.degree; }$/;"	f	class:PrVertex
+scatter	src/apps/graph_analytics/sssp.h	/^  M scatter(const SpState& s) { return s.distance; }$/;"	f	class:SpVertex
+scatter	src/apps/graph_analytics/tc.h	/^  M scatter(const CtState& s) { return M(s); }$/;"	f	class:CtVertex
+scatter	src/apps/graph_analytics/tc.h	/^  M scatter(const GnState& s) { return M(); }$/;"	f	class:GnVertex
+scatter	src/apps/graph_simulation/graphsim.h	/^  M scatter(const GsState& s) { return M(); }$/;"	f	class:InitVertex
+scatter	src/apps/graph_simulation/graphsim.h	/^  M scatter(const GsState& s)$/;"	f	class:GsVertex
+scatter	src/apps/information_retrieval/tfidf.h	/^  M scatter(const DtState& s) { return M(); }  \/\/ doc -> msg(empty) -> term$/;"	f	class:IDF
+scatter	src/apps/information_retrieval/tfidf.h	/^  M scatter(const DtState& s) { return M(); }  \/\/ doc -> msg(empty) -> term$/;"	f	class:QE
+scatter	src/apps/information_retrieval/tfidf.h	/^  M scatter(const DtState& s) { return s.idf; }  \/\/ term -> msg(idf) -> doc$/;"	f	class:DL
+scatter	src/apps/information_retrieval/tfidf.h	/^  M scatter(const DtState& s) { return s.idf; }  \/\/ term -> msg(idf) -> doc$/;"	f	class:TFIDF
+scatter	src/apps/information_retrieval/tfidf_batch.h	/^  M scatter(const DtState& s) { return M(); }  \/\/ doc -> msg(empty) -> term$/;"	f	class:IDF
+scatter	src/apps/information_retrieval/tfidf_batch.h	/^  M scatter(const DtState& s) { return M(s.bv, s.idf); }  \/\/ term -> msg(idf) -> doc$/;"	f	class:TFIDF
+scatter	src/apps/information_retrieval/tfidf_batch.h	/^  M scatter(const DtState& s) { return s.bv; }  \/\/ doc -> msg(empty) -> term$/;"	f	class:QE
+scatter	src/apps/information_retrieval/tfidf_batch.h	/^  M scatter(const DtState& s) { return s.idf; }  \/\/ term -> msg(idf) -> doc$/;"	f	class:DL
+scatter	src/vprogram/vertex_program.h	/^  virtual M scatter(const S& state)$/;"	f	class:VertexProgram
+scatter_source_messages	src/vprogram/vertex_program_execute.hpp	/^void VertexProgram<W, M, A, S>::scatter_source_messages()$/;"	f	class:VertexProgram
+score	src/apps/information_retrieval/tfidf.h	/^struct DState { fp_t score = 0.0, length = 1.0; };$/;"	m	struct:DState
+scores	src/apps/information_retrieval/tfidf_batch.h	/^struct DState { fp_t scores[BATCH_SIZE] = {0.0}; fp_t length = 1.0; };$/;"	m	struct:DState
+segment_of_idx	src/matrix/matrix2d.hpp	/^uint32_t Matrix2D<Weight, Tile>::segment_of_idx(uint32_t idx)$/;"	f	class:Matrix2D
+segs	src/vector/vertex_vector.h	/^    FixedVector<VertexMirrorSegment<Matrix, Array>> segs;$/;"	m	struct:VertexVector::MirrorSegments
+send	src/vector/accum_partial_segment.h	/^  void send()$/;"	f	class:AccumPartialSegment
+send_to_rank_ith	src/vector/msg_output_segment.h	/^  void send_to_rank_ith(uint32_t i)$/;"	f	class:MsgOutgoingSegment
+send_to_rank_jth	src/vector/vertex_master_segment.h	/^  void send_to_rank_jth(uint32_t j)$/;"	f	class:VertexMasterSegment
+serialize	src/utils/common.h	/^  void serialize(Archive& archive, const uint32_t version) {}$/;"	f	struct:Empty
+serialize	src/utils/common.h	/^  void serialize(Archive& archive, const uint32_t version)$/;"	f	struct:Serializable
+serialize	src/utils/common.h	/^  void serialize(Archive& archive, const uint32_t) { archive & *((std::vector<T>*) this); }$/;"	f	struct:SerializableVector
+serialize	src/utils/common.h	/^  void serialize(Archive& archive, const uint32_t) { archive & *this; }$/;"	f	struct:IntegerWrapper
+serialize	src/vprogram/types.h	/^  void serialize(Archive& archive, const uint32_t version)$/;"	f	struct:Object
+serialize_into	src/structures/random_access_array.hpp	/^uint32_t RandomAccessArray<Value>::serialize_into(void*& blob)$/;"	f	class:RandomAccessArray
+serialize_into	src/structures/serializable_bitvector.hpp	/^uint32_t SerializableBitVector::serialize_into(void* blob)$/;"	f	class:SerializableBitVector
+serialize_into	src/structures/streaming_array.hpp	/^uint32_t StreamingArray<Value, ActivitySet>::serialize_into(void*& blob)$/;"	f	class:StreamingArray
+serialize_into_dynamic	src/structures/random_access_array.hpp	/^uint32_t RandomAccessArray<Value>::serialize_into_dynamic(void*& blob)$/;"	f	class:RandomAccessArray
+serialize_into_dynamic	src/structures/streaming_array.hpp	/^uint32_t StreamingArray<Value, ActivitySet>::serialize_into_dynamic(void*& blob)$/;"	f	class:StreamingArray
+set	src/structures/static_bitvector.h	/^  void set(size_t bit)$/;"	f	class:StaticBitVector
+set	src/utils/csc.h	/^  void set(uint32_t global_idx_, uint32_t idx_, const Triple<Empty>& triple_)$/;"	f	struct:CSCEntry
+set	src/utils/csc.h	/^  void set(uint32_t global_idx_, uint32_t idx_, const Triple<Weight>& triple_)$/;"	f	struct:CSCEntry
+set_all	src/structures/static_bitvector.h	/^  void set_all() { memset(words, 0xFFFF, BITS_PER_WORD * NWORDS); }$/;"	f	class:StaticBitVector
+set_at_master_only	src/utils/log.cpp	/^void Log::set_at_master_only(bool at_master_only)$/;"	f	class:Log
+set_log_level	src/utils/log.cpp	/^void Log::set_log_level(LogLevel level)$/;"	f	class:Log
+shuffle_ranks	src/utils/env.cpp	/^void Env::shuffle_ranks(RankOrder order)$/;"	f	class:Env
+sink	src/utils/dashboard.h	/^  BV* sink;$/;"	m	struct:ProcessedDashboard
+sink	src/utils/rowgrp.h	/^  BV* sink;  \/\/ Non-empty row, with a corresponding empty col -- processed at the end.$/;"	m	struct:ProcessedRowGrp
+sink	src/vector/vertex_mirror_segment.h	/^  bool sink;$/;"	m	class:VertexMirrorSegment
+sink_csc	src/utils/tile.h	/^  CSC<Weight>* csc, * sink_csc;$/;"	m	struct:CSCTile2D
+sink_offset	src/vector/accum_final_segment.h	/^  uint32_t sink_offset;$/;"	m	class:AccumFinalSegment
+size	src/apps/graph_simulation/graphsim_query.h	/^  int size = 0;                  \/\/ num of vertices$/;"	m	struct:Query
+size	src/structures/bitvector.h	/^  uint32_t size() const { return n; };$/;"	f	class:BitVector
+size	src/structures/fixed_vector.h	/^  uint32_t size() const { return position; }$/;"	f	class:FixedVector
+size	src/structures/random_access_array.h	/^  uint32_t size() const { return n; }$/;"	f	class:RandomAccessArray
+size	src/structures/static_bitvector.h	/^  size_t size() const { return SIZE; }$/;"	f	class:StaticBitVector
+size	src/structures/streaming_array.h	/^  uint32_t size() { return n; }$/;"	f	class:StreamingArray
+source	src/utils/colgrp.h	/^  BV* source;  \/\/ Non-empty column, with a corresponding empty row -- cached initially.$/;"	m	struct:ProcessedColGrp
+source	src/utils/dashboard.h	/^  BV* source;$/;"	m	struct:ProcessedDashboard
+source	src/vector/msg_input_segment.h	/^  bool source;$/;"	m	class:MsgIncomingSegment
+source	src/vector/msg_output_segment.h	/^  bool source;$/;"	m	class:MsgOutgoingSegment
+source	src/vector/msg_vector.h	/^    FixedVector<MsgIncomingSegment<Matrix, Array>> source;$/;"	m	struct:MsgVector::IncomingSegments
+source	src/vector/msg_vector.h	/^    FixedVector<MsgOutgoingSegment<Matrix, Array>> source;$/;"	m	struct:MsgVector::OutgoingSegments
+source_blobs	src/vector/msg_vector.h	/^  std::vector<void*> source_blobs;$/;"	m	class:MsgVector
+source_num_outstanding	src/vector/msg_vector.h	/^  uint32_t source_num_outstanding;$/;"	m	class:MsgVector
+source_requests	src/vector/msg_vector.h	/^  std::vector<MPI_Request> source_requests;$/;"	m	class:MsgVector
+src	src/tools/cw2bin.cpp	/^  vid_t src, dst;$/;"	m	struct:Triple	file:
+src	src/vprogram/vertex_program.h	/^  const uint32_t src, dst;$/;"	m	struct:Edge
+start	src/utils/dist_timer.h	/^  double start;$/;"	m	class:DistTimer
+stationary	src/vprogram/vertex_program.h	/^  bool stationary = false;$/;"	m	class:VertexProgram
+stop	src/utils/dist_timer.h	/^  void stop()$/;"	f	class:DistTimer
+sub_other	src/utils/dashboard.h	/^    BV sub_other;    \/\/ other could be source or sink, based on colgrp or rowgrp, respectively$/;"	m	struct:ProcessedDashboard::RanksMeta
+sub_regular	src/utils/dashboard.h	/^    BV sub_regular;  \/\/ size == count of globally regular, count == count of locally regular$/;"	m	struct:ProcessedDashboard::RanksMeta
+tag	src/vector/accum_final_segment.h	/^  uint32_t tag;$/;"	m	class:AccumFinalSegment
+tag	src/vector/accum_partial_segment.h	/^  uint32_t tag;$/;"	m	class:AccumPartialSegment
+tag	src/vector/vertex_mirror_segment.h	/^  int32_t tag;$/;"	m	class:VertexMirrorSegment
+temporarily_resize	src/structures/bitvector.h	/^  void temporarily_resize(uint32_t n_)  \/\/ Requires that n_ is at most the _initial_ size.$/;"	f	class:BitVector
+temporarily_resize	src/structures/random_access_array.h	/^  void temporarily_resize(uint32_t n_)$/;"	f	class:RandomAccessArray
+temporarily_resize	src/structures/streaming_array.h	/^  void temporarily_resize(uint32_t n_)$/;"	f	class:StreamingArray
+test	src/structures/static_bitvector.h	/^  bool test(size_t bit) const  \/* is set? *\/$/;"	f	class:StaticBitVector
+tile_height	src/matrix/matrix2d.h	/^  const uint32_t tile_height, tile_width;$/;"	m	class:Matrix2D
+tile_of_triple	src/matrix/matrix2d.hpp	/^Pair Matrix2D<Weight, Tile>::tile_of_triple(const Triple<Weight>& triple)$/;"	f	class:Matrix2D
+tile_width	src/matrix/matrix2d.h	/^  const uint32_t tile_height, tile_width;$/;"	m	class:Matrix2D
+tiles	src/matrix/matrix2d.h	/^  std::vector<std::vector<Tile>> tiles;$/;"	m	class:Matrix2D
+to_string	src/apps/graph_analytics/bfs.h	/^  std::string to_string() const$/;"	f	struct:BfsState
+to_string	src/apps/graph_analytics/cc.h	/^  std::string to_string() const { return "{label: " + std::to_string(label) + "}"; }$/;"	f	struct:CcState
+to_string	src/apps/graph_analytics/degree.h	/^  std::string to_string() const { return "{degree: " + std::to_string(degree) + "}"; }$/;"	f	struct:DegState
+to_string	src/apps/graph_analytics/pr.h	/^  std::string to_string() const$/;"	f	struct:PrState
+to_string	src/apps/graph_analytics/sssp.h	/^  std::string to_string() const$/;"	f	struct:SpState
+to_string	src/apps/graph_analytics/tc.h	/^  std::string to_string() const$/;"	f	struct:CtState
+to_string	src/apps/graph_analytics/tc.h	/^  std::string to_string() const$/;"	f	struct:GnState
+to_string	src/apps/graph_simulation/graphsim.h	/^  string to_string() const$/;"	f	struct:GsState
+to_string	src/apps/information_retrieval/tfidf.h	/^  std::string to_string() const$/;"	f	struct:DtState
+to_string	src/apps/information_retrieval/tfidf_batch.h	/^  std::string to_string() const$/;"	f	struct:DtState
+to_string	src/structures/static_bitvector.h	/^  std::string to_string() const$/;"	f	class:StaticBitVector
+to_string	src/vprogram/types.h	/^  std::string to_string() const$/;"	f	struct:Object
+tol	src/apps/graph_analytics/pr.h	/^constexpr fp_t tol = 1e-5;    \/\/ convergence tolerance$/;"	v
+topk	src/vprogram/vertex_program.hpp	/^void VertexProgram<W, M, A, S>::topk(uint32_t k, std::vector<std::pair<I, V>>& topk,$/;"	f	class:VertexProgram
+touch	src/structures/bitvector.h	/^  bool touch(uint32_t idx)$/;"	f	class:BitVector
+tpp	Makefile	/^tpp ?= 2$/;"	m
+trace	src/utils/log.hpp	/^void Log::trace(const char* fmt, ...) const$/;"	f	class:Log
+triples	src/utils/tile.h	/^  std::vector<Triple<Weight>>* triples;$/;"	m	struct:Tile2D
+unhash	src/matrix/hashers.h	/^  long unhash(long v) const { return v * h2 % max_range; }$/;"	f	class:ModuloArithmeticHasher
+unhash	src/matrix/hashers.h	/^  long unhash(long v) const { return v; }$/;"	f	class:NullHasher
+unhash	src/matrix/hashers.h	/^  long unhash(long v) const {$/;"	f	class:SimpleBucketHasher
+union_with	src/structures/bitvector.hpp	/^void BitVector::union_with(BitVector const& bv)$/;"	f	class:BitVector
+unset	src/structures/static_bitvector.h	/^  void unset(size_t bit)$/;"	f	class:StaticBitVector
+unset_all	src/structures/static_bitvector.h	/^  void unset_all() { memset(words, 0, BITS_PER_WORD * NWORDS); }$/;"	f	class:StaticBitVector
+untouch	src/structures/bitvector.h	/^  bool untouch(uint32_t idx)$/;"	f	class:BitVector
+v	src/vprogram/vertex_program.h	/^  VectorV* v = nullptr;  \/** State vector **\/$/;"	m	class:VertexProgram
+val	src/utils/csc.h	/^  Weight val;$/;"	m	struct:CSCEntry
+vals	src/structures/random_access_array.h	/^  Value* vals;$/;"	m	class:RandomAccessArray
+vals	src/structures/streaming_array.h	/^  Value* vals;$/;"	m	class:StreamingArray
+value	src/apps/information_retrieval/tfidf_batch.h	/^  BV bv; fp_t value;$/;"	m	struct:BvMsg
+value	src/utils/common.h	/^  Empty value() { return Empty::EMPTY; }$/;"	f	struct:Triple
+value	src/utils/common.h	/^  Weight value() { return weight; }$/;"	f	struct:Triple
+value	src/utils/common.h	/^  uint32_t value;$/;"	m	struct:IntegerWrapper
+value	src/utils/enum.h	/^  int value = 0;$/;"	m	class:Enum
+values	src/apps/information_retrieval/tfidf_batch.h	/^  BV bv; fp_t values[BATCH_SIZE] = {0.0};$/;"	m	struct:BvAccum
+values	src/structures/fixed_vector.h	/^  Value* values;$/;"	m	class:FixedVector
+vector_nwords	src/structures/bitvector.h	/^  uint32_t vector_nwords() const$/;"	f	class:BitVector
+vid	src/apps/graph_simulation/graphsim.h	/^  int vid;           \/\/ vertex ID$/;"	m	struct:GsState
+wait_all	src/matrix/processed_matrix2d.hpp	/^void ProcessedMatrix2D<Weight, Annotation>::wait_all(std::vector<MPI_Request>& reqs)$/;"	f	class:ProcessedMatrix2D
+wait_for_ith	src/vector/vertex_vector.h	/^  void wait_for_ith(uint32_t ith)$/;"	f	class:VertexVector
+wait_for_some	src/vector/accum_final_segment.h	/^  const std::vector<int32_t>& wait_for_some()$/;"	f	class:AccumFinalSegment
+wait_for_some	src/vector/msg_vector.h	/^  std::vector<int32_t>* wait_for_some()$/;"	f	class:MsgVector
+wait_for_sources	src/vector/msg_vector.h	/^  void wait_for_sources()$/;"	f	class:MsgVector
+warn	src/utils/log.hpp	/^void Log::warn(const char* fmt, ...) const$/;"	f	class:Log
+weight	src/tools/cw2bin.cpp	/^  ew_t weight;$/;"	m	struct:Triple	file:
+weight	src/utils/common.h	/^  Weight weight;$/;"	m	struct:Triple
+weight	src/vprogram/vertex_program.h	/^  const Empty& weight;$/;"	m	struct:Edge
+weight	src/vprogram/vertex_program.h	/^  const Weight& weight;$/;"	m	struct:Edge
+what	src/utils/log.h	/^  inline virtual const char* what() const throw()$/;"	f	class:Exception
+word_t	src/structures/static_bitvector.h	/^typedef uint32_t word_t;$/;"	t
+words	src/structures/bitvector.h	/^  uint32_t* words;$/;"	m	class:BitVector
+words	src/structures/static_bitvector.h	/^  word_t words[NWORDS] = {0};$/;"	m	class:StaticBitVector
+write	src/tools/cw2bin.cpp	/^  void write(ostream& os) const$/;"	f	struct:Triple
+x	src/vprogram/vertex_program.h	/^  VectorX* x = nullptr;  \/** Message vector **\/$/;"	m	class:VertexProgram
+y	src/vprogram/vertex_program.h	/^  VectorY* y = nullptr;  \/** Accumulator vector **\/$/;"	m	class:VertexProgram
+~AccumFinalSegment	src/vector/accum_final_segment.h	/^  ~AccumFinalSegment()$/;"	f	class:AccumFinalSegment
+~BitVector	src/structures/bitvector.h	/^  virtual ~BitVector()$/;"	f	class:BitVector
+~CSC	src/utils/csc.h	/^  ~CSC()$/;"	f	struct:CSC
+~CSCMatrix2D	src/matrix/csc_matrix2d.hpp	/^CSCMatrix2D<Weight, Annotation>::~CSCMatrix2D()$/;"	f	class:CSCMatrix2D
+~DistMatrix2D	src/matrix/dist_matrix2d.hpp	/^DistMatrix2D<Weight, Tile>::~DistMatrix2D()$/;"	f	class:DistMatrix2D
+~FixedVector	src/structures/fixed_vector.h	/^  ~FixedVector()$/;"	f	class:FixedVector
+~Graph	src/matrix/graph.hpp	/^Graph<Weight>::~Graph()$/;"	f	class:Graph
+~Locator	src/utils/locator.h	/^  ~Locator()$/;"	f	struct:Locator
+~MsgOutgoingSegment	src/vector/msg_output_segment.h	/^  ~MsgOutgoingSegment()$/;"	f	class:MsgOutgoingSegment
+~ProcessedMatrix2D	src/matrix/processed_matrix2d.hpp	/^ProcessedMatrix2D<Weight, Annotation>::~ProcessedMatrix2D()$/;"	f	class:ProcessedMatrix2D
+~RandomAccessArray	src/structures/random_access_array.h	/^  ~RandomAccessArray()$/;"	f	class:RandomAccessArray
+~ReversibleHasher	src/matrix/hashers.h	/^  virtual ~ReversibleHasher() {}$/;"	f	class:ReversibleHasher
+~Serializable	src/utils/common.h	/^  virtual ~Serializable() {};$/;"	f	struct:Serializable
+~StreamingArray	src/structures/streaming_array.h	/^  ~StreamingArray()$/;"	f	class:StreamingArray
+~Tile2D	src/utils/tile.h	/^  ~Tile2D() { free_triples(); }$/;"	f	struct:Tile2D
+~VertexMasterSegment	src/vector/vertex_master_segment.h	/^  ~VertexMasterSegment()$/;"	f	class:VertexMasterSegment
+~VertexProgram	src/vprogram/vertex_program.hpp	/^VertexProgram<W, M, A, S>::~VertexProgram()$/;"	f	class:VertexProgram
+~VertexVector	src/vector/vertex_vector.h	/^  ~VertexVector()$/;"	f	class:VertexVector
