@@ -1,8 +1,10 @@
 #include <iostream>
 #include <mpi.h>
 #include <string.h>
-
+#include <cmath>
 using namespace std;
+
+
 
 
 int getCount(const char *description, int split_type) {
