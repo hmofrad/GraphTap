@@ -31,7 +31,15 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   }
   else if (partitioning == Partitioning::_1D_ROW)
   {
-    LOG.fatal("1D_ROW partitioning Not implemented! \n");
+    rowgrp_nranks = 1;
+    colgrp_nranks = nranks;
+    assert(rowgrp_nranks * colgrp_nranks == nranks);
+
+    rank_nrowgrps = 1;
+    rank_ncolgrps = ncolgrps;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+
+   // LOG.fatal("1D_ROW partitioning Not implemented! \n");
   }
   else if (partitioning == Partitioning::_2D)
   {
@@ -115,7 +123,10 @@ void DistMatrix2D<Weight, Tile>::assign_tiles()
       }
       else if (this->partitioning == Partitioning::_1D_ROW)
       {
-        LOG.fatal("1D_ROW partitioning Not implemented! \n");
+        tile.rank    = rg;
+        tile.ith     = rg / colgrp_nranks;
+        tile.jth     = cg / rowgrp_nranks;
+        //LOG.fatal("1D_ROW partitioning Not implemented! \n");
       }
       else if (this->partitioning == Partitioning::_2D)
       {
