@@ -12,7 +12,8 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
 {
   /* Calculate out-degrees */
   Graph<ew_t> GR; // reverse graph for out-degree
-  GR.load_directed(true, filepath, nvertices, true);  // reverse
+  //  GR.load_directed(true, filepath, nvertices, true);  // reverse
+  GR.load_directed(true, filepath, nvertices, true, false, Hashing::BUCKET, Partitioning::_1D_ROW);  // reverse
 
   DegVertex<ew_t> vp_degree(&GR, true);  // stationary
 
@@ -26,6 +27,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
   /* Calculate Pagerank */
   Graph<ew_t> G;
   G.load_directed(true, filepath, nvertices);
+  G.load_directed(true, filepath, nvertices, false, false, Hashing::BUCKET, Partitioning::_1D_ROW);
 
   /* Pagerank initialization using out-degrees */
   PrVertex vp(&G, true);  // stationary
