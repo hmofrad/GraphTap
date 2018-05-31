@@ -4,8 +4,6 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
  
-
-
 #include <iostream>
 #include <cstdlib> 
 #include <fstream>
@@ -22,16 +20,16 @@ int main(int argc, char **argv) {
     	exit(1);
 	}
 
-	std::string fpath_in = argv[1];
-  	std::string fpath_out = argv[2];
+	std::string filepath_in = argv[1];
+  	std::string filepath_out = argv[2];
 
-	std::ifstream fin(fpath_in.c_str(),   std::ios_base::in);
-	std::ofstream fout(fpath_out.c_str(), std::ios_base::binary);
+	std::ifstream  fin(filepath_in.c_str(),   std::ios_base::in);
+	std::ofstream fout(filepath_out.c_str(), std::ios_base::binary);
 
 	// Consume comments identified by '#' and '%' characters
 	// Linebased read/write of pairs
-	// Read pairs of (char i, char j) from fpath_in
-	// Write bianry pairs of (uint32_t i, uint32_t j) to fpath_out
+	// Read pairs of (char i, char j) from filepath_in
+	// Write bianry pairs of (uint32_t i, uint32_t j) to filepath_out
 	uint32_t num_comments = 0;
 	uint32_t num_edges = 0;
 	bool is_comment = false;
@@ -66,7 +64,7 @@ int main(int argc, char **argv) {
 	std::cout << num_comments << " line comments" << std::endl;
 	std::cout << num_edges << " edges " << std::endl;
 	std::cout << (num_comments + num_edges) << " number of lines" << std::endl;
-	std::cout << "Verif using \"wc -l " << fpath_in << "\"" << std::endl;
+	std::cout << "Verify using \"wc -l " << filepath_in << "\"" << std::endl;
 
 	return(0);
 }
