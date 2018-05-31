@@ -43,12 +43,22 @@ echo "working directory = "$SLURM_SUBMIT_DIR
 
 echo "************************************************"
 
+
 module purge
-module load openmpi
+module load gcc/5.4.0
+module load mpich/3.1
+
+
+module purge
+module load gcc/5.4.0
+module load openmpi/3.0.0
+
+#module purge
+#module load openmpi
 #module load intel
-module load python/anaconda3.5-4.2.0
-module load boost/1.62.0
-module load gcc/6.3.0
+#module load python/anaconda3.5-4.2.0
+#module load boost/1.62.0
+#module load gcc/6.3.0
 
 export SLURM_CPU_BIND="none"
 #export I_MPI_FABRICS_LIST="ofi,tmi,dapl,tcp,ofa"
@@ -61,7 +71,7 @@ export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
 #./hello.omp
-APP=bin/graph_analytics/
+APP=bin/graph_analytics/pr
 
 time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864
 #time mpirun -np 32 bin/pr /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27.bin 134217728
