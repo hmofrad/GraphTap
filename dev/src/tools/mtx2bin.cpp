@@ -7,7 +7,6 @@
 
 using namespace std;
 
-
 int main(int argc, char* argv[])
 {
   cout
@@ -48,35 +47,19 @@ int main(int argc, char* argv[])
     if (string(argv[i]) == "-wi")
       weights_in = true;
     if (string(argv[i]) == "-wo")
-    {
       weights_rand = true;
-    }
-    if (string(argv[i]) == "-woi") {
+    if (string(argv[i]) == "-woi")
       weights_int = true;
-    }
-    if (string(argv[i]) == "-wod") {
+    if (string(argv[i]) == "-wod")
       weights_double = true;
-    }
   }
   
+  // When there's input weights, they can be written in int and double 
+  // When there's no input weight, only random weights will be written
   if(weights_in)
     weights_out = weights_int or weights_double;  
   else
     weights_out = weights_rand;
-
-  
-  // We only write random weights when there's no input weights or -woi or -wod is not passed
-  //weights_out = weights_in and (weights_int or weights_double);
-  //weights_out = not weights_in and weights_rand;
-  //weights_out = not weights_in and weights_rand;
-  //weights_rand = not(weights_in or weights_int or weights_double) and weights_out;
-  // We don't want to overwrite input weights in case output weights is presented 
-  // We don't want to write output weights in case weights_in is not presented
-  
-  //weights_out  = ((not weights_in and not weights_out) or (weights_in and not weights_out)) or (not weights_in and weights_rand);
-
-  std::cout << "weights_in=" << weights_in << ",weights_out=" << weights_out << ",weights_int=" << weights_int << ",weights_double=" << weights_double << ",weights_rand=" << weights_rand << std::endl; 
-
 
   ifstream fin(fpath_in.c_str());
   ofstream fout(fpath_out.c_str(), ios::binary);
@@ -88,23 +71,7 @@ int main(int argc, char* argv[])
     position = fin.tellg();
     std::getline(fin, line);
   } while ((line[0] == '#') || (line[0] == '%'));
-    
-  //std::cout << line << " " << position << " " <<  fin.tellg() << std::endl;
   fin.seekg(position, ios_base::beg);
-  //std::cout << fin.tellg() << std::endl;
-  //std::getline(fin, line);
-  //std::cout << line << " " << fin.tellg() << std::endl;
-
-
-  
-
-  //vector<char> buffer(1024);
-  //char c = (char) fin.peek();
-  //while (c == '%' || c == '#')
-  //{
-    //fin.getline(buffer.data(), buffer.size());
-    //c = (char) fin.peek();
-  //}
 
   // Read/write header
   uint32_t n, m;
@@ -112,8 +79,6 @@ int main(int argc, char* argv[])
   std::istringstream iss;
   if (header_in)
   {
-    // fin.seekg(-strlen(buffer.data()), ios::cur);
-    // fin >> nnz >> n >> m;
     std::getline(fin, line);
     iss.str(line);
     iss >> n >> m >> nnz;
@@ -133,6 +98,7 @@ int main(int argc, char* argv[])
   uint32_t i, j;
   double wd = 0;
   uint32_t wi = 0;
+  uint64_t nedges = 0;
   while (std::getline(fin, line))
   {
     iss.clear();
@@ -143,7 +109,7 @@ int main(int argc, char* argv[])
 
     if (weights_in)
       iss >> wd;  
-    
+
     if (weights_out)
     {
       if (weights_int)
@@ -151,67 +117,23 @@ int main(int argc, char* argv[])
         wi = (uint32_t) wd;
         fout.write(reinterpret_cast<const char*>(&wi), sizeof(uint32_t));
       }
-      else if (weights_double)
-        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));
-      else if (weights_rand)
-      {
-        wd = 1 + (rand() % 128);
-        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));
-      }
-    }
-
-    // solely uncoment it for debug purpose 
-    std::cout << "(i,j,w)=" << "(" << i << "," << j << "," << wd << ")" << std::endl;
-  }
-
-  fin.close();
-  fout.close();
-  i = 0;
-  j = 0;
-  uint64_t wdd = 0;
-  ifstream in(fpath_out.c_str(), ios::binary);
-  in.read(reinterpret_cast<char *>(&i),sizeof(uint32_t));
-  in.read(reinterpret_cast<char *>(&j),sizeof(uint32_t));
-  in.read(reinterpret_cast<char *>(&wd),sizeof(double));
-
-  std::cout << "(i,j,w)=" << "(" << i << "," << j << "," << wd << ")" << std::endl;
-
-
-
-  in.close();
-
-  //retrun(0);
-  /*
-  // Read/write pairs/triples
-  uint32_t i, j;
-  double wd = 1;
-  srand(0);
-  while (!fin.eof())
-  {
-    fin >> i;
-    if (fin.eof()) break;
-    fin >> j;
-
-    fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
-    fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
-    if (weights_in)
-      fin >> wd;
-    if (weights_out)
-    {
-      if (weights_rand)
-        wd = 1 + (rand() % 128);
-      if (weights_int)
-      {
-        uint32_t wi = (uint32_t) wd;
-        fout.write(reinterpret_cast<const char*>(&wi), sizeof(uint32_t));
-      }
       else
-        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));
+      {
+        if (weights_rand)
+          wd = 1 + (rand() % 128);  
+        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));        
+      }
     }
-  }
 
+    nedges++;
+    // Solely uncoment this for debug purpose 
+     std::cout << "(i,j,w)=" << "(" << i << "," << j << "," << wd << ")" << std::endl;
+  }
 
   fin.close();
   fout.close();
-  */
+
+  cout << "\n" << argv[0] << ": " << nedges << " edges are written to "<<  argv[2] << endl;
+
+  return(0);
 }
