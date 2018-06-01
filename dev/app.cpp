@@ -12,13 +12,69 @@
 
 #include <mpi.h>
 
+#include "hashers.h"
 
-//void shuffle_ranks(int nranks) {
-//	std::vector<int> rnaks(nranks);
-//    int seed = 0;
-//    srand(seed);
 
-//}
+uint32_t hash(long max_domain, long nbuckets, long v) {
+	const long int multiplier = 128u;
+	long nparts = 0;
+	long height = 0;
+	long max_range = 0;
+
+	nparts = nbuckets * multiplier;
+	height = max_domain / nparts;
+	max_range = height / nparts;
+	std::cout << "multiplier=" << multiplier << std::endl;
+	std::cout << "nparts=" << nparts << std::endl;
+	std::cout << "height=" << height << std::endl;
+	std::cout << "max_range=" << max_range << std::endl;
+
+
+    if(v >= max_range) return v;
+    long col = (uint32_t) v % nparts;
+    long row = v / nparts;
+    return row + col * height;
+
+
+	//return(0);
+
+
+}
+
+
+void load_binary(std::string filepath, uint32_t num_vertices, int nranks,bool is_master) {
+	uint32_t num_rows = num_vertices;
+	uint32_t num_cols = num_vertices;
+
+	ReversibleHasher* hasher = new SimpleBucketHasher(num_vertices, nranks);
+	if(is_master) {
+		uint32_t i, j ,k;
+
+		for(i = num_vertices - 100; i < num_vertices; i++) {
+			j = hasher->hash(i);
+			k = hasher->hash(j);
+			//std::cout << "i=" << i << ",hash(i)=" << j << ",hash(j)=" << k << std::endl;
+			if((i != j) && (j == k)) {
+				std::cout << "i=" << i << ",hash(i)=" << j << ",hash(j)=" << k << std::endl;
+			}
+
+		}
+
+	}
+	
+
+
+
+	/* if(is_master) {
+		long v = 10;
+		std::cout << "hash(" << v  << ")=" << hash(num_vertices, nranks, v) <<  std::endl;
+
+		v = 976560;
+		std::cout << "hash(" << v  << ")=" << hash(num_vertices, nranks, v) <<  std::endl;
+	} */
+
+}
+
 
 int main(int argc, char ** argv) {
 	
@@ -44,7 +100,7 @@ int main(int argc, char ** argv) {
 
   	//std::cout << nranks << "," << rank << "," << is_master << std::endl;
 
-	std::vector<int> ranks(nranks);
+	std::vector<int> ranks(nranks, 0);
   	if(is_master) {		
     	int seed = 0;
     	srand(seed);
@@ -109,7 +165,7 @@ int main(int argc, char ** argv) {
 
 	
 
-
+  	load_binary(filepath, num_vertices, nranks, is_master);
 
 
 
