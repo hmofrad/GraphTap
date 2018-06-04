@@ -12,12 +12,12 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
 {
   /* Calculate out-degrees */
   Graph<ew_t> GR; // reverse graph for out-degree
-  std::cout << GR.A << std::endl; 
+  //std::cout << GR.A << std::endl; 
 
-  exit(0)
+  
   //  GR.load_directed(true, filepath, nvertices, true);  // reverse
-  GR.load_directed(true, filepath, nvertices, true, false, Hashing::BUCKET, Partitioning::_1D_ROW);  // reverse
-
+  GR.load_directed(true, filepath, nvertices, true, false, Hashing::BUCKET, Partitioning::_2D);  // reverse
+  exit(0);
   DegVertex<ew_t> vp_degree(&GR, true);  // stationary
 
   DistTimer degree_timer("Degree Execution");
@@ -30,7 +30,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
   /* Calculate Pagerank */
   Graph<ew_t> G;
   G.load_directed(true, filepath, nvertices);
-  G.load_directed(true, filepath, nvertices, false, false, Hashing::BUCKET, Partitioning::_1D_ROW);
+  G.load_directed(true, filepath, nvertices, false, false, Hashing::BUCKET, Partitioning::_2D);
 
   /* Pagerank initialization using out-degrees */
   PrVertex vp(&G, true);  // stationary
@@ -64,7 +64,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
 
 int main(int argc, char* argv[])
 {
-  Env::init();
+  Env::init(RankOrder::KEEP_ORIGINAL);
 
   /* Print usage. */
   if (argc < 3)
