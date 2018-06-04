@@ -49,9 +49,9 @@ module load gcc/5.4.0
 module load mpich/3.1
 
 
-module purge
-module load gcc/5.4.0
-module load openmpi/3.0.0
+#module purge
+#module load gcc/5.4.0
+#module load openmpi/3.0.0
 
 #module purge
 #module load openmpi
