@@ -10,8 +10,8 @@
 # git config --local  user.name  NAME
 # git config --global user.email EMAIL
 # git config --global user.name  NAME
-# git config --system user.email EMAIL
-# git config --system user.name  NAME
+# sudo git config --system user.email EMAIL
+# sudo git config --system user.name  NAME
 
 if [ -z "$1" ] || [ $# -gt 2 ]; then
     echo "Usage: ./gitty.sh <FILE|FLAG> [\"COMMENT\"]";
