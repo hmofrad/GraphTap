@@ -53,6 +53,8 @@ void Env::shuffle_ranks(RankOrder order)
     srand(seed);
     std::iota(ranks.begin(), ranks.end(), 0);  // ranks = range(len(ranks))
     std::random_shuffle(ranks.begin() + 1, ranks.end());
+
+    assert(ranks[0] == 0);
   }
 
   MPI_Bcast(ranks.data(), nranks, MPI_INT, 0, MPI_COMM_WORLD);
