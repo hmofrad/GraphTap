@@ -2,10 +2,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
+#include <sstream>
+#include <ctime>
 
 using namespace std;
-
 
 int main(int argc, char* argv[])
 {
@@ -29,12 +29,14 @@ int main(int argc, char* argv[])
   string fpath_in = argv[1];
   string fpath_out = argv[2];
 
-  bool header_in    = false;
-  bool header_out   = false;
-  bool weights_in   = false;
-  bool weights_out  = false;
-  bool weights_int  = false;
-  bool weights_rand = false;
+  bool header_in      = false;
+  bool header_out     = false;
+  bool weights_in     = false;
+  bool weights_out    = false;
+  bool weights_int    = false;
+  bool weights_rand   = false;
+  bool weights_double = false;
+
 
   for (auto i = 3; i < argc; i++)
   {
@@ -44,34 +46,42 @@ int main(int argc, char* argv[])
       header_out = true;
     if (string(argv[i]) == "-wi")
       weights_in = true;
-    if (string(argv[i]) == "-woi" or string(argv[i]) == "-wod")
-      weights_out = true;
+    if (string(argv[i]) == "-wo")
+      weights_rand = true;
     if (string(argv[i]) == "-woi")
       weights_int = true;
+    if (string(argv[i]) == "-wod")
+      weights_double = true;
   }
-
-  weights_rand = not weights_in and weights_out;
+  
+  // When there's input weights, they can be written in int and double 
+  // When there's no input weight, only random weights will be written
+  if(weights_in)
+    weights_out = weights_int or weights_double;  
+  else
+    weights_out = weights_rand;
 
   ifstream fin(fpath_in.c_str());
   ofstream fout(fpath_out.c_str(), ios::binary);
 
   // Skip comments
-  vector<char> buffer(1024);
-  char c = (char) fin.peek();
-  while (c == '%' || c == '#')
-  {
-    fin.getline(buffer.data(), buffer.size());
-    c = (char) fin.peek();
-  }
+  std::string line;
+  int position; // Fallback position
+  do {
+    position = fin.tellg();
+    std::getline(fin, line);
+  } while ((line[0] == '#') || (line[0] == '%'));
+  fin.seekg(position, ios_base::beg);
 
   // Read/write header
   uint32_t n, m;
   uint64_t nnz = 0;
+  std::istringstream iss;
   if (header_in)
   {
-    // fin.seekg(-strlen(buffer.data()), ios::cur);
-    // fin >> nnz >> n >> m;
-    fin >> n >> m >> nnz;
+    std::getline(fin, line);
+    iss.str(line);
+    iss >> n >> m >> nnz;
     cout << "Header: " << n << " " << m << " " << nnz << endl;
 
     // Write header
@@ -84,33 +94,46 @@ int main(int argc, char* argv[])
   }
 
   // Read/write pairs/triples
+  srand(time(NULL));
   uint32_t i, j;
-  double wd = 1;
-  srand(0);
-  while (!fin.eof())
+  double wd = 0;
+  uint32_t wi = 0;
+  uint64_t nedges = 0;
+  while (std::getline(fin, line))
   {
-    fin >> i;
-    if (fin.eof()) break;
-    fin >> j;
-
+    iss.clear();
+    iss.str(line);
+    iss >> i >> j;  
     fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
     fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
+
     if (weights_in)
-      fin >> wd;
+      iss >> wd;  
+
     if (weights_out)
     {
-      if (weights_rand)
-        wd = 1 + (rand() % 128);
       if (weights_int)
       {
-        uint32_t wi = (uint32_t) wd;
+        wi = (uint32_t) wd;
         fout.write(reinterpret_cast<const char*>(&wi), sizeof(uint32_t));
       }
       else
-        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));
+      {
+        if (weights_rand)
+          wd = 1 + (rand() % 128);  
+        fout.write(reinterpret_cast<const char*>(&wd), sizeof(double));        
+      }
     }
+
+    nedges++;
+    // Solely uncoment this for debug purpose 
+    // std::cout << "(i,j,w)=" << "(" << i << "," << j << "," << wd << ")" << std::endl;
   }
 
   fin.close();
   fout.close();
+
+  cout << "\n" << argv[0] << ": " << nedges << " edges are written to "<<  argv[2] << endl;
+
+  return(0);
 }
