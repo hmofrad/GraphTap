@@ -19,7 +19,12 @@ CSCMatrix2D<Weight, Annotation>::~CSCMatrix2D()
 template <class Weight, class Annotation>
 void CSCMatrix2D<Weight, Annotation>::distribute()
 {
+  if(!Env::rank)
+    std::cout << "Begin 0" << std::endl;
   Base::distribute();
+  Env::barrier();
+  if(!Env::rank)
+    std::cout << "End 0" << std::endl;
 
   for (auto& colgrp : local_colgrps)
   {
