@@ -10,6 +10,8 @@
 #include "utils/dist_timer.h"
 #include "matrix/graph.h"
 
+#include <fstream>
+
 
 template <class Weight>
 Graph<Weight>::Graph() : A(nullptr) {}
@@ -65,34 +67,41 @@ void Graph<Weight>::load_binary(
     hasher = new ModuloArithmeticHasher(nvertices);
 
   // Open matrix file.
-  FILE* file;
-  if (!(file = fopen(filepath.c_str(), "r")))
+  std::ifstream fin(filepath.c_str(), std::ios_base::binary);
+  if(!fin.is_open())
   {
     LOG.info("Unable to open input file");
-    exit(1);
+    exit(1); 
   }
+
+
 
   // Obtain filesize (minus header) and initial offset (beyond header).
   bool header_present = nvertices == 0;
   uint64_t orig_filesize, filesize, share, offset = 0, endpos;
 
-  struct stat st;
-  if (stat(filepath.c_str(), &st) != 0)
-  {
-    LOG.info("Stat() failure");
-    exit(1);
-  }
+  fin.seekg (0, std::ios_base::end);
+  orig_filesize = filesize = (uint64_t) fin.tellg();
+  fin.seekg(0, std::ios_base::beg);
 
-  orig_filesize = filesize = (uint64_t) st.st_size;
+  if(!Env::rank)
+    std::cout << filesize  << " " << orig_filesize << std::endl;
 
-  if (header_present)
+
+if (header_present)
   {
     // Read header as 32-bit nvertices, 32-bit mvertices, 64-bit nedges (nnz)
     Triple<uint64_t> header;
 
-    if (!fread(&header, sizeof(header), 1, file))
+    uint32_t n, m;
+    uint64_t nnz = 0;
+
+
+    fin.read(reinterpret_cast<char *>(&header), sizeof(header));
+
+    if(fin.gcount() != sizeof(header))
     {
-      LOG.info("fread() failure");
+      LOG.info("read() failure");
       exit(1);
     }
 
@@ -111,6 +120,27 @@ void Graph<Weight>::load_binary(
     offset += sizeof(header);
     filesize -= offset;
   }
+
+  uint64_t ntriples = (orig_filesize - offset) / sizeof(Triple<Weight>);
+  LOG.info("File appears to have %lu edges (%u-byte weights). \n",
+           ntriples, sizeof(Triple<Weight>) - sizeof(Triple<Empty>));
+
+  if (header_present and nedges != ntriples)
+    LOG.info("[WARN] Number of edges in header does not match number of edges in file. \n");
+
+  // Now with nvertices potentially changed, initialize the matrix object.
+  A = new Matrix(nvertices, mvertices, Env::nranks * Env::nranks, partitioning);
+
+  if(!Env::rank)
+    std::cout << "HERE!" << std::endl;
+
+
+
+  Env::barrier();
+  exit(0);
+
+/*
+
 
   uint64_t ntriples = (orig_filesize - offset) / sizeof(Triple<Weight>);
 
@@ -205,6 +235,8 @@ void Graph<Weight>::load_binary(
 
   ingress_timer.stop();
   ingress_timer.report();
+
+*/  
 }
 
 
