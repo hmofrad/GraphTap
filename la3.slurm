@@ -73,11 +73,11 @@ NP=$SLURM_NTASKS
 #./hello.omp
 APP=bin/graph_analytics/pr
 
-time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat20.bin 1048576 1
+time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat20.bin 1048576 20
 #time mpirun -np 32 bin/pr /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27.bin 134217728
 
 
-#time mpirun -np ${NP} bin/pr /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20
+#time mpirun -np ${APP} bin/pr /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20
 #time mpirun -np ${NP} bin/sssp /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 5
 #time mpirun -np ${NP} bin/bfs /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 5
 #time mpirun -np ${NP} bin/cc /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864
