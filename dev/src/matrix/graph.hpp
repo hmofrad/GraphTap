@@ -79,14 +79,9 @@ void Graph<Weight>::load_binary(
   // Obtain filesize (minus header) and initial offset (beyond header).
   bool header_present = nvertices == 0;
   uint64_t orig_filesize, filesize, share, offset = 0, endpos;
-
   fin.seekg (0, std::ios_base::end);
   orig_filesize = filesize = (uint64_t) fin.tellg();
   fin.seekg(0, std::ios_base::beg);
-
-  if(!Env::rank)
-    std::cout << filesize  << " " << orig_filesize << std::endl;
-
 
 if (header_present)
   {
@@ -131,28 +126,6 @@ if (header_present)
   // Now with nvertices potentially changed, initialize the matrix object.
   A = new Matrix(nvertices, mvertices, Env::nranks * Env::nranks, partitioning);
 
-  if(!Env::rank)
-    std::cout << "HERE!" << std::endl;
-
-
-
-  Env::barrier();
-  exit(0);
-
-/*
-
-
-  uint64_t ntriples = (orig_filesize - offset) / sizeof(Triple<Weight>);
-
-  LOG.info("File appears to have %lu edges (%u-byte weights). \n",
-           ntriples, sizeof(Triple<Weight>) - sizeof(Triple<Empty>));
-
-  if (header_present and nedges != ntriples)
-    LOG.info("[WARN] Number of edges in header does not match number of edges in file. \n");
-
-  // Now with nvertices potentially changed, initialize the matrix object.
-  A = new Matrix(nvertices, mvertices, Env::nranks * Env::nranks, partitioning);
-
   // Determine current rank's offset and endpos in File.
   share = (filesize / Env::nranks) / sizeof(Triple<Weight>) * sizeof(Triple<Weight>);
   assert(share % sizeof(Triple<Weight>) == 0);
@@ -161,9 +134,10 @@ if (header_present)
   endpos = (Env::rank == Env::nranks - 1) ? orig_filesize : offset + share;
 
   // Seek up to the offset for rank.
-  if (fseek(file, offset, SEEK_SET) < 0)
-  {
-    LOG.info("fseek() failure \n");
+  fin.seekg(offset, std::ios_base::beg);
+
+  if(!fin.good()) {
+    LOG.info("seekg() failure \n");
     exit(1);
   }
 
@@ -172,10 +146,24 @@ if (header_present)
 
   DistTimer read_timer("Reading Input File");
 
-  Triple<Weight> triple;
+  if(!Env::rank) {
+    std::cout << Env::rank << ":" << offset << "," << endpos << " " <<  (endpos - offset) / sizeof(Triple<Weight>) << std::endl;
+  }
 
-  while (offset < endpos && fread(&triple, sizeof(Triple<Weight>), 1, file))
+  Triple<Weight> triple;
+  Triple<Weight> triple1;
+  Triple<Weight> triple2;
+
+
+  while (offset < endpos)
   {
+    fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
+    if(fin.gcount() != sizeof(triple))
+    {
+      LOG.info("read() failure");
+      exit(1);
+    }
+
     if ((offset & ((1L << 26) - 1L)) == 0)
     {
       LOG.info<false, false>("|");
@@ -188,14 +176,14 @@ if (header_present)
 
     // Remove self-loops
     if (triple.row == triple.col)
-      continue;
+      continue;    
 
     // Flip the edges to transpose the matrix, since y = ATx => process messages along in-edges
     // (unless graph is to be reversed).
     if (directed and not reverse_edges)
       std::swap(triple.row, triple.col);
 
-    if (remove_cycles)
+   if (remove_cycles)
     {
       if ((not reverse_edges and triple.col > triple.row)
           or (reverse_edges and triple.col < triple.row))
@@ -213,6 +201,11 @@ if (header_present)
       std::swap(triple.row, triple.col);
       A->insert(triple);
     }
+
+
+      
+
+
   }
 
   read_timer.stop();
@@ -222,7 +215,39 @@ if (header_present)
   LOG.info<true, false>("\n");
 
   assert(offset == endpos);
-  fclose(file);
+  fin.close();
+
+
+
+  // Partition the matrix and distribute the tiles.
+  LOG.info("Partitioning and distributing ... \n");
+
+  DistTimer part_dist_timer("Partition and Distribute");
+  A->distribute();
+  part_dist_timer.stop();
+
+  // LOG.info("Ingress completed \n");
+
+  ingress_timer.stop();
+  ingress_timer.report();
+
+
+
+
+
+  
+  
+
+
+
+
+  //Env::barrier();
+  //exit(0);
+
+/*
+
+
+
 
   // Partition the matrix and distribute the tiles.
   LOG.info("Partitioning and distributing ... \n");
