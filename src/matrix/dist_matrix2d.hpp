@@ -45,11 +45,29 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   {
     /* Number of ranks sharing each rowgroup and colgroup. */
     integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
+    // _1D using _2D
+    //rowgrp_nranks = 1;
+    //colgrp_nranks = nranks;
+
     assert(rowgrp_nranks * colgrp_nranks == nranks);
     /* Number of rowgroups and colgroups per rank. */
     rank_nrowgrps = nrowgrps / colgrp_nranks;
     rank_ncolgrps = ncolgrps / rowgrp_nranks;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+
+
+    // Numa-aware _2D
+    int nmachines = 4; // 4;
+    int nsockets_machine = 2; // 2;
+    int ncores_socket = 2;
+    rowgrp_nranks = ncores_socket * nmachines;
+    colgrp_nranks = nsockets_machine;
+    assert(rowgrp_nranks * colgrp_nranks == nranks);
+    
+    rank_nrowgrps = nrowgrps / nsockets_machine;
+    rank_ncolgrps = nsockets_machine;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+
   }
   else if (partitioning == Partitioning::_TEST)
   {
@@ -65,6 +83,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   /**** TODO: Place this in a function; this makes sure leader _always_ exists in row+col group.
         NOTE: It doesn't at all guarantee that the rowgrps == colgrps of a process!
               This cannot be the case in non-square nranks at least. *****/
+/*
   BitVector bv(nranks);
 
   for (uint32_t rg = 0; rg < nrowgrps; rg++)
@@ -92,7 +111,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
       tile.cg = cg;
     }
   }
-
+*/
   print_info();
 }
 
@@ -132,6 +151,10 @@ void DistMatrix2D<Weight, Tile>::assign_tiles()
       {
         tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
         tile.ith = rg / colgrp_nranks;
+        tile.jth = cg / rowgrp_nranks;
+       // NUMA_2D
+        tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
+        tile.ith = rg % rowgrp_nranks;
         tile.jth = cg / rowgrp_nranks;
       }
 
