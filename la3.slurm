@@ -2,16 +2,17 @@
 #SBATCH --job-name=la3
 #SBATCH --output=la3.out
 #SBATCH --error=la3.err
-#SBATCH --ntasks=64
-#SBATCH --cpus-per-task=1
-#SBATCH --nodes=16
-#SBATCH --ntasks-per-node=4
-#SBATCH --sockets-per-node=2
-#SBATCH --cores-per-socket=2
+#SBATCH --ntasks=4
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-socket=2
+##SSBATCH ---ntasks-per-socket=1
+##SSBATCH ---ntasks-per-core=1
+##SSBATCH ---cpus-per-task=1
+##SSBATCH ---sockets-per-node=2
+##SSBATCH ---cores-per-socket=14
 #SBATCH --time=01:00:00
 #SBATCH --cluster=mpi
 #SBATCH --partition=opa
-
 
 
 # Set this to whatever MAX_NUM_THREADS
