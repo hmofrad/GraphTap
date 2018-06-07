@@ -61,7 +61,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
 
 int main(int argc, char* argv[])
 {
-  Env::init();
+  Env::init(RankOrder::KEEP_ORIGINAL);
 
   /* Print usage. */
   if (argc < 3)
