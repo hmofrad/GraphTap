@@ -4,6 +4,9 @@
 #include <mpi.h>
 #include "utils/enum.h"
 
+#include <sched.h>
+
+int sched_getcpu(void);
 
 class RankOrder : public Enum {
 public:
