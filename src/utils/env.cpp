@@ -30,7 +30,7 @@ void Env::init(RankOrder order)
 
   int cpuname_len;
   MPI_Get_processor_name(cpuname, &cpuname_len);
-  cpuid = getcpuid();
+  cpuid = sched_getcpu();
 
   MPI_WORLD = MPI_COMM_WORLD;
   if (order != RankOrder::KEEP_ORIGINAL)
@@ -81,26 +81,4 @@ double Env::now()
   auto retval = gettimeofday(&tv, nullptr);
   assert(retval == 0);
   return (double) tv.tv_sec + (double) tv.tv_usec / 1e6;
-}
-
-int Env::getcpuid()
-{
-    /* Get the the current process' stat file from the proc filesystem */
-    FILE* procfile = fopen("/proc/self/stat", "r");
-    long to_read = 8192;
-    char buffer[to_read];
-    int read = fread(buffer, sizeof(char), to_read, procfile);
-    fclose(procfile);
-    //printf("%s\n", buffer);
-    
-    // Field with index 38 (zero-based counting) is the one we want
-    char* line = strtok(buffer, " ");
-    for (int i = 1; i < 39; i++)
-    {
-        line = strtok(NULL, " ");
-    }
-
-    line = strtok(NULL, " ");
-    int cpu_id = atoi(line);
-    return cpu_id;
 }
