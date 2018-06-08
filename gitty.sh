@@ -6,11 +6,11 @@
 # (e) m.hasanzadeh.mofrad@gmail.com
 
 # To setup under a Linux box after git clone REPO_ADDRESS
-# git config --local  user.email EMAIL
-# git config --local  user.name  NAME
-# git config --global user.email EMAIL
-# git config --global user.name  NAME
+#      git config --local  user.email EMAIL
+#      git config --global user.email EMAIL
 # sudo git config --system user.email EMAIL
+#      git config --local  user.name  NAME
+#      git config --global user.name  NAME
 # sudo git config --system user.name  NAME
 
 if [ -z "$1" ] || [ $# -gt 2 ]; then
