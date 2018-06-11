@@ -76,9 +76,8 @@ int main(int argc, char* argv[])
   std::string filepath = argv[1];
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-  std::cout << Env::rank << "," << Env::cpuname << "," << Env::cpuid << std::endl;
-  //while(1) ;
-  //run(filepath, nvertices, niters);
+  //std::cout << Env::rank << "," << Env::cpuname << "," << Env::cpuid << std::endl;
+  run(filepath, nvertices, niters);
 
   Env::finalize();
   return 0;
