@@ -1,4 +1,6 @@
 # C++ and MPI Compilers (minimum -std=c++14)
+export PATH := /home/moh/mpich/bin:$(PATH)
+
 CXX = g++
 MPI_CXX = mpicxx
 
