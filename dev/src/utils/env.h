@@ -4,6 +4,9 @@
 #include <mpi.h>
 #include "utils/enum.h"
 
+#include <sched.h>
+
+int sched_getcpu(void);
 
 class RankOrder : public Enum {
 public:
@@ -37,6 +40,12 @@ public:
   static void barrier();  // global barrier
 
   static double now();  // timestamp
+
+  static char cpuname[]; // CPU name
+
+  static int cpuid; // CPU id
+
+  static int getcpuid(); // get CPU id
 
 private:
   static void shuffle_ranks(RankOrder order);
