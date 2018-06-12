@@ -19,7 +19,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
   GR.load_directed(true, filepath, nvertices, true, false, Hashing::BUCKET, Partitioning::_2D);  // reverse
   DegVertex<ew_t> vp_degree(&GR, true);  // stationary
 
-  exit(0);
+  //exit(0);
   DistTimer degree_timer("Degree Execution");
   vp_degree.execute(1);
   degree_timer.stop();
@@ -78,6 +78,8 @@ int main(int argc, char* argv[])
   std::string filepath = argv[1];
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+  std::cout << Env::rank << "," << Env::cpuname << "," << Env::cpuid << std::endl;
+
 
   run(filepath, nvertices, niters);
 
