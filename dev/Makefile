@@ -1,5 +1,5 @@
 # C++ and MPI Compilers (minimum -std=c++14)
-export PATH := /home/moh/mpich/bin:$(PATH)
+#export PATH := /home/moh/mpich/bin:$(PATH)
 CXX = g++
 MPI_CXX = mpicxx
 
@@ -33,8 +33,8 @@ DNWARN = -Wno-comment -Wno-literal-suffix -Wno-sign-compare \
          -Wno-unused-function -Wno-unused-variable -Wno-reorder
 THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 #DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
-OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
-
+#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+#OTHERS = -fpermissive
 
 SRC_UTILS = $(wildcard src/utils/*.cpp)
 
@@ -48,7 +48,7 @@ clean:
 
 ga: $(eval tk=$(ga))
 	$(eval tk=$(ga))
-ga_all: pr
+ga_all: pr 
 #ga_all: ga degree pr sssp bfs cc tc
 
 ir:
@@ -74,5 +74,5 @@ run: #$(app)
 
 .DEFAULT:
 	@mkdir -p bin/$(tk)
-	$(MPI_CXX) -std=c++14 $(DNWARN) $(THREADED) $(OPTIMIZE) $(DEBUG) \
+	$(MPI_CXX) -std=c++14 $(DNWARN) $(THREADED) $(OPTIMIZE) $(DEBUG) $(OTHERS) \
 		$(SRC_UTILS) src/apps/$(tk)/$@.cpp -lboost_serialization -I src -o bin/$(tk)/$@
