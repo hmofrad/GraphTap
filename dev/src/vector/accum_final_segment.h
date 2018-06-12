@@ -31,7 +31,7 @@ public:
   std::vector<void*> blobs;
 
 private:
-  std::vector<int32_t> requests;
+  std::vector<MPI_Request> requests;
 
   std::vector<int32_t> indices;
 
@@ -84,7 +84,8 @@ public:
 
       blobs.push_back((*partials)[i].irecv((*ranks_meta)[i].rank, tag, Env::MPI_WORLD, &request));
 
-      requests.push_back(request);
+      //requests.push_back((int32_t) request);
+	  requests.push_back(request);
     }
   }
 
@@ -95,10 +96,23 @@ public:
     indices.resize(requests.size());
 
     assert(num_outstanding > 0);
-    if (std::is_base_of<Serializable, typename Array::Type>::value)
+    if (std::is_base_of<Serializable, typename Array::Type>::value) {
+	  //MPI_Request *R = &requests;
+	  //std::vector<int> intVec;
+      //std::vector<MPI_Request> R(requests.begin(), requests.end());	
+	  
+	  //std::vector<MPI_Request> R = &requests[0];
+	  //Communicable<Array>::irecv_dynamic_some(blobs, R);
       Communicable<Array>::irecv_dynamic_some(blobs, requests);
+	}
+	
+	      
 
-    MPI_Waitsome(requests.size(), requests.data(), &num_ready, indices.data(), MPI_STATUSES_IGNORE);
+
+
+
+	//MPI_Waitsome(requests.size(), (MPI_Request*) requests.data(), &num_ready, indices.data(), MPI_STATUSES_IGNORE);
+	MPI_Waitsome(requests.size(), requests.data(), &num_ready, indices.data(), MPI_STATUSES_IGNORE);
 
     assert(num_ready != MPI_UNDEFINED);  /* TODO/CONSIDER */
 
@@ -114,7 +128,10 @@ public:
   {
     (*partials)[jth].irecv_postprocess(blobs[jth]);
     blobs[jth] = nullptr;
-    requests[jth] = MPI_REQUEST_NULL;
+	requests[jth] =  MPI_REQUEST_NULL;
+	//int32_t *t = &requests[jth];
+    //t = (int32_t*) MPI_REQUEST_NULL;
+	
   }
 };
 
