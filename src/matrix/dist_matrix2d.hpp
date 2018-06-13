@@ -56,6 +56,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
 
 
+    
     // Numa-aware _2D
     int nmachines = 4; // 4;
     int nsockets_machine = 2; // 2;
@@ -66,7 +67,8 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     
     rank_nrowgrps = nrowgrps / nsockets_machine;
     rank_ncolgrps = nsockets_machine;
-    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+   assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+    
 
   }
   else if (partitioning == Partitioning::_TEST)
@@ -152,10 +154,12 @@ void DistMatrix2D<Weight, Tile>::assign_tiles()
         tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
         tile.ith = rg / colgrp_nranks;
         tile.jth = cg / rowgrp_nranks;
-       // NUMA_2D
+        
+        // NUMA_2D
         tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
         tile.ith = rg % rowgrp_nranks;
         tile.jth = cg / rowgrp_nranks;
+        
       }
 
       tile.nth = tile.ith * rank_ncolgrps + tile.jth;
