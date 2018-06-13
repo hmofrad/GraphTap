@@ -28,10 +28,10 @@ public:
   using W = ew_t; using M = Empty; using A = deg_t; using S = DegState;
   using VertexProgram<W, M, A, S>::VertexProgram;  // inherit constructors
 
-  M scatter(const DegState& s) { return M(); }
-  A gather(const Edge<W>& edge, const M& msg) { return 1; }
-  void combine(const A& y1, A& y2) { y2 += y1; }
-  bool apply(const A& y, DegState& s) { s.degree = y; return true; }
+  M scatter(const DegState& s) { /*LOG.info("scatter-start\n"); */ return M();}
+  A gather(const Edge<W>& edge, const M& msg) { /*LOG.info("gather-start\n"); */return 1;}
+  void combine(const A& y1, A& y2) { /*LOG.info("combine-start\n"); */ y2 += y1; /*LOG.info("combine-end\n");*/}
+  bool apply(const A& y, DegState& s) { /*LOG.info("apply-start\n"); */ s.degree = y; return true;}
 };
 
 
