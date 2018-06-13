@@ -62,6 +62,7 @@ void run(std::string filepath, vid_t nvertices, uint32_t niters)
 
 int main(int argc, char* argv[])
 {
+  //Env::init();
   Env::init(RankOrder::KEEP_ORIGINAL);
 
   /* Print usage. */
@@ -76,7 +77,7 @@ int main(int argc, char* argv[])
   std::string filepath = argv[1];
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-  //std::cout << Env::rank << "," << Env::cpuname << "," << Env::cpuid << std::endl;
+  std::cout << Env::rank << "," << Env::cpuname << "," << Env::cpuid << std::endl;
   run(filepath, nvertices, niters);
 
   Env::finalize();
