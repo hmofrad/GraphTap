@@ -1,5 +1,5 @@
 # C++ and MPI Compilers (minimum -std=c++14)
-#export PATH := /home/moh/mpich/bin:$(PATH)
+export PATH := /home/moh/mpich/bin:$(PATH)
 
 CXX = g++
 MPI_CXX = mpicxx
@@ -33,7 +33,7 @@ gs = graph_simulation
 DNWARN = -Wno-comment -Wno-literal-suffix -Wno-sign-compare \
          -Wno-unused-function -Wno-unused-variable -Wno-reorder
 THREADED = -fopenmp -D_GLIBCXX_PARALLEL
-DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
+#DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 #OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 
