@@ -87,7 +87,6 @@ public:
   void* irecv(int32_t rank, int32_t tag, MPI_Comm comm, MPI_Request* request)
   {
     void* blob = nullptr;
-
     // "IF" this is determined statically, the compiler should optimize this branch away.
     if (std::is_base_of<Serializable, typename Array::Type>::value)
     {
@@ -102,9 +101,11 @@ public:
     }
     else
     {
+
       blob = new_blob();
       MPI_Irecv(blob, blob_nbytes_max(), MPI_BYTE, rank, tag, comm, request);
       return blob;
+
     }
   }
 
