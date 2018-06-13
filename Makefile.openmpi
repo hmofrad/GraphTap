@@ -1,5 +1,5 @@
 # C++ and MPI Compilers (minimum -std=c++14)
-export PATH := /usr/local/openmpi/bin:$(PATH)
+#export PATH := /usr/local/openmpi/bin:$(PATH)
 
 CXX = g++
 MPI_CXX = mpicxx
@@ -34,7 +34,7 @@ DNWARN = -Wno-comment -Wno-literal-suffix -Wno-sign-compare \
          -Wno-unused-function -Wno-unused-variable -Wno-reorder
 THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 #DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
-OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 
 SRC_UTILS = $(wildcard src/utils/*.cpp)
@@ -49,7 +49,7 @@ clean:
 
 ga: $(eval tk=$(ga))
 	$(eval tk=$(ga))
-ga_all: ga degree pr sssp bfs cc tc
+ga_all: pr
 
 ir:
 	$(eval tk=$(ir))
@@ -59,7 +59,7 @@ gs:
 	$(eval tk=$(gs))
 gs_all: gs graphsim
 
-apps: ga_all ir_all gs_all
+apps: ga_all
 
 tools:
 	@mkdir -p bin/tools
