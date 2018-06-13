@@ -1,4 +1,4 @@
-#include <cstdio>
+	#include <cstdio>
 #include <cstdlib>
 #include <functional>
 #include "utils/env.h"
@@ -24,6 +24,8 @@ void run(std::string filepath, vid_t nvertices, bool out_degree = false)
   DistTimer timer("Degree Execution");
   vp.execute(1);
   timer.stop();
+  
+  //LOG.info(">>>>>>>>>>>>>>%d %d %d\n", sizeof(MPI_REQUEST_NULL), sizeof(int32_t), sizeof(MPI_Request));
 
   if (out_degree)
     LOG.info("Out-Degrees: \n");
