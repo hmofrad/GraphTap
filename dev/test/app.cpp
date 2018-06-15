@@ -12,9 +12,12 @@
 
 #include <mpi.h>
 
-#include "hashers.h"
+#include <sched.h>
+int sched_getcpu(void);
 
+//#include "hashers.h"
 
+/*
 uint32_t hash(long max_domain, long nbuckets, long v) {
 	const long int multiplier = 128u;
 	long nparts = 0;
@@ -64,7 +67,7 @@ void load_binary(std::string filepath, uint32_t num_vertices, int nranks,bool is
 	
 
 
-
+*/
 	/* if(is_master) {
 		long v = 10;
 		std::cout << "hash(" << v  << ")=" << hash(num_vertices, nranks, v) <<  std::endl;
@@ -73,10 +76,13 @@ void load_binary(std::string filepath, uint32_t num_vertices, int nranks,bool is
 		std::cout << "hash(" << v  << ")=" << hash(num_vertices, nranks, v) <<  std::endl;
 	} */
 
-}
+//}
 
 
-int main(int argc, char ** argv) {
+int main(int argc, char** argv) {
+	
+	char processor_name[MPI_MAX_PROCESSOR_NAME];
+	int processor_name_len;
 	
 	int required = MPI_THREAD_MULTIPLE;
 	int provided = -1;
@@ -90,12 +96,44 @@ int main(int argc, char ** argv) {
 
   	int rank   = -1;
   	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	assert(nranks >= 0);
+	assert(rank >= 0);
+	
+	MPI_Get_processor_name(processor_name, &processor_name_len);
+
+    int cpu_id = sched_getcpu();
+	std::cout << "Rank " << rank << " of " << nranks << 
+	               ", hostname " << processor_name << ", CPU " << cpu_id << std::endl;
 
 	bool is_master = (rank == 0);
+	
+	
+	
+	// Print usage
+  	// Should be moved later
+	if(argc != 4)  {
+		if(is_master) {
+			std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations>]\""
+	    			  << std::endl;
+		}	
+		MPI_Barrier(MPI_WORLD);
+     	MPI_Finalize();
+		std::exit(1);
+	}
 
+	std::string filepath = argv[1]; 
+	uint32_t num_vertices = std::atoi(argv[2]);
+  	uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+  	std::cout << num_vertices << " "<< num_iterations <<  std::endl;
+	
+	
+	
+	
+	MPI_Finalize();
 
+	return(0);
 
+}
+/*
 
 
   	//std::cout << nranks << "," << rank << "," << is_master << std::endl;
@@ -167,6 +205,7 @@ int main(int argc, char ** argv) {
 
   	load_binary(filepath, num_vertices, nranks, is_master);
 
+*/
 
 
 
@@ -178,7 +217,3 @@ int main(int argc, char ** argv) {
 
 
 
-	MPI_Finalize();
-
-	return(0);
-}
