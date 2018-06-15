@@ -2,18 +2,19 @@
 #SBATCH --job-name=la3
 #SBATCH --output=la3.out
 #SBATCH --error=la3.err
-#SBATCH --ntasks=16
-#SBATCH --nodes=4
+#SBATCH --ntasks=8
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-socket=2
 #SBATCH --sockets-per-node=2
-##SSBATCH ---ntasks-per-core=1
-##SBATCH --distribution cyclic:cyclic
-##SSBATCH ---cores-per-socket=14
+#SBATCH --ntasks-per-socket=2
 #SBATCH --time=01:00:00
 #SBATCH --cluster=mpi
 #SBATCH --partition=opa
+
+##SSBATCH ---ntasks-per-core=1
+##SBATCH --distribution cyclic:cyclic
+##SSBATCH ---cores-per-socket=14
 
 
 
@@ -26,20 +27,29 @@ echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 echo "************************************************"
 
+MPI="mpich"
+#MPI="openmpi"
+if [ "${MPI}" = "mpich" ]
+then
+	echo "MPI"=${MPI}
+	module purge
+	module load gcc/5.4.0
+	module load mpich/3.1	
+else
+	echo "MPI"=${MPI}
+	module purge
+	module load gcc/5.4.0
+	module load openmpi/3.0.0
+fi
 
-#module purge
-#module load gcc/5.4.0
-#module load mpich/3.1
 
 
-module purge
-module load gcc/5.4.0
-module load openmpi/3.0.0
+
 
 export SLURM_CPU_BIND="none"
 #export I_MPI_FABRICS_LIST="ofi,tmi,dapl,tcp,ofa"
 #export I_MPI_FALLBACK=1
-export I_MPI_FABRICS=shm:ofa
+export I_MPI_FABRICS=shm:ofi
 
 
 export I_MPI_DEBUG=2
@@ -51,7 +61,6 @@ APP=bin/graph_analytics/pr
 
 #time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat20.bin 1048576 20
 #time mpirun -np 32 bin/pr /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27.bin 134217728
-
 
 time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20
 #time mpirun -np ${NP} bin/sssp /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 5
