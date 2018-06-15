@@ -2,15 +2,16 @@
 
 CXX = g++
 MPI_CXX = mpicxx
+CXX_FLAGS = -std=c++14
 
-obj=proc2tile
+obj=app
 
 .PHONY: all clean
 
 all: clean app
 
 app:
-	$(MPI_CXX) -o $(obj) $(obj).cpp
+	$(MPI_CXX) $(CXX_FLAGS) -o $(obj) $(obj).cpp
 clean:
 	rm -rf $(obj)
 	
