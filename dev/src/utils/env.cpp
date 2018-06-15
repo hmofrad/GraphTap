@@ -14,9 +14,9 @@ bool Env::is_master;  // rank == 0?
 
 MPI_Comm Env::MPI_WORLD;
 
-char Env::cpuname[MPI_MAX_PROCESSOR_NAME];
+char Env::cpu_name[MPI_MAX_PROCESSOR_NAME];
 
-int Env::cpuid; // CPU id
+int Env::cpu_id; // CPU id
 
 void Env::init(RankOrder order)
 {
@@ -28,9 +28,9 @@ void Env::init(RankOrder order)
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   is_master = rank == 0;
 
-  int cpuname_len;
-  MPI_Get_processor_name(cpuname, &cpuname_len);
-  cpuid = sched_getcpu();
+  int cpu_name_len;
+  MPI_Get_processor_name(cpu_name, &cpu_name_len);
+  cpu_id = sched_getcpu();
 
   MPI_WORLD = MPI_COMM_WORLD;
   if (order != RankOrder::KEEP_ORIGINAL)
