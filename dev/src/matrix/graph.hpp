@@ -212,7 +212,7 @@ if (header_present)
 
   LOG.info<false, false>("[%d]", Env::rank);
   Env::barrier();
-  LOG.info<true, false>("\n");
+  LOG.info<true, false>(">>>>>>>>>>>>>%d %d\n", sizeof(Triple<Weight>), sizeof(triple));
 
   assert(offset == endpos);
   fin.close();
