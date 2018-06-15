@@ -41,11 +41,11 @@ public:
 
   static double now();  // timestamp
 
-  static char cpuname[]; // CPU name
+  static char cpu_name[]; // CPU name
 
-  static int cpuid; // CPU id
+  static int cpu_id; // CPU id
 
-  static int getcpuid(); // get CPU id
+  //static int getcpuid(); // get CPU id
 
 private:
   static void shuffle_ranks(RankOrder order);
