@@ -90,20 +90,42 @@ int main(int argc, char* argv[])
   
   //MPI_MAX_PROCESSOR_NAME
   
-  if(!Env::rank)
-  {
-	  for(int i = 0; i < Env::nranks; i++) 
-		  std::cout << i << ":" << cpu_ids[i] << std::endl;
-  }
+  //if(!Env::rank)
+  //{
+//	  for(int i = 0; i < Env::nranks; i++) 
+	//	  std::cout << i << ":" << cpu_ids[i] << std::endl;
+  //}
   
  
 
   int cpu_name_len = strlen(Env::cpu_name);
   std::vector<int> recvcounts(Env::nranks);
 
-  MPI_Gather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+  //MPI_Gather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+  //MPI_Allgather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
+  
+  int total_length = 0;
+  MPI_Allreduce(&cpu_name_len, &total_length, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  
+  int max_length = 0;
+  MPI_Allreduce(&cpu_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  max_length = max_length + 1; // '\n'
+  
+  total_length = max_length * Env::nranks; 
+  std::string total_string (total_length, '\0');
+  //char *total_string_ = (char *) malloc(total_length_ * sizeof(char));
+  //char *temp_string = (char *) malloc(max_length * sizeof(char));
+  //memset(temp_string, 0, max_length);
+  //strcpy(temp_string, Env::cpu_name);
+  //printf("%s\n", temp_string);
+  MPI_Allgather(&Env::cpu_name, max_length, MPI_CHAR, (void *) total_string.data(), max_length, MPI_CHAR, MPI_COMM_WORLD);
+  //printf(">>>>%s\n", total_string_);
+  //std::vector<int> recvcounts_(Env::nranks);
+  //recvcounts_
+  //MPI_ALLGather(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string_, recvcounts.data(), displacement.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
   
   
+  /*
   if(!Env::rank)
   {
 	  for(int i = 0; i < Env::nranks; i++) 
@@ -125,19 +147,33 @@ int main(int argc, char* argv[])
     total_string = (char *) malloc(total_length * sizeof(char));
 	memset(total_string, 0, total_length);
   }
-
+*/
   //char *mystring = (char *)strings[Env::nranks];
   //int mylen = strlen(mystring);
 
 
   //MPI_Gatherv(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string, recvcounts.data(), displacement.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
+  
+  
   //MPI_Gather(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
    if (!Env::rank) {
+	   int k = 0;
+	   //std::string j = NULL;
+	   char *j = (char *) total_string.data();
+
 	   for(int i = 0; i < Env::nranks; i++) 
 	   {
-		   char *j = total_string + displacement[i];
-           printf("%d: <%s> %d %d %d\n", Env::rank, j, strlen(j), recvcounts[i], displacement[i]);
+		   //char *j = total_string + displacement[i];
+           //printf("%d: <%s> %d %d %d\n", Env::rank, j, strlen(j), recvcounts[i], displacement[i]);
+		   
+		   //j = &total_string + k;
+		   
+		   printf("+++%s %d\n", j, cpu_ids[i]);
+		   k += max_length;
+		   j = (char *) total_string.data() + k;
+		   
 	   }
+	   //printf("%d %d %d\n", total_length, total_length_, max_length);
 		   
 		
         //free(totalstring);
