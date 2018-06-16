@@ -104,14 +104,14 @@ int main(int argc, char* argv[])
   //MPI_Gather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
   //MPI_Allgather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
   
-  int total_length = 0;
-  MPI_Allreduce(&cpu_name_len, &total_length, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  //int total_length = 0;
+  //MPI_Allreduce(&cpu_name_len, &total_length, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   
   int max_length = 0;
   MPI_Allreduce(&cpu_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   max_length = max_length + 1; // '\n'
   
-  total_length = max_length * Env::nranks; 
+  int total_length = max_length * Env::nranks; 
   std::string total_string (total_length, '\0');
   //char *total_string_ = (char *) malloc(total_length_ * sizeof(char));
   //char *temp_string = (char *) malloc(max_length * sizeof(char));
@@ -160,7 +160,8 @@ int main(int argc, char* argv[])
 	   int k = 0;
 	   //std::string j = NULL;
 	   char *j = (char *) total_string.data();
-
+		std::vector<std::string> str;
+		str.clear();
 	   for(int i = 0; i < Env::nranks; i++) 
 	   {
 		   //char *j = total_string + displacement[i];
@@ -169,16 +170,34 @@ int main(int argc, char* argv[])
 		   //j = &total_string + k;
 		   
 		   printf("+++%s %d\n", j, cpu_ids[i]);
+		   str.push_back(j);
 		   k += max_length;
 		   j = (char *) total_string.data() + k;
 		   
 	   }
+	   
+	   for(int i = 0; i < Env::nranks; i++) 
+		   printf(">>%s\n", str[i]);
+	   
+	   //total_string[0] = X;
+	     // printf(">>%s\n", str[0]);
 	   //printf("%d %d %d\n", total_length, total_length_, max_length);
 		   
 		
         //free(totalstring);
         //free(displs);
         //free(recvcounts);
+		
+		
+		std::string s = "What is the right way to split a string into a vector of strings";
+std::stringstream ss(s);
+std::istream_iterator<std::string> begin(ss);
+std::istream_iterator<std::string> end;
+//printf(">>%x\n", ss);
+std::vector<std::string> vstrings(begin, end);
+std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+		
+		
     }
 
  
