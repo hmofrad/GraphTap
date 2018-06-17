@@ -1,11 +1,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
+
 #include "utils/dist_timer.h"
 #include "pr.h"
 
 #include <iostream>
-
+#include <set>
 /* Calculate Pagerank for a directed input graph. */
 
 
@@ -78,133 +79,58 @@ int main(int argc, char* argv[])
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
   
-  //int root = -1;
-  //if(!Env::rank)
-   // root = Env::rank;
-  std::cout << Env::rank << "," << Env::cpu_name << "," << Env::cpu_id << std::endl;
-  std::vector<int> cpu_ids(Env::nranks);
+  std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
+  std::vector<int> core_ids(Env::nranks);
   
+  MPI_Gather(&Env::core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
   
-   
-  MPI_Gather(&Env::cpu_id, 1, MPI_INT, cpu_ids.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-  
-  //MPI_MAX_PROCESSOR_NAME
-  
-  //if(!Env::rank)
-  //{
-//	  for(int i = 0; i < Env::nranks; i++) 
-	//	  std::cout << i << ":" << cpu_ids[i] << std::endl;
-  //}
-  
- 
-
-  int cpu_name_len = strlen(Env::cpu_name);
+  int core_name_len = strlen(Env::core_name);
   std::vector<int> recvcounts(Env::nranks);
-
-  //MPI_Gather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-  //MPI_Allgather(&cpu_name_len, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
-  
-  //int total_length = 0;
-  //MPI_Allreduce(&cpu_name_len, &total_length, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   
   int max_length = 0;
-  MPI_Allreduce(&cpu_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  max_length = max_length + 1; // '\n'
+  MPI_Allreduce(&core_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   
-  int total_length = max_length * Env::nranks; 
+  char *str_padded[max_length + 1]; // + 1 for '\n'
+  memset(str_padded, '\0', max_length + 1);
+  memcpy(str_padded, &Env::core_name, max_length + 1);
+  
+  int total_length = (max_length + 1) * Env::nranks; 
   std::string total_string (total_length, '\0');
-  //char *total_string_ = (char *) malloc(total_length_ * sizeof(char));
-  //char *temp_string = (char *) malloc(max_length * sizeof(char));
-  //memset(temp_string, 0, max_length);
-  //strcpy(temp_string, Env::cpu_name);
-  //printf("%s\n", temp_string);
-  MPI_Allgather(&Env::cpu_name, max_length, MPI_CHAR, (void *) total_string.data(), max_length, MPI_CHAR, MPI_COMM_WORLD);
-  //printf(">>>>%s\n", total_string_);
-  //std::vector<int> recvcounts_(Env::nranks);
-  //recvcounts_
-  //MPI_ALLGather(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string_, recvcounts.data(), displacement.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
-  
-  
-  /*
-  if(!Env::rank)
+  MPI_Allgather(str_padded, max_length + 1, MPI_CHAR, (void *) total_string.data(), max_length + 1, MPI_CHAR, MPI_COMM_WORLD);
+
+   
+
+  int offset = 0;
+  std::vector<std::string> str;
+  str.clear();
+  for(int i = 0; i < Env::nranks; i++) 
   {
-	  for(int i = 0; i < Env::nranks; i++) 
-		  std::cout << i << ":" << recvcounts[i] << std::endl;
+    str.push_back(total_string.substr(offset, max_length + 1));
+    offset += max_length + 1;
   }
-
-  std::vector<int> displacement(Env::nranks);
-  int total_length = 0;
-  char *total_string = NULL;
-  if(!Env::rank)
-  {
-    displacement[0] = 0 ;
-    total_length += recvcounts[0] + 1;
-	for (int i=1; i < Env::nranks; i++) 
-	{
-	  total_length += recvcounts[i] + 1;
-	  displacement[i] = displacement[i-1] + recvcounts[i-1] + 1;
-	}
-    total_string = (char *) malloc(total_length * sizeof(char));
-	memset(total_string, 0, total_length);
+	   
+	   
+  if (!Env::rank) {  
+    for(int i = 0; i < Env::nranks; i++)
+      printf("rank=%d, core_id=%d, cup_name=%s\n", i, core_ids[i] , str[i].c_str());
   }
-*/
-  //char *mystring = (char *)strings[Env::nranks];
-  //int mylen = strlen(mystring);
-
-
-  //MPI_Gatherv(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string, recvcounts.data(), displacement.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
   
   
-  //MPI_Gather(&Env::cpu_name, cpu_name_len, MPI_CHAR, total_string, 1, MPI_CHAR, 0, MPI_COMM_WORLD);
-   if (!Env::rank) {
-	   int k = 0;
-	   //std::string j = NULL;
-	   char *j = (char *) total_string.data();
-		std::vector<std::string> str;
-		str.clear();
-	   for(int i = 0; i < Env::nranks; i++) 
-	   {
-		   //char *j = total_string + displacement[i];
-           //printf("%d: <%s> %d %d %d\n", Env::rank, j, strlen(j), recvcounts[i], displacement[i]);
-		   
-		   //j = &total_string + k;
-		   
-		   printf("+++%s %d\n", j, cpu_ids[i]);
-		   str.push_back(j);
-		   k += max_length;
-		   j = (char *) total_string.data() + k;
-		   
-	   }
-	   
-	   for(int i = 0; i < Env::nranks; i++) 
-		   printf(">>%s\n", str[i]);
-	   
-	   //total_string[0] = X;
-	     // printf(">>%s\n", str[0]);
-	   //printf("%d %d %d\n", total_length, total_length_, max_length);
-		   
-		
-        //free(totalstring);
-        //free(displs);
-        //free(recvcounts);
-		
-		
-		std::string s = "What is the right way to split a string into a vector of strings";
-std::stringstream ss(s);
-std::istream_iterator<std::string> begin(ss);
-std::istream_iterator<std::string> end;
-//printf(">>%x\n", ss);
-std::vector<std::string> vstrings(begin, end);
-std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-		
-		
-    }
+  int nmachines = std::set<std::string>(str.begin(), str.end()).size();
+  
+  
+  //printf("%d\n", nmachines);
+  //printf("%d %d %d\n" ,NUM_SOCKETS, NUM_CORES_PER_SOCKET, NUM_CORES_PER_MACHINE);
+	
+	
+	
+	
 
  
   
-  //MPI_Allgather(&Env::cpu_id, 1, MPI_INT, cpu_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
+  //MPI_Allgather(&Env::core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
   
-  //MPI_Allgather(&Env::cpu_id, 1, MPI_INT, cpu_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
+  //MPI_Allgather(&Env::core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
   
 
   /*
