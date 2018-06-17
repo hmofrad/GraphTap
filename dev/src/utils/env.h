@@ -6,6 +6,10 @@
 
 #include <sched.h>
 
+#define NUM_SOCKETS 2
+#define NUM_CORES_PER_SOCKET 14
+#define NUM_CORES_PER_MACHINE (NUM_SOCKETS * NUM_CORES_PER_SOCKET)
+
 int sched_getcpu(void);
 
 class RankOrder : public Enum {
@@ -41,9 +45,9 @@ public:
 
   static double now();  // timestamp
 
-  static char cpu_name[]; // CPU name
+  static char core_name[]; // Core name = hostname
 
-  static int cpu_id; // CPU id
+  static int core_id; // Core id
 
   //static int getcpuid(); // get CPU id
 
