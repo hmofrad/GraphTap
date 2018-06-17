@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <set>
+#include <algorithm>
 /* Calculate Pagerank for a directed input graph. */
 
 
@@ -101,23 +102,99 @@ int main(int argc, char* argv[])
    
 
   int offset = 0;
-  std::vector<std::string> str;
-  str.clear();
+  std::vector<std::string> machines_all;
+  machines_all.clear();
   for(int i = 0; i < Env::nranks; i++) 
   {
-    str.push_back(total_string.substr(offset, max_length + 1));
+    machines_all.push_back(total_string.substr(offset, max_length + 1));
     offset += max_length + 1;
   }
 	   
 	   
   if (!Env::rank) {  
     for(int i = 0; i < Env::nranks; i++)
-      printf("rank=%d, core_id=%d, cup_name=%s\n", i, core_ids[i] , str[i].c_str());
+      printf("rank=%d, core_id=%d, cup_name=%s\n", i, core_ids[i] , machines_all[i].c_str());
+  
+  
+  
+  int nmachines = std::set<std::string>(machines_all.begin(), machines_all.end()).size();
+  
+  std::vector<std::string> machines = machines_all; 
+  std::vector<std::string>::iterator it;
+  it = std::unique(machines.begin(), machines.end());
+  machines.resize(std::distance(machines.begin(),it));
+
+  std::vector<int> machines_nranks(nmachines, 0); 
+  //std::vector<int> machines_nsockets(nmachines, 0); 
+  std::vector<std::vector<int>> machines_ranks(nmachines);
+  std::vector<std::vector<int>> machines_cores(nmachines);
+
+  //vector<int> myRow(1,5);
+//myVector.push_back(myRow);
+// add element to row
+//myVector[0].push_back(1);
+
+   // print out content:
+  //std::cout << "myvector contains:";
+  //for (it=machines.begin(); it!=machines.end(); ++it)
+  //  std::cout << ' ' << *it;
+  //std::cout << '\n';
+
+  //std::vector<std::string>::iterator it1;
+  for (it=machines_all.begin(); it!=machines_all.end(); it++) {
+	  //ptrdiff_t pos = find(machines.begin(), machines.end(), *it) - machines.begin();
+	  int idx = distance(machines.begin(), find(machines.begin(), machines.end(), *it));
+	  assert((idx > 0) && (idx < machines.size()));
+	  
+	  machines_nranks[idx]++;
+	  int idx1 = it - machines_all.begin();
+
+	  machines_ranks[idx].push_back(idx);
+	  machines_cores[idx].push_back(core_ids[idx1]);
+	  
+	  
+	std::cout << " " << *it << "," << idx << "," <<  machines[idx].c_str()  << "," << idx1 << ".." << core_ids[idx1] << std::endl;	  
+
+	  //if(std::find(machines.begin(), machines.end(), *it) != machines.end())
+	//for (it1=machines.begin(); it1!=machines.end(); ++it1) {
+		//std::cout << " " << *it << "," << *it1 << ( *it == *it1) << std::endl;
+	  //it.compare(
+	  
+	//}
+	//break;
   }
+
+  std::vector<int>::iterator it1;
+  std::vector<int>::iterator it2;
+  for(int i = 0; i < nmachines; i++) {
+    for(int j= 0; j < machines_ranks[i].size(); j++) {
+      std::cout << machines[i] << " " << machines_ranks[i][j] <<  " " << machines_cores[i][j] << std::endl;
+	}
+
+  }
+  //for (it1=machines.begin(); it1!=machines.end(); ++it1) {
+	//  for (it2=machines_ranks.begin(); it2!=machines_ranks.end(); ++it2) {
+		//  int idx = it - machines.begin();
+		  //int idx1 = it2 - machines_ranks[idx].begin();
+		  //std::cout << *it1 << " " << *it2 <<  " " << machines_cores[idx][idx1] << std::endl;
+		  
+//	  }
+	  
+ // }
   
   
-  int nmachines = std::set<std::string>(str.begin(), str.end()).size();
+
+  //for(int i = 0; i < nmachines; i++)
+	//  printf("%d\n", machines_nranks[i]);
+      //printf("rank=%d, core_id=%d, cup_name=%s\n", i, core_ids[i] , machines_all[i].c_str());
   
+  	  
+    
+    //}
+	  
+
+  
+  }
   
   //printf("%d\n", nmachines);
   //printf("%d %d %d\n" ,NUM_SOCKETS, NUM_CORES_PER_SOCKET, NUM_CORES_PER_MACHINE);
