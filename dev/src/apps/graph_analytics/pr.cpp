@@ -79,7 +79,8 @@ int main(int argc, char* argv[])
   std::string filepath = argv[1];
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-  
+  std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
+  /*
   std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
   std::vector<int> core_ids(Env::nranks);
   
@@ -195,31 +196,7 @@ int main(int argc, char* argv[])
 
   
   }
-  
-  //printf("%d\n", nmachines);
-  //printf("%d %d %d\n" ,NUM_SOCKETS, NUM_CORES_PER_SOCKET, NUM_CORES_PER_MACHINE);
-	
-	
-	
-	
-
- 
-  
-  //MPI_Allgather(&Env::core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
-  
-  //MPI_Allgather(&Env::core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, MPI_COMM_WORLD);
-  
-
-  /*
-  if(!Env::rank) 
-  {
-	  
-  }
-  else
-  {
-     MPI_Send(&Env::cpuid, 1, MPI_INT, Env::rank, 0, MPI_COMM_WORLD);	  
-  }
-*/	  
+  */
   
   
   
