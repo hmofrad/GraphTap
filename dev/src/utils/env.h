@@ -1,10 +1,15 @@
 #ifndef ENV_H
 #define ENV_H
 
+#include <sched.h>
+#include <vector>
+#include <set>
+#include <unordered_set>
+
 #include <mpi.h>
 #include "utils/enum.h"
 
-#include <sched.h>
+
 
 #define NUM_SOCKETS 2
 #define NUM_CORES_PER_SOCKET 14
@@ -46,13 +51,19 @@ public:
   static double now();  // timestamp
 
   static char core_name[]; // Core name = hostname
-
   static int core_id; // Core id
-
-  //static int getcpuid(); // get CPU id
-
+  static int nmachines; // Number of allocated machines
+  static std::vector<int> machines; // Number of machines
+  static int machines_nranks; // Number of ranks per machine
+  static std::vector<std::vector<int>> machines_ranks;
+  static std::vector<std::vector<int>> machines_cores;
+  static std::vector<std::unordered_set<int>> machines_cores_uniq;
+  static std::vector<int> machines_nsockets; // Number of sockets available per machine
+  
 private:
   static void shuffle_ranks(RankOrder order);
+  
+  static void affinity(); // Affinity
 };
 
 
