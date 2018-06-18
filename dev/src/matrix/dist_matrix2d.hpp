@@ -55,18 +55,36 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     rank_ncolgrps = ncolgrps / rowgrp_nranks;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
 
+	std::vector<int> machines_ntiles(Env::nmachines);	
+	for(int i = 0; i < Env::nmachines; i++) 
+	{
+		machines_ntiles[i] = Env::machines_nranks[i] * Env::nranks;
+	}
 	if(!Env::rank){
 		//printf("%d %d %d %d\n", rank, nranks, Env::rank, Env::nmachines); //, 
 		//printf("%s %d %d\n", Env::machines[0].c_str(), Env::machines_ranks[0][0], Env::machines_cores[0][0]);
-		//printf("%d %d %d\n", Env::machines_nranks[0], Env::machines_ncores[0], Env::machines_nsockets[0]);
+		printf("machines_nranks=%d machines_ncores=%d machines_nsockets=%d\n", Env::machines_nranks[0], Env::machines_ncores[0], Env::machines_nsockets[0]);
+		
+		//printf("%d %d %d\n", Env::nranks, Env::machines_nranks[0], Env::machines_nranks[0]/Env::machines_ncores[0]);
+		
+		printf("machines_nranks=%d machines_ncores=%d machines_nsockets=%d\n", Env::machines_nranks[0], Env::machines_ncores[0], Env::machines_nsockets[0]);
+		printf("%d\n", machines_ntiles[0]);
 		
 	}
+	int num_sockets = Env::machines_nsockets[0]; //NUM_SOCKETS
+	rowgrp_nranks = Env::nmachines;
+	colgrp_nranks = Env::machines_nranks[0];
+	assert(rowgrp_nranks * colgrp_nranks == nranks);
+	
+	rank_nrowgrps = nranks / Env::machines_nranks[0];
+    rank_ncolgrps = Env::nmachines;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
 
     /*
     // Numa-aware _2D
     int nmachines = 4; // 4;
     int nsockets_machine = 2; // 2;
-    int ncores_socket = 2;
+    int ncores_socket = 1;
     rowgrp_nranks = ncores_socket * nmachines;
     colgrp_nranks = nsockets_machine;
     assert(rowgrp_nranks * colgrp_nranks == nranks);
@@ -160,12 +178,15 @@ void DistMatrix2D<Weight, Tile>::assign_tiles()
         tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
         tile.ith = rg / colgrp_nranks;
         tile.jth = cg / rowgrp_nranks;
-        /*
+		
+		
+        
         // NUMA_2D
         tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
         tile.ith = rg % rowgrp_nranks;
         tile.jth = cg / rowgrp_nranks;
-        */
+		
+        
       }
 
       tile.nth = tile.ith * rank_ncolgrps + tile.jth;
@@ -197,21 +218,23 @@ void DistMatrix2D<Weight, Tile>::print_info()
            rank_ncolgrps, rowgrp_nranks, colgrp_nranks);
 
   /* Print a 2D grid of tiles, each annotated with the owner's rank. */
-  for (uint32_t rg = 0; rg < std::min(nrowgrps, 10u); rg++)
+  for (uint32_t rg = 0; rg < nrowgrps; rg++)
+  //for (uint32_t rg = 0; rg < std::min(nrowgrps, 10u); rg++)
   {
-    for (uint32_t cg = 0; cg < std::min(ncolgrps, 10u); cg++)
+    for (uint32_t cg = 0; cg < ncolgrps; cg++)
+    //for (uint32_t cg = 0; cg < std::min(ncolgrps, 10u); cg++)
     {
       LOG.info<true, false>("%02d ", tiles[rg][cg].rank);
       // LOG.info("[%02d] ", tiles[x][y].nth);
     }
 
-    if (ncolgrps > 10u)
-      LOG.info<true, false>(" ...");
+    //if (ncolgrps > 10u)
+      //LOG.info<true, false>(" ...");
     LOG.info<true, false>("\n");
   }
 
-  if (nrowgrps > 10u)
-    LOG.info<true, false>(" ...\n");
+  //if (nrowgrps > 10u)
+    //LOG.info<true, false>(" ...\n");
 }
 
 template <class Weight, class Tile>
