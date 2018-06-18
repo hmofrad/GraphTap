@@ -19,12 +19,16 @@ MPI_Comm Env::MPI_WORLD;
 char Env::core_name[MPI_MAX_PROCESSOR_NAME];
 int Env::core_id;
 int Env::nmachines;
-std::vector<int> Env::machines;
-int Env::machines_nranks;
-std::vector<std::vector<int>> machines_ranks;
+std::vector<std::string> Env::machines;
+std::vector<int> Env::machines_nranks;
+std::vector<std::vector<int>> Env::machines_ranks;
 std::vector<std::vector<int>> Env::machines_cores;
-std::vector<std::unordered_set<int>> machines_cores_uniq;
+std::vector<std::unordered_set<int>> Env::machines_cores_uniq;
+std::vector<int> Env::machines_ncores;
 std::vector<int> Env::machines_nsockets;
+
+//std:vector<int> test;
+
 
 void Env::init(RankOrder order)
 {
@@ -131,16 +135,20 @@ void Env::affinity()
   */
   nmachines = std::set<std::string>(machines_all.begin(), machines_all.end()).size();
   
-  std::vector<std::string> machines = machines_all; 
+  //std::vector<std::string> 
+  machines = machines_all; 
   std::vector<std::string>::iterator it;
   it = std::unique(machines.begin(), machines.end());
   machines.resize(std::distance(machines.begin(),it));
 
-  std::vector<int> machines_nranks(nmachines, 0);
-  std::vector<std::vector<int>> machines_ranks(nmachines);
-  std::vector<std::vector<int>> machines_cores(nmachines);
+  //std::vector<int> machines_nranks(&nmachines, 0);
+  machines_nranks.resize(nmachines, 0);
+  //std::vector<std::vector<int>> 
+  machines_ranks.resize(nmachines);
+  //std::vector<std::vector<int>> 
+  machines_cores.resize(nmachines);
   std::vector<std::unordered_set<int>> machines_cores_uniq(nmachines);
-  std::vector<int> machines_nsockets(nmachines, 0);
+  
 
   
   
@@ -167,21 +175,26 @@ void Env::affinity()
 	//std::cout << " " << *it << "," << idx << "," <<  machines[idx].c_str()  << "," << idx1 << ".." << core_ids[idx1] << std::endl;
   }
   
+  //std::vector<int> 
+  machines_ncores.resize(nmachines, 0);
+  //std::vector<int>
+  machines_nsockets.resize(nmachines, 0);
   std::vector<int> sockets_per_machine(NUM_SOCKETS, 0);
-  if(is_master) {
+ // if(is_master) {
 	  for(int i = 0; i < nmachines; i++)
 	  {
-	    std::unordered_set<int>::iterator iter;
-		for(iter=machines_cores_uniq[i].begin(); iter!=machines_cores_uniq[i].end();++iter)
+	    std::unordered_set<int>::iterator it1;
+		for(it1=machines_cores_uniq[i].begin(); it1!=machines_cores_uniq[i].end();it1++)
 		{
-			int socket_id = *iter / NUM_CORES_PER_SOCKET;
+			int socket_id = *it1 / NUM_CORES_PER_SOCKET;
 			sockets_per_machine[socket_id] = 1;
-			std::cout << *iter << " " << socket_id << ", ";
+			//std::cout << *it1 << " " << socket_id << ", ";
 		}
-		std::cout << "\n";
+		//std::cout << "\n";
+		machines_ncores[i] = machines_cores_uniq[i].size();
 		machines_nsockets[i] = std::accumulate(sockets_per_machine.begin(), sockets_per_machine.end(), 0);
 	  }
-  }
+  //}
   
       
 
@@ -202,21 +215,26 @@ void Env::affinity()
 	  std::vector<int>::iterator it2;
 	  for(int i = 0; i < nmachines; i++)
 	  {
-		std::cout << machines[i] << ": ";
+		std::cout << "Machine=" << machines[i] << "(rank,core): ";
 		for(int j= 0; j < machines_ranks[i].size(); j++) {
 		  std::cout << "(" << machines_ranks[i][j] <<  "," << machines_cores[i][j] << ")";
 		}
-		
+		std::cout << " unique_core(core):";
 		std::unordered_set<int>::iterator iter;
 		for(iter=machines_cores_uniq[i].begin(); iter!=machines_cores_uniq[i].end();++iter)
 		{
-			std::cout << " " << *iter << " ";
+			std::cout << "(" << *iter << ")";
 		}
 		
-		std::cout << " " << machines_nsockets[i] << "\n";
+		std::cout << "| machine_nranks=" << machines_nranks[i];
+		std::cout << "| machine_ncores=" << machines_ncores[i];
+		std::cout << "| machine_nsockets=" << machines_nsockets[i] << "\n";
       }
 	  
   }
+  
+  
+ // test
 
   
   
