@@ -53,12 +53,15 @@ public:
   static char core_name[]; // Core name = hostname
   static int core_id; // Core id
   static int nmachines; // Number of allocated machines
-  static std::vector<int> machines; // Number of machines
-  static int machines_nranks; // Number of ranks per machine
+  static std::vector<std::string> machines; // Number of machines
+  static std::vector<int> machines_nranks; // Number of ranks per machine
   static std::vector<std::vector<int>> machines_ranks;
   static std::vector<std::vector<int>> machines_cores;
   static std::vector<std::unordered_set<int>> machines_cores_uniq;
+  static std::vector<int> machines_ncores; // Number of cores per machine
   static std::vector<int> machines_nsockets; // Number of sockets available per machine
+  //static std:vector<int> test;
+  
   
 private:
   static void shuffle_ranks(RankOrder order);
