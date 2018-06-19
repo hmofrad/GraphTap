@@ -155,7 +155,7 @@ void Env::affinity()
   for (it=machines_all.begin(); it!=machines_all.end(); it++)
   {
     int idx = distance(machines.begin(), find(machines.begin(), machines.end(), *it));
-    assert((idx > 0) && (idx < machines.size()));
+    //assert((idx > 0) && (idx < machines.size()));
 	  
     machines_nranks[idx]++;
     int idx1 = it - machines_all.begin();
