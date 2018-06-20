@@ -57,6 +57,10 @@ struct Tile2D
     triples = nullptr;
   }
   
+  uint32_t rg, cg;
+  uint32_t ith, jth, nth;
+  int32_t rank;
+  
   
 };
 
@@ -147,6 +151,28 @@ if (header_present)
   tiles.resize(nrowgrps);
   for (uint32_t i = 0; i < nrowgrps; i++)
     tiles[i].resize(ncolgrps);
+
+  for (uint32_t i = 0; i < nrowgrps; i++)
+  {
+	for (uint32_t j = 0; j < ncolgrps; j++)  
+	{
+	  tiles[i][j].rg = i;
+      tiles[i][j].cg = j;
+	  tiles[i][j].rank = i;
+	}
+  }
+  if(!rank) {
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+	  for (uint32_t j = 0; j < ncolgrps; j++)  
+	  {
+        printf("%d ", tiles[i][j].rank);
+	  }
+	  printf("\n");
+    }
+ }
+  
+  
 /*
   for (auto& tile_r : tiles)
   {
