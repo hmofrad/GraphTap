@@ -71,6 +71,88 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 		printf("%d\n", machines_ntiles[0]);
 		
 	}
+	Env::nmachines = 4;
+	Env::nranks = 16;
+	//int colgrp_nranks_ = 16;
+	//int rowgrp_nranks_ = 16;
+	int bigtile_nranks = Env::nranks/sqrt(Env::nmachines);
+	int bigtile_nranks_u = Env::nranks/Env::nmachines;
+	integer_factorize(Env::nranks/Env::nmachines, rowgrp_nranks, colgrp_nranks);
+	
+	if(!Env::rank)
+  	  printf("bigtile_nranks=%d, rowgrp_nranks=%d, colgrp_nranks=%d\n", bigtile_nranks, rowgrp_nranks, colgrp_nranks);
+		
+    
+	std::vector<int> big_tiles(Env::nmachines);
+	int rowgrp_nmachines = sqrt(Env::nmachines);
+	int colgrp_nmachines = sqrt(Env::nmachines);
+	assert(rowgrp_nmachines * colgrp_nmachines == Env::nmachines);
+	
+
+	
+	rank_nrowgrps = (Env::nranks / rowgrp_nmachines) / colgrp_nranks;
+    rank_ncolgrps = (Env::nranks / rowgrp_nmachines) / rowgrp_nranks;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+	
+	
+	int bigtile_width = Env::nranks / rowgrp_nmachines;
+	int bigtile_height = Env::nranks / colgrp_nmachines;
+	assert(bigtile_height * colgrp_nmachines == Env::nranks);
+	if(!Env::rank)
+	printf("nmachines=%d, nranks=%d, rowgrp_nranks=%d, colgrp_nranks=%d, rowgrp_nmachines=%d, colgrp_nmachines=%d, rank_nrowgrps=%d, rank_ncolgrps=%d, bigtile_width=%d, bigtile_height=%d\n", 
+	   Env::nmachines, Env::nranks, rowgrp_nranks, colgrp_nranks, rowgrp_nmachines, colgrp_nmachines, rank_nrowgrps, rank_ncolgrps, bigtile_width, bigtile_height);
+	
+    tiles.resize(Env::nranks);
+    for (uint32_t x = 0; x < Env::nranks; x++)
+      tiles[x].resize(Env::nranks);	
+	int t = 0;
+	for (uint32_t rm = 0; rm < rowgrp_nmachines; rm++)
+	{
+      for (uint32_t cm = 0; cm < rowgrp_nmachines; cm++)
+	  {
+        for (uint32_t rg = rm * bigtile_width; rg < (rm * bigtile_width) + bigtile_width; rg++)
+        {
+          for (uint32_t cg = cm * bigtile_height; cg < (cm * bigtile_height) + bigtile_height; cg++)
+          {
+            auto& tile = tiles[rg][cg];
+            tile.rg = rg;
+            tile.cg = cg;	
+		
+            tile.rank = ((cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks)) + (t * bigtile_nranks_u);
+            tile.ith = rg / colgrp_nranks;
+            tile.jth = cg / rowgrp_nranks;
+
+            tile.nth = tile.ith * rank_ncolgrps + tile.jth;	 
+			if(!rank)
+			  printf("[%d %d %d %d %d] ", rm, cm, rg, cg, tile.rank);
+	      }
+		  if(!rank)		
+		    printf("\n");
+        }
+		if(!rank)		
+		  printf("\n");
+	    t++;
+	  }
+	}
+	
+	
+	
+    for (uint32_t rg = 0; rg < Env::nranks; rg++)
+    {
+      for (uint32_t cg = 0; cg < Env::nranks; cg++)
+      {
+        LOG.info<true, false>("%02d ", tiles[rg][cg].rank);
+      }
+      LOG.info<true, false>("\n");
+    }
+	
+	
+	
+    //print_info();
+	//printf("%d\n", Env::nmachines);
+	Env::finalize();
+	exit(0);
+
 	int num_sockets = Env::machines_nsockets[0]; //NUM_SOCKETS
 	rowgrp_nranks = Env::nmachines;
 	colgrp_nranks = Env::machines_nranks[0];
@@ -218,23 +300,23 @@ void DistMatrix2D<Weight, Tile>::print_info()
            rank_ncolgrps, rowgrp_nranks, colgrp_nranks);
 
   /* Print a 2D grid of tiles, each annotated with the owner's rank. */
-  for (uint32_t rg = 0; rg < nrowgrps; rg++)
-  //for (uint32_t rg = 0; rg < std::min(nrowgrps, 10u); rg++)
+  //for (uint32_t rg = 0; rg < nrowgrps; rg++)
+  for (uint32_t rg = 0; rg < std::min(nrowgrps, 10u); rg++)
   {
     for (uint32_t cg = 0; cg < ncolgrps; cg++)
-    //for (uint32_t cg = 0; cg < std::min(ncolgrps, 10u); cg++)
+    for (uint32_t cg = 0; cg < std::min(ncolgrps, 10u); cg++)
     {
       LOG.info<true, false>("%02d ", tiles[rg][cg].rank);
       // LOG.info("[%02d] ", tiles[x][y].nth);
     }
 
-    //if (ncolgrps > 10u)
-      //LOG.info<true, false>(" ...");
+    if (ncolgrps > 10u)
+      LOG.info<true, false>(" ...");
     LOG.info<true, false>("\n");
   }
 
-  //if (nrowgrps > 10u)
-    //LOG.info<true, false>(" ...\n");
+  if (nrowgrps > 10u)
+    LOG.info<true, false>(" ...\n");
 }
 
 template <class Weight, class Tile>
