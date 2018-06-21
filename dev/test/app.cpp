@@ -41,7 +41,7 @@ struct Tile2D
 {
   //int test;
   std::vector<struct Triple >* triples;
-  
+  /*
   Tile2D() { allocate_triples(); }
   ~Tile2D() { free_triples(); }
   
@@ -50,21 +50,20 @@ struct Tile2D
     if (!triples)
       triples = new std::vector<struct Triple>;
   }
-
+  
   void free_triples()
   {
     delete triples;
     triples = nullptr;
   }
-  
+  */
   uint32_t rg, cg;
   uint32_t ith, jth, nth;
   int32_t rank;
-  
-  
 };
 
 std::vector<std::vector<struct Tile2D>> tiles;
+std::vector<int> local_tiles;
 
 void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols)
 {
@@ -122,9 +121,12 @@ if (header_present)
   share = ((filesize / nranks) / sizeof(struct Triple)) * sizeof(struct Triple);
   assert(share % sizeof(struct Triple) == 0);
 
-  offset += share * rank;
-  endpos = (rank == nranks - 1) ? orig_filesize : offset + share;
+  //offset += share * rank;
+  //endpos = (rank == nranks - 1) ? orig_filesize : offset + share;
 
+  offset = offset;
+  endpos = orig_filesize;
+  
   // Seek up to the offset for rank.
   fin.seekg(offset, std::ios_base::beg);
 
@@ -161,19 +163,36 @@ if (header_present)
 	  tiles[i][j].rank = i;
 	}
   }
-  if(!rank) {
+ // if(rank == 2) {
     for (uint32_t i = 0; i < nrowgrps; i++)
     {
 	  for (uint32_t j = 0; j < ncolgrps; j++)  
 	  {
-        printf("%d ", tiles[i][j].rank);
+		  if(tiles[i][j].rank == rank)
+		  {
+		    local_tiles.push_back((i * ncolgrps) + j);
+          printf(">>>> %d %d %d %d\n", tiles[i][j].rank, i, j, (i * ncolgrps) + j);
+		  }
 	  }
-	  printf("\n");
+	  //printf("\n");
     }
- }
+	
+	/*
+	for(uint32_t i = 0; i < local_tiles.size(); i++)
+	{
+		
+		uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+		uint32_t col = local_tiles[i] % ncolgrps;
+		printf("[%d][%d] = %d ", row, col, local_tiles[i]);
+	}
+    printf("\n");  
+	*/
+ //}
+ 
   
   
-/*
+  
+  
   for (auto& tile_r : tiles)
   {
 	  for (auto& tile_c: tile_r)
@@ -181,19 +200,30 @@ if (header_present)
 		tile_c.triples = new std::vector<struct Triple>;
 	  }
   }
-*/
+  
+  uint64_t sum = 0;
   Triple triple;
+
   while (offset < endpos)
   {
     fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
 	uint32_t row_idx = triple.row / tile_height;
 	uint32_t col_idx = triple.col / tile_width;
-	std::cout << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << std::endl;
-	//tiles[row_idx][col_idx].triples = new std::vector<struct Triple> t(triple.row , triple.col);
-	//tiles[row_idx][col_idx].test = (int) row_idx;
-	//printf("%d\n", tiles[row_idx][col_idx].triples == NULL);
-	tiles[row_idx][col_idx].triples->push_back(triple);
 	
+	
+	uint32_t local_idx = (row_idx * ncolgrps) + col_idx;
+
+    //assert(((row_idx * ncolgrps) + col_idx) == 
+	if (std::find(local_tiles.begin(), local_tiles.end(), local_idx) != local_tiles.end())
+	{
+		tiles[row_idx][col_idx].triples->push_back(triple);
+		sum++;
+	//if(!rank)
+	  //std::cout << tile_height << "," << tile_width << "," << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << " " << local_idx << std::endl;	
+	  assert((row_idx >= 0) and (row_idx < nrowgrps));
+	  assert((col_idx >= 0) and (col_idx < ncolgrps));
+	  
+	}
 	
     if(fin.gcount() != sizeof(triple))
     {
@@ -208,11 +238,12 @@ if (header_present)
     }
     offset += sizeof(Triple);
   }
-
   assert(offset == endpos);
   fin.close();
   
  
+ 
+ /*
   int i = 0, j= 0;
   //for(int i = 0; i < nvertices; i++)	  
   for (auto& tile_r : tiles)
@@ -226,24 +257,57 @@ if (header_present)
 		  for (auto& triple : *(tile_c.triples))
 		  {
 		  if(!rank);
-			printf("%d:t[%d][%d]=[%d %d]\n", rank, i, j, triple.row, triple.col);
+			printf("%d:[%d][%d]=[%d %d]\n", rank, i, j, triple.row, triple.col);
 		  }
 		  j++;
 	  }
 	  i++;
   }
+  */
+
+  uint64_t sum1 = 0;
+  std::vector<std::vector<struct Triple>> outboxes(nranks);  
+  
+  for(uint32_t i = 0; i < local_tiles.size(); i++) 
+  {
+	uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+	uint32_t col = local_tiles[i] % ncolgrps;
+	  sum1 += tiles[row][col].triples->size();
+  }
+	  
+  
+  /*
+  for (uint32_t i = 0; i < nrowgrps; i++)
+  {
+	for (uint32_t j = 0; j < ncolgrps; j++)  
+	{
+	  if(tiles[i][j].rank == rank) {
+        printf("tiles[%d][%d]->%lu \n", i, j, tiles[i][j].triples->size());
+	  sum1 += tiles[i][j].triples->size();
+	  }
+	}
+  }
+  */
+  printf("SUM=%lu %lu %d\n", sum, sum1, 4219314 + 3983833 + 4002485 + 4571584);	
+  
+ 
+   
+ 
+ 
+  
+  
   
 
-  /*
+  
   for (auto& tile_r : tiles)
   {
 	  for (auto& tile_c: tile_r)
 	  {
 		delete tile_c.triples;
-		//tile_r.free_triples();
+		//tile_c.free_triples();
 	  }
   }
-  */
+  
   
   
   
@@ -302,7 +366,7 @@ int main(int argc, char** argv) {
 	std::string filepath = argv[1]; 
 	uint32_t num_vertices = std::atoi(argv[2]);
   	uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-  	std::cout << num_vertices << " "<< num_iterations <<  std::endl;
+  	//std::cout << num_vertices << " "<< num_iterations <<  std::endl;
 	
 	load_binary(filepath, num_vertices, num_vertices);
 	
