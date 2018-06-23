@@ -78,6 +78,72 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 
 	
 	Env::nmachines = 4;
+	std::vector<std::vector<Tile>> tiles_;
+	uint32_t offset_ = 4;
+	map(tiles_, Env::nmachines, offset_);
+	if(!Env::rank)
+		printf("Exiting\n");
+
+	uint32_t rowgrp_nmachines = Env::nmachines;
+	uint32_t colgrp_nmachines = Env::nmachines;
+	//assert(rowgrp_nmachines * colgrp_nmachines == Env::nmachines);
+	
+	//rank_nrowgrps = (Env::nranks / rowgrp_nmachines) / colgrp_nranks;
+    //rank_ncolgrps = (Env::nranks / rowgrp_nmachines) / rowgrp_nranks;
+    //assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+
+	uint32_t width_ = Env::nmachines / rowgrp_nmachines;
+	assert(width_ * rowgrp_nmachines == Env::nmachines);
+	uint32_t height_ = Env::nmachines / colgrp_nmachines;
+	assert(height_ * colgrp_nmachines == Env::nmachines);
+	
+	uint32_t nrakns_machine = Env::nranks / Env::nmachines;
+	assert(nrakns_machine * Env::nmachines == Env::nranks);
+	
+	if(!Env::rank) 
+	{
+	  for (uint32_t rm = 0; rm < rowgrp_nmachines; rm++)
+	  {
+		  for (uint32_t cm = 0; cm < rowgrp_nmachines; cm++)
+		  {
+			printf("%d %d %d\n", rm, cm, (cm * nrakns_machine));
+			map(tiles_, Env::nmachines, (cm * nrakns_machine));
+			    for (uint32_t rg = 0; rg < Env::nmachines; rg++)
+    {
+      for (uint32_t cg = 0; cg < Env::nmachines; cg++)
+      {
+        LOG.info<true, false>("%02d ", tiles_[rg][cg].rank);
+      }
+      LOG.info<true, false>("\n");
+    }	
+			
+			
+			
+		  }
+	  }
+    }
+	
+	
+/*
+    for (uint32_t rg = 0; rg < Env::nmachines; rg++)
+    {
+      for (uint32_t cg = 0; cg < Env::nmachines; cg++)
+      {
+        LOG.info<true, false>("%02d ", tiles_[rg][cg].rank);
+      }
+      LOG.info<true, false>("\n");
+    }	
+	*/
+	
+	Env::finalize();
+		
+	exit(0);		
+	
+	/*
+	
+
+	
+	
 	uint32_t super_nranks = Env::nmachines;
 	uint32_t super_ntiles = Env::nmachines * Env::nmachines;
 	uint32_t super_rank_ntiles = super_ntiles / super_nranks;
@@ -99,7 +165,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 	if(!rank)
 		printf("super_rowgrp_nranks=%d super_colgrp_nranks=%d super_ntiles=%d\n", super_rowgrp_nranks, super_colgrp_nranks, super_ntiles);
 	
-    /* Number of rowgroups and colgroups per rank. */
+    
 	uint32_t super_nrowgrps = sqrt(super_ntiles);
 	uint32_t super_ncolgrps = super_ntiles / super_nrowgrps;
 	uint32_t super_rank_nrowgrps = super_nrowgrps / super_colgrp_nranks;
@@ -347,6 +413,9 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 	rank_nrowgrps = nranks / Env::machines_nranks[0];
     rank_ncolgrps = Env::nmachines;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+	
+	*/
+	
 
     /*
     // Numa-aware _2D
@@ -596,4 +665,70 @@ void DistMatrix2D<Weight, Tile>::distribute()
   MPI_Barrier(Env::MPI_WORLD);
   LOG.info<true, false>("\n");
   // LOG.info("Done blocking on recvs!\n");
+}
+
+
+template <class Weight, class Tile>
+void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uint32_t nranks_, uint32_t offset_)
+{	
+  uint32_t ntiles_ = nranks_ * nranks_;
+  uint32_t rank_ntiles_ = ntiles_ / nranks_;
+  tiles_.resize(ntiles_);
+  for (uint32_t x = 0; x < ntiles_; x++)
+  tiles_[x].resize(ntiles_);
+  
+  uint32_t rowgrp_nranks_;
+  uint32_t colgrp_nranks_;  
+  integer_factorize(nranks_, rowgrp_nranks_, colgrp_nranks_);
+  assert(rowgrp_nranks_ * colgrp_nranks_ == nranks_);
+  
+  uint32_t nrowgrps_ = sqrt(ntiles_);
+  uint32_t ncolgrps_ = ntiles_ / nrowgrps_;
+  uint32_t rank_nrowgrps_ = nrowgrps_ / colgrp_nranks_;
+  uint32_t rank_ncolgrps_ = ncolgrps_ / rowgrp_nranks_;
+  assert(rank_nrowgrps_ * rank_ncolgrps_ == rank_ntiles_);
+  
+  for (uint32_t rg = 0; rg < nrowgrps_; rg++)
+  {
+    for (uint32_t cg = 0; cg < ncolgrps_; cg++)
+    {
+      auto& tile = tiles_[rg][cg];
+      tile.rg = rg + offset_;
+      tile.cg = cg + offset_;
+
+      tile.rank = (cg % rowgrp_nranks_) * colgrp_nranks_ + (rg % colgrp_nranks_) + offset_;
+      tile.ith = rg / colgrp_nranks_ + offset_;
+      tile.jth = cg / rowgrp_nranks_ + offset_;
+		
+      tile.nth = tile.ith * rank_ncolgrps + tile.jth + offset_;
+    }
+  }
+	
+  BitVector bv(ntiles_);
+
+  for (uint32_t rg = 0; rg < nrowgrps_; rg++)
+  {
+    if (bv.count() == bv.size())
+      bv.clear();
+
+    for (uint32_t rg_ = rg; rg_ < nrowgrps_; rg_++)
+    {
+      if (not bv.touch(tiles_[rg_][rg].rank))
+      {
+        using std::swap;
+        swap(tiles_[rg_], tiles_[rg]);
+        break;
+      }
+    }
+  }
+
+  for (uint32_t rg = 0; rg < nrowgrps_; rg++)
+  {
+    for (uint32_t cg = 0; cg < ncolgrps_; cg++)
+    {
+      auto& tile = tiles_[rg][cg];
+      tile.rg = rg;
+      tile.cg = cg;
+    }
+  }
 }
