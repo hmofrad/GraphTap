@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
   std::string filepath = argv[1];
   vid_t nvertices = (vid_t) std::atol(argv[2]);
   uint32_t niters = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-  std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
+  //std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
   /*
   std::cout << Env::rank << "," << Env::core_name << "," << Env::core_id << std::endl;
   std::vector<int> core_ids(Env::nranks);
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
   
   
   
-  //run(filepath, nvertices, niters);
+  run(filepath, nvertices, niters);
 
   Env::finalize();
   return 0;
