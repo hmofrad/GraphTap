@@ -155,13 +155,13 @@ void Env::affinity()
   for (it=machines_all.begin(); it!=machines_all.end(); it++)
   {
     int idx = distance(machines.begin(), find(machines.begin(), machines.end(), *it));
-    //assert((idx > 0) && (idx < machines.size()));
+    assert((idx >= 0) && (idx < machines.size()));
 	  
     machines_nranks[idx]++;
     int idx1 = it - machines_all.begin();
 
     machines_ranks[idx].push_back(idx1);
-	assert((core_ids[idx1] > 0) && (core_ids[idx1] < NUM_CORES_PER_MACHINE));
+	assert((core_ids[idx1] >= 0) && (core_ids[idx1] < NUM_CORES_PER_MACHINE));
 	machines_cores[idx].push_back(core_ids[idx1]);
 	
 	//int core_uniq_sz = machines_cores_uniq[idx].size();
@@ -188,9 +188,11 @@ void Env::affinity()
 		{
 			int socket_id = *it1 / NUM_CORES_PER_SOCKET;
 			sockets_per_machine[socket_id] = 1;
-			//std::cout << *it1 << " " << socket_id << ", ";
+			if(!rank)
+			    std::cout << i << " " << *it1 << " " << socket_id << ", ";
 		}
-		//std::cout << "\n";
+		if(!rank)
+		 std::cout << "\n";
 		machines_ncores[i] = machines_cores_uniq[i].size();
 		machines_nsockets[i] = std::accumulate(sockets_per_machine.begin(), sockets_per_machine.end(), 0);
 	  }
