@@ -45,83 +45,34 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   }
   else if (partitioning == Partitioning::_2D)
   {
+	//Env::nmachines = 16;
+	uint32_t nranks_machine = Env::nranks / Env::nmachines;
+	uint32_t rowgrp_nmachines = Env::nmachines;
+	uint32_t colgrp_nmachines = Env::nmachines;
+	uint32_t width_ = nranks_machine;
+	uint32_t height_ = nranks_machine;
+	
 	/*
-    // Number of ranks sharing each rowgroup and colgroup.
-    integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
-    // _1D using _2D
-    //rowgrp_nranks = 1;
-    //colgrp_nranks = nranks;
-
-    assert(rowgrp_nranks * colgrp_nranks == nranks);
-    // Number of rowgroups and colgroups per rank
-    rank_nrowgrps = nrowgrps / colgrp_nranks;
-    rank_ncolgrps = ncolgrps / rowgrp_nranks;
-    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-
-	std::vector<int> machines_ntiles(Env::nmachines);	
-	for(int i = 0; i < Env::nmachines; i++) 
-	{
-		machines_ntiles[i] = Env::machines_nranks[i] * Env::nranks;
-	}
-	
-	if(!Env::rank){
-		//printf("%d %d %d %d\n", rank, nranks, Env::rank, Env::nmachines); //, 
-		//printf("%s %d %d\n", Env::machines[0].c_str(), Env::machines_ranks[0][0], Env::machines_cores[0][0]);
-		printf("machines_nranks=%d machines_ncores=%d machines_nsockets=%d\n", Env::machines_nranks[0], Env::machines_ncores[0], Env::machines_nsockets[0]);
-		
-		//printf("%d %d %d\n", Env::nranks, Env::machines_nranks[0], Env::machines_nranks[0]/Env::machines_ncores[0]);
-		
-		printf("machines_nranks=%d machines_ncores=%d machines_nsockets=%d\n", Env::machines_nranks[0], Env::machines_ncores[0], Env::machines_nsockets[0]);
-		printf("%d\n", machines_ntiles[0]);
-		
-	}
-	*/
-	
-
-	
-	Env::nmachines = 4;
+	//assert(Env::nranks / Env::nmachines == Env::nmachines);
 	uint32_t nranks_ = Env::nmachines;
 	uint32_t ntiles_ = Env::nmachines * Env::nmachines;
 	uint32_t rank_ntiles_ = ntiles_ / nranks_;
-	//std::vector<std::vector<Tile>> tiles_;
-	//uint32_t offset_ = 4;
-	//map(tiles_, Env::nmachines, offset_);
-	//if(!Env::rank)
-	//	printf("Exiting\n");
 
 
-	uint32_t rowgrp_nmachines = Env::nmachines;
-	uint32_t colgrp_nmachines = Env::nmachines;
 	
-	
-	//assert(rowgrp_nmachines * colgrp_nmachines == Env::nmachines);
-	
-	//rank_nrowgrps = (Env::nranks / rowgrp_nmachines) / colgrp_nranks;
-    //rank_ncolgrps = (Env::nranks / rowgrp_nmachines) / rowgrp_nranks;
-    //assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-
 	uint32_t width_ = rowgrp_nmachines;
-	//assert(width_ * rowgrp_nmachines == Env::nmachines);
 	uint32_t height_ = colgrp_nmachines;
-	//assert(height_ * colgrp_nmachines == Env::nmachines);
 	
 	uint32_t nrakns_machine = Env::nranks / Env::nmachines;
 	assert(nrakns_machine * Env::nmachines == Env::nranks);
 
-	integer_factorize(Env::nranks, rowgrp_nranks, colgrp_nranks);
-	if(!Env::rank)
-	  printf("1.%d %d %d\n", rowgrp_nranks, colgrp_nranks, Env::nranks);	
-	
 	uint32_t rowgrp_nranks_;
     uint32_t colgrp_nranks_;
-    integer_factorize(rowgrp_nmachines, rowgrp_nranks_, colgrp_nranks_);
+	
+    integer_factorize(nrakns_machine, rowgrp_nranks_, colgrp_nranks_);
     rowgrp_nranks = rowgrp_nmachines * rowgrp_nranks_;
     colgrp_nranks = colgrp_nranks_;
-	if(!Env::rank){
-		printf("2.%d %d %d\n", rowgrp_nranks_, colgrp_nranks_, Env::nranks);
-	printf("2.%d %d %d\n", rowgrp_nranks, colgrp_nranks, Env::nranks);
-	}
-
+	printf("############ (%d %d) (%d %d) (%d %d)\n", rowgrp_nranks, rowgrp_nranks_, colgrp_nranks, colgrp_nranks_, Env::nranks, nranks_);
     assert(rowgrp_nranks * colgrp_nranks == Env::nranks);
   
     uint32_t nrowgrps_ = sqrt(ntiles_);
@@ -129,21 +80,36 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     uint32_t rank_nrowgrps_ = nrowgrps_ / colgrp_nranks_;
     uint32_t rank_ncolgrps_ = ncolgrps_ / rowgrp_nranks_;
 	
+	printf("++++++++++++++ %d %d %d %d %d\n", nrowgrps_, ncolgrps_,rank_nrowgrps_, rank_ncolgrps_, rank_ntiles_);
+	
     assert(rank_nrowgrps_ * rank_ncolgrps_ == rank_ntiles_);
+	
+	
+	
+
+	
 	
     rank_nrowgrps = rowgrp_nmachines * rank_nrowgrps_;
     rank_ncolgrps = rank_ncolgrps_;
-	if(!Env::rank){
-		printf("3.%d %d %d\n", rank_nrowgrps_, rank_ncolgrps_, rank_ntiles_);
-    printf("3.%d %d %d\n", rank_nrowgrps, rank_ncolgrps, rank_ntiles);
-	}
-	
+	if(!Env::rank)
+		printf("############ %d %d %d \n", rank_nrowgrps, rank_ncolgrps, rank_ntiles);
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+	*/
 	
-	std::vector<std::vector<Tile>> tiles_(Env::nmachines);
-    for (uint32_t x = 0; x < Env::nmachines; x++)
-      tiles_[x].resize(Env::nmachines);
+	
+	std::vector<std::vector<Tile>> tiles_(nranks_machine);
+    for (uint32_t x = 0; x < nranks_machine; x++)
+      tiles_[x].resize(nranks_machine);
   
+    integer_factorize(nranks_machine, rowgrp_nranks, colgrp_nranks);
+	rowgrp_nranks = rowgrp_nranks * Env::nmachines;
+    assert(rowgrp_nranks * colgrp_nranks == Env::nranks);
+	
+    rank_nrowgrps = nrowgrps / colgrp_nranks;
+    rank_ncolgrps = ncolgrps / rowgrp_nranks;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles); 
+	//printf("%d %d %d \n", rank_nrowgrps, rank_ncolgrps, rank_ntiles);
+	
     tiles.resize(nranks);
     for (uint32_t x = 0; x < nranks; x++)
       tiles[x].resize(nranks);
@@ -154,10 +120,10 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 	{
       for (uint32_t cm = 0; cm < colgrp_nmachines; cm++)
       {
-		map(tiles_, colgrp_nmachines, (cm * width_), rm);		
-		for (uint32_t rg = 0; rg < rowgrp_nmachines; rg++)
+		map(tiles_, nranks_machine, (cm * width_), rm);
+		for (uint32_t rg = 0; rg < nranks_machine; rg++)
 		{
-	      for (uint32_t cg = 0; cg < colgrp_nmachines; cg++)
+	      for (uint32_t cg = 0; cg < nranks_machine; cg++)
 	      {
 			uint32_t rg_idx = (rm * height_) + rg;
 			uint32_t cg_idx = (cm * width_) + cg;
@@ -172,32 +138,10 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 		}
       }
     }
-  
-    /* Number of ranks sharing each rowgroup and colgroup. */
-    //integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
-    //assert(rowgrp_nranks * colgrp_nranks == nranks);
-    /* Number of rowgroups and colgroups per rank. */
-    //rank_nrowgrps = nrowgrps / colgrp_nranks;
-    //rank_ncolgrps = ncolgrps / rowgrp_nranks;
-    //assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-  
-  
-    /*
-    // Numa-aware _2D
-    int nmachines = 4; // 4;
-    int nsockets_machine = 2; // 2;
-    int ncores_socket = 1;
-    rowgrp_nranks = ncores_socket * nmachines;
-    colgrp_nranks = nsockets_machine;
-    assert(rowgrp_nranks * colgrp_nranks == nranks);
-    
-    rank_nrowgrps = nrowgrps / nsockets_machine;
-    rank_ncolgrps = nsockets_machine;
-    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-    */
 
-if(!Env::rank)
- {
+	
+   if(!Env::rank)
+   {
     for (uint32_t rg = 0; rg < Env::nranks; rg++)
     {
       for (uint32_t cg = 0; cg < Env::nranks; cg++)
@@ -206,7 +150,7 @@ if(!Env::rank)
       }
       LOG.info<true, false>("\n");
     }	
-	
+	/*
     for (uint32_t rg = 0; rg < Env::nranks; rg++)
     {
       for (uint32_t cg = 0; cg < Env::nranks; cg++)
@@ -216,20 +160,13 @@ if(!Env::rank)
       }
       LOG.info<true, false>("\n");
     }	
-	
-	
+	*/
   }	
-	
-	
-
-
-
-
-
+  
+  //Env::finalize();		
+  //exit(0);	
   
 	
-	//Env::finalize();		
-    //exit(0);		
 
 
   }
@@ -481,12 +418,17 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
   uint32_t colgrp_nranks_;  
   integer_factorize(nranks_, rowgrp_nranks_, colgrp_nranks_);
   assert(rowgrp_nranks_ * colgrp_nranks_ == nranks_);
+  if(!Env::rank)
+  printf("nranks_=%d, %d %d\n", nranks_, rowgrp_nranks_, colgrp_nranks_);
   
   uint32_t nrowgrps_ = sqrt(ntiles_);
   uint32_t ncolgrps_ = ntiles_ / nrowgrps_;
   uint32_t rank_nrowgrps_ = nrowgrps_ / colgrp_nranks_;
   uint32_t rank_ncolgrps_ = ncolgrps_ / rowgrp_nranks_;
+  if(!Env::rank)
+  printf("1.ntiles_=%d, %d %d\n", ntiles_, nrowgrps_, ncolgrps_);
   assert(rank_nrowgrps_ * rank_ncolgrps_ == rank_ntiles_);
+  //printf("2.rank_ntiles_=%d, %d %d\n", rank_ntiles_, rank_nrowgrps_, rank_ncolgrps_);
   
   for (uint32_t rg = 0; rg < nrowgrps_; rg++)
   {
@@ -503,7 +445,21 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
       tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth ;
     }
   }
-  	
+
+  /*
+   if(!Env::rank)
+   {
+    LOG.info<true, false>("\n");
+    for (uint32_t rg = 0; rg < nrowgrps_; rg++)
+    {
+      for (uint32_t cg = 0; cg < ncolgrps_; cg++)
+      {
+        LOG.info<true, false>("%02d ", tiles_[rg][cg].rank);
+      }
+      LOG.info<true, false>("\n");
+    }	
+   }
+  */
   BitVector bv(ntiles_);
   for (uint32_t rg = 0; rg < nrowgrps_; rg++)
   {
@@ -520,6 +476,10 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
       }
     }
   }
+  
+
+  
+  
   /*
   for (uint32_t rg = 0; rg < nrowgrps_; rg++)
   {
