@@ -60,7 +60,7 @@ public:
   static std::vector<std::unordered_set<int>> machines_cores_uniq;
   static std::vector<int> machines_ncores; // Number of cores per machine
   static std::vector<int> machines_nsockets; // Number of sockets available per machine
-  //static std:vector<int> test;
+
   
   
 private:
