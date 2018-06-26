@@ -11,6 +11,7 @@
 #include "matrix/graph.h"
 
 #include <fstream>
+#include <iostream>
 
 
 template <class Weight>
