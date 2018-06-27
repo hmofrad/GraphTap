@@ -30,7 +30,7 @@ public:
    * Can handle larger than INT_MAX triples (unlike naive MPI-based solutions).
    **/
   void distribute();
-  void map(std::vector<std::vector<Tile>> &tiles_, uint32_t nranks_);
+  void map(std::vector<std::vector<Tile>> &tiles_, uint32_t nranks_, bool transpose=false);
 
 protected:
   /* General rank information and Per-rank tiles, rowgroups and colgroups. */
