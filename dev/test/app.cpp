@@ -266,7 +266,7 @@ if (header_present)
   */
 
   uint64_t sum1 = 0;
-  std::vector<std::vector<struct Triple>> outboxes(nranks);  
+  //std::vector<std::vector<struct Triple>> outboxes(nranks);  
   
   for(uint32_t i = 0; i < local_tiles.size(); i++) 
   {
@@ -299,14 +299,7 @@ if (header_present)
   
 
   
-  for (auto& tile_r : tiles)
-  {
-	  for (auto& tile_c: tile_r)
-	  {
-		delete tile_c.triples;
-		//tile_c.free_triples();
-	  }
-  }
+  
   
   
   
@@ -370,6 +363,23 @@ int main(int argc, char** argv) {
 	
 	load_binary(filepath, num_vertices, num_vertices);
 	
+	uint32_t i = 0;
+	//uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+	//uint32_t col = local_tiles[i] % ncolgrps;
+	  //sum1 += tiles[row][col].triples->size();
+	
+	
+	printf("rank=%d size=%lu, s=%lu\n", rank, local_tiles.size(), tiles[0][0].triples->size());
+	
+	
+	for (auto& tile_r : tiles)
+    {
+	  for (auto& tile_c: tile_r)
+	  {
+		delete tile_c.triples;
+		//tile_c.free_triples();
+	  }
+    }
 	
 	MPI_Finalize();
 
