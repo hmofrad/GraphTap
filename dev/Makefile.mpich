@@ -32,7 +32,7 @@ gs = graph_simulation
 DNWARN = -Wno-comment -Wno-literal-suffix -Wno-sign-compare \
          -Wno-unused-function -Wno-unused-variable -Wno-reorder
 THREADED = -fopenmp -D_GLIBCXX_PARALLEL
-DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
+#DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 #OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 
@@ -48,7 +48,7 @@ clean:
 
 ga: $(eval tk=$(ga))
 	$(eval tk=$(ga))
-ga_all: degree
+ga_all: pr
 #ga_all: ga degree pr sssp bfs cc tc
 
 ir:
