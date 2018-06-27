@@ -16,6 +16,8 @@ ProcessedMatrix2D<Weight, Annotation>::ProcessedMatrix2D(
     uint32_t nrows, uint32_t ncols, uint32_t ntiles, Partitioning partitioning)
     : Base(nrows, ncols, ntiles, partitioning), already_distributed(false)
 {
+if(!Env::rank)
+  printf("%d %d\n", tile_width, tile_height);
   assert(tile_width == tile_height);
 
   for (auto& rowgrp : local_rowgrps)
