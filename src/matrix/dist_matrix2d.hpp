@@ -68,7 +68,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     rank_nrowgrps = nrowgrps / nsockets_machine;
     rank_ncolgrps = nsockets_machine;
    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-    
+   
 
   }
   else if (partitioning == Partitioning::_TEST)
@@ -191,9 +191,9 @@ void DistMatrix2D<Weight, Tile>::print_info()
            rank_ncolgrps, rowgrp_nranks, colgrp_nranks);
 
   /* Print a 2D grid of tiles, each annotated with the owner's rank. */
-  for (uint32_t rg = 0; rg < std::min(nrowgrps, 10u); rg++)
+  for (uint32_t rg = 0; rg < std::min(nrowgrps, 20u); rg++)
   {
-    for (uint32_t cg = 0; cg < std::min(ncolgrps, 10u); cg++)
+    for (uint32_t cg = 0; cg < std::min(ncolgrps, 20u); cg++)
     {
       LOG.info<true, false>("%02d ", tiles[rg][cg].rank);
       // LOG.info("[%02d] ", tiles[x][y].nth);
