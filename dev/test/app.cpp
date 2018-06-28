@@ -364,9 +364,10 @@ int main(int argc, char** argv) {
 	load_binary(filepath, num_vertices, num_vertices);
 	
 	uint32_t i = 0;
+	
 	//uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
 	//uint32_t col = local_tiles[i] % ncolgrps;
-	  //sum1 += tiles[row][col].triples->size();
+	//sum1 += tiles[row][col].triples->size();
 	
 	
 	printf("rank=%d size=%lu, s=%lu\n", rank, local_tiles.size(), tiles[0][0].triples->size());
