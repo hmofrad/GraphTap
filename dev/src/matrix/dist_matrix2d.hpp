@@ -8,8 +8,10 @@
 #include "structures/bitvector.h"
 #include "matrix/graph.h"
 
-const bool TWOD_STAGGERED = false;
 const bool TRANSPOSE = true;
+const bool TWOD_STAGGERED = true;
+const bool NUMA = true;
+
 
 template <class Weight, class Tile>
 DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_t ntiles,
@@ -48,7 +50,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   else if (partitioning == Partitioning::_2D)
   {
 	  
-	Env::nmachines = 4;
+	//Env::nmachines = 4;
 	/* Machine configuration */
 	uint32_t rowgrp_nmachines = Env::nmachines;
 	uint32_t colgrp_nmachines = Env::nmachines;
@@ -117,7 +119,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
       super_tiles[x].resize(nranks_s);	
 
     // Machine tiles 
-    map(super_tiles, nranks_s, TRANSPOSE);
+    map(super_tiles, nranks_s);
 	
 	if(!Env::rank)
 	{
@@ -144,12 +146,6 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 	}
 	
 	
-	
-	
-	
-
-
-
 	for (uint32_t rm = 0; rm < rowgrp_nmachines; rm++)
 	{
       for (uint32_t cm = 0; cm < colgrp_nmachines; cm++)
@@ -266,6 +262,17 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     map(tiles, nranks, TRANSPOSE);
   }
 
+  if(NUMA)
+  {
+	uint32_t nranks_machine = Env::nranks / Env::nmachines; ///Env::machines_nranks[0];
+    rowgrp_nranks = Env::nmachines;
+    colgrp_nranks = nranks_machine;
+    assert(rowgrp_nranks * colgrp_nranks == Env::nranks);  
+    rank_nrowgrps = nranks_machine;
+    rank_ncolgrps = Env::nmachines;
+    assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+    map(tiles, nranks,  TRANSPOSE);
+  }
 
   print_info();
   //Env::finalize();		
@@ -499,30 +506,61 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
   {
     for (uint32_t cg = 0; cg < ncolgrps_; cg++)
     {
-	  if(TRANSPOSE)
-	  {
-		auto& tile = tiles_[cg][rg];
-        tile.cg = rg;
-        tile.rg = cg;
+	  if(TWOD_STAGGERED)
+	  {		  
+	    if(transpose)
+	    {
+		  auto& tile = tiles_[cg][rg];
+          tile.rg = cg;
+          tile.cg = rg;
+		
+	      tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_);
+		  tile.ith =  (cg / rowgrp_nranks_);
+          tile.jth =  (rg / colgrp_nranks_);
+		
+          tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
+	    }
+        else
+        {	
+          auto& tile = tiles_[rg][cg];
+          tile.rg = rg;
+          tile.cg = cg;
 
-	    tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_);
-		tile.ith =  (cg / rowgrp_nranks_);
-        tile.jth =  (rg / colgrp_nranks_);
-	  
-        tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
+	      tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_);
+          tile.ith =  (rg / colgrp_nranks_);
+          tile.jth =  (cg / rowgrp_nranks_);
+   	  	  
+          tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
+        }
 	  }
-      else
-      {	
-        auto& tile = tiles_[rg][cg];
-        tile.rg = rg;
-        tile.cg = cg;
-
-	    tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_);
-        tile.ith =  (rg / colgrp_nranks_);
-        tile.jth =  (cg / rowgrp_nranks_);
 	  
-        tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
-      }
+	  if(NUMA) 
+      {
+		if(transpose)
+		{
+          auto& tile = tiles_[cg][rg];
+          tile.rg = cg;
+          tile.cg = rg;
+
+	      tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
+          tile.ith = cg / colgrp_nranks;
+          tile.jth = rg % rowgrp_nranks;
+		   
+		  tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
+		}
+		else
+		{
+		  auto& tile = tiles_[rg][cg];
+          tile.rg = rg;
+          tile.cg = cg;
+
+	      tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
+          tile.ith = rg % rowgrp_nranks;
+          tile.jth = cg / rowgrp_nranks;
+		   
+		  tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
+		}
+	  }
     }
   }
   
