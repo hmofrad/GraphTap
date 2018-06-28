@@ -9,8 +9,12 @@
 #include "matrix/graph.h"
 
 const bool TRANSPOSE = true;
-const bool TWOD_STAGGERED = true;
-const bool NUMA = true;
+
+const bool TWOD_STAGGERED = true; // Nested
+const bool _TWOD_STAGGERED = true;
+
+const bool NUMA = true; //Nested
+const bool _NUMA = true;
 
 
 template <class Weight, class Tile>
@@ -50,7 +54,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   else if (partitioning == Partitioning::_2D)
   {
 	  
-	//Env::nmachines = 4;
+	Env::nmachines = 4;
 	/* Machine configuration */
 	uint32_t rowgrp_nmachines = Env::nmachines;
 	uint32_t colgrp_nmachines = Env::nmachines;
@@ -119,13 +123,14 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
       super_tiles[x].resize(nranks_s);	
 
     // Machine tiles 
-    map(super_tiles, nranks_s);
-	
+    map(super_tiles, nranks_s, TRANSPOSE);
+
 	if(!Env::rank)
 	{
-      for (uint32_t rg = 0; rg < Env::nmachines; rg++)
+		
+      for (uint32_t rg = 0; rg < nranks_s; rg++)
       {
-        for (uint32_t cg = 0; cg < Env::nmachines; cg++)
+        for (uint32_t cg = 0; cg < nranks_s; cg++)
         {
           LOG.info<true, false>("%02d ", super_tiles[rg][cg].rank);
         }
@@ -134,9 +139,9 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
       LOG.info<true, false>("\n");
 	  
 	  
-	  for (uint32_t rg = 0; rg < Env::nmachines; rg++)
+	  for (uint32_t rg = 0; rg < nranks_s; rg++)
       {
-        for (uint32_t cg = 0; cg < Env::nmachines; cg++)
+        for (uint32_t cg = 0; cg < nranks_s; cg++)
         {
 		  if(!super_tiles[rg][cg].rank)
             LOG.info<true, false>("[%02d %02d %02d %02d %02d]", super_tiles[rg][cg].rg, super_tiles[rg][cg].cg, super_tiles[rg][cg].ith, super_tiles[rg][cg].jth, super_tiles[rg][cg].nth);
@@ -144,6 +149,14 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
         LOG.info<true, false>("\n");
       }	
 	}
+	
+		if(!Env::rank)
+	printf("%d\n", nranks_s);
+	
+	 
+ // Env::finalize();		
+  //exit(0);	
+   
 	
 	
 	for (uint32_t rm = 0; rm < rowgrp_nmachines; rm++)
@@ -252,7 +265,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
 */
 
 
-  if(TWOD_STAGGERED)
+  if(_TWOD_STAGGERED)
   {
     integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
     assert(rowgrp_nranks * colgrp_nranks == nranks);
@@ -262,7 +275,7 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     map(tiles, nranks, TRANSPOSE);
   }
 
-  if(NUMA)
+  if(_NUMA)
   {
 	uint32_t nranks_machine = Env::nranks / Env::nmachines; ///Env::machines_nranks[0];
     rowgrp_nranks = Env::nmachines;
@@ -275,6 +288,11 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
   }
 
   print_info();
+  
+  //Env::finalize();		
+  //exit(0);	
+  
+  
   //Env::finalize();		
   //exit(0);	
 }
@@ -514,7 +532,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
           tile.rg = cg;
           tile.cg = rg;
 		
-	      tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_);
+		  tile.rank = ((cg % rowgrp_nranks_) * colgrp_nranks_) + (rg % colgrp_nranks_); // + (cg % colgrp_nranks_);
 		  tile.ith =  (cg / rowgrp_nranks_);
           tile.jth =  (rg / colgrp_nranks_);
 		
