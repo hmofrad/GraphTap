@@ -561,7 +561,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
           tile.cg = rg;
 
 	      tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
-          tile.ith = cg / colgrp_nranks;
+          tile.ith = cg / rowgrp_nranks;
           tile.jth = rg % rowgrp_nranks;
 		   
 		  tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
