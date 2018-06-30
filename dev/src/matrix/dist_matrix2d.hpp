@@ -8,7 +8,7 @@
 #include "structures/bitvector.h"
 #include "matrix/graph.h"
 
-const bool TRANSPOSE = true;
+const bool TRANSPOSE = false;
 
 const bool TWOD_STAGGERED = true; // Nested
 const bool _TWOD_STAGGERED = true;
@@ -564,7 +564,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
           tile.ith = cg / rowgrp_nranks;
           tile.jth = rg % rowgrp_nranks;
 		   
-		  tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
+		  tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
 		}
 		else
 		{
@@ -576,7 +576,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
           tile.ith = rg % rowgrp_nranks;
           tile.jth = cg / rowgrp_nranks;
 		   
-		  tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
+		  tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
 		}
 	  }
     }
