@@ -8,7 +8,7 @@
 #include "structures/bitvector.h"
 #include "matrix/graph.h"
 
-const bool TRANSPOSE = false;
+const bool TRANSPOSE = true;
 
 const bool TWOD_STAGGERED = true; // Nested
 const bool _TWOD_STAGGERED = true;
@@ -272,7 +272,14 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     rank_nrowgrps = nrowgrps / colgrp_nranks;
     rank_ncolgrps = ncolgrps / rowgrp_nranks;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-    map(tiles, nranks, TRANSPOSE);
+    //map(tiles, nranks, TRANSPOSE);
+	if(!Env::rank)
+	{
+	    printf("_TWOD_STAGGERED\n");
+		printf("rowgrp_nranks=%d, colgrp_nranks=%d,      nranks=%d\n", rowgrp_nranks, colgrp_nranks, Env::nranks);
+		printf("rank_nrowgrps=%d, rank_ncolgrps=%d, rank_ntiles=%d\n", rank_nrowgrps, rank_ncolgrps, rank_ntiles);
+	}
+	assign_tiles();
   }
 
   if(_NUMA)
@@ -284,8 +291,45 @@ DistMatrix2D<Weight, Tile>::DistMatrix2D(uint32_t nrows, uint32_t ncols, uint32_
     rank_nrowgrps = nranks_machine;
     rank_ncolgrps = Env::nmachines;
     assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
-    map(tiles, nranks,  TRANSPOSE);
+	if(!Env::rank)
+	{
+		printf("rowgrp_nranks=%d, colgrp_nranks=%d,      nranks=%d\n", rowgrp_nranks, colgrp_nranks, Env::nranks);
+		printf("rank_nrowgrps=%d, rank_ncolgrps=%d, rank_ntiles=%d\n", rank_nrowgrps, rank_ncolgrps, rank_ntiles);
+	}
+	assign_tiles();
+    //map(tiles, nranks,  TRANSPOSE);
   }
+  
+  BitVector bv(nranks);
+
+  for (uint32_t rg = 0; rg < nrowgrps; rg++)
+  {
+    if (bv.count() == bv.size())
+      bv.clear();
+
+    for (uint32_t rg_ = rg; rg_ < nrowgrps; rg_++)
+    {
+      if (not bv.touch(tiles[rg_][rg].rank))
+      {
+        using std::swap;
+        swap(tiles[rg_], tiles[rg]);
+        break;
+      }
+    }
+  }
+
+  for (uint32_t rg = 0; rg < nrowgrps; rg++)
+  {
+    for (uint32_t cg = 0; cg < ncolgrps; cg++)
+    {
+      auto& tile = tiles[rg][cg];
+      tile.rg = rg;
+      tile.cg = cg;
+    }
+  }
+  
+  
+  
 
   print_info();
   
@@ -308,44 +352,61 @@ DistMatrix2D<Weight, Tile>::~DistMatrix2D()
 template <class Weight, class Tile>
 void DistMatrix2D<Weight, Tile>::assign_tiles()
 {
+  //Tile tile;
   for (uint32_t rg = 0; rg < nrowgrps; rg++)
   {
     for (uint32_t cg = 0; cg < ncolgrps; cg++)
     {
-      auto& tile = tiles[rg][cg];
-      tile.rg = rg;
-      tile.cg = cg;
 
-      if (this->partitioning == Partitioning::_1D_COL)
+	  if(_TWOD_STAGGERED)
+	  {
+		if(TRANSPOSE)
+		{
+		  auto& tile = tiles[cg][rg];
+		  tile.rg = cg;
+		  tile.cg = rg;
+		  
+		  tile.rank = ((cg % rowgrp_nranks) * colgrp_nranks) + (rg % colgrp_nranks);
+		  tile.ith =  (cg / rowgrp_nranks);
+          tile.jth =  (rg / colgrp_nranks);
+          tile.nth = (tile.ith * rank_nrowgrps) + tile.jth;		  
+        }
+		else
+		{
+	      auto& tile = tiles[rg][cg];
+          tile.rg = rg;
+          tile.cg = cg;
+		  tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
+          tile.ith = rg / colgrp_nranks;
+          tile.jth = cg / rowgrp_nranks;
+		  tile.nth = tile.ith * rank_ncolgrps + tile.jth;
+		}
+	  }
+      // NUMA_2D
+      if(_NUMA)
       {
-        tile.rank    = cg; //(cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
-        tile.ith     = rg / colgrp_nranks;
-        tile.jth     = cg / rowgrp_nranks;
+        if(TRANSPOSE)
+		{
+		  auto& tile = tiles[cg][rg];
+		  tile.rg = cg;
+		  tile.cg = rg;
+		  
+	      tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
+          tile.ith = cg / rowgrp_nranks;
+          tile.jth = rg % rowgrp_nranks;
+	      tile.nth = (tile.ith * rank_ncolgrps) + tile.jth;
+		}
+		else
+		{
+	      auto& tile = tiles[rg][cg];
+          tile.rg = rg;
+          tile.cg = cg;  
+		  tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
+		  tile.ith = rg % rowgrp_nranks;
+		  tile.jth = cg / rowgrp_nranks;
+		  tile.nth = (tile.ith * rank_nrowgrps) + tile.jth;
+		}
       }
-      else if (this->partitioning == Partitioning::_1D_ROW)
-      {
-        tile.rank    = rg;
-        tile.ith     = rg / colgrp_nranks;
-        tile.jth     = cg / rowgrp_nranks;
-        //LOG.fatal("1D_ROW partitioning Not implemented! \n");
-      }
-      else if (this->partitioning == Partitioning::_2D)
-      {
-        tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg % colgrp_nranks);
-        tile.ith = rg / colgrp_nranks;
-        tile.jth = cg / rowgrp_nranks;
-		
-		
-        
-        // NUMA_2D
-        tile.rank = (cg % rowgrp_nranks) * colgrp_nranks + (rg / rowgrp_nranks);
-        tile.ith = rg % rowgrp_nranks;
-        tile.jth = cg / rowgrp_nranks;
-		
-        
-      }
-
-      tile.nth = tile.ith * rank_ncolgrps + tile.jth;
     }
   }
 }
@@ -520,6 +581,8 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
   assert(rank_nrowgrps_ * rank_ncolgrps_ == rank_ntiles_);
   //printf("2.rank_ntiles_=%d, %d %d\n", rank_ntiles_, rank_nrowgrps_, rank_ncolgrps_);
   
+  
+  
   for (uint32_t rg = 0; rg < nrowgrps_; rg++)
   {
     for (uint32_t cg = 0; cg < ncolgrps_; cg++)
@@ -551,7 +614,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
           tile.nth = (tile.ith * rank_ncolgrps_) + tile.jth;
         }
 	  }
-	  
+	  /*
 	  if(NUMA) 
       {
 		if(transpose)
@@ -579,6 +642,7 @@ void DistMatrix2D<Weight, Tile>::map(std::vector<std::vector<Tile>> &tiles_, uin
 		  tile.nth = (tile.ith * rank_nrowgrps_) + tile.jth;
 		}
 	  }
+	  */
     }
   }
   
