@@ -373,6 +373,9 @@ int main(int argc, char** argv) {
 	printf("rank=%d size=%lu, s=%lu\n", rank, local_tiles.size(), tiles[0][0].triples->size());
 	
 	
+	
+	
+	
 	for (auto& tile_r : tiles)
     {
 	  for (auto& tile_c: tile_r)
