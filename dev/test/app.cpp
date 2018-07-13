@@ -171,7 +171,7 @@ if (header_present)
 		  if(tiles[i][j].rank == rank)
 		  {
 		    local_tiles.push_back((i * ncolgrps) + j);
-          printf(">>>> %d %d %d %d\n", tiles[i][j].rank, i, j, (i * ncolgrps) + j);
+          //printf("%d: [%d][%d] %d\n", tiles[i][j].rank, i, j, (i * ncolgrps) + j);
 		  }
 	  }
 	  //printf("\n");
@@ -203,7 +203,7 @@ if (header_present)
   
   uint64_t sum = 0;
   Triple triple;
-
+int ii = 0;
   while (offset < endpos)
   {
     fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
@@ -218,10 +218,14 @@ if (header_present)
 	{
 		tiles[row_idx][col_idx].triples->push_back(triple);
 		sum++;
-	//if(!rank)
-	  //std::cout << tile_height << "," << tile_width << "," << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << " " << local_idx << std::endl;	
-	  assert((row_idx >= 0) and (row_idx < nrowgrps));
-	  assert((col_idx >= 0) and (col_idx < ncolgrps));
+	    if(!rank)
+		{
+		  if(ii == 0)
+	        std::cout << tile_height << "," << tile_width << "," << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << " " << local_idx << std::endl;	
+		ii++;
+		}
+	    assert((row_idx >= 0) and (row_idx < nrowgrps));
+	    assert((col_idx >= 0) and (col_idx < ncolgrps));
 	  
 	}
 	
@@ -243,9 +247,9 @@ if (header_present)
   
  
  
- /*
+/* 
   int i = 0, j= 0;
-  //for(int i = 0; i < nvertices; i++)	  
+	  
   for (auto& tile_r : tiles)
   {	  
       j = 0;
@@ -288,12 +292,50 @@ if (header_present)
 	}
   }
   */
-  printf("SUM=%lu %lu %d\n", sum, sum1, 4219314 + 3983833 + 4002485 + 4571584);	
+  //printf("SUM=%lu %lu %d\n", sum, sum1, 4219314 + 3983833 + 4002485 + 4571584);	
   
  
-   
- 
- 
+ int i = 0, j= 0;
+if(rank == 2)   
+{
+   for (uint32_t i = 0; i < nrowgrps; i++)
+  {
+	for (uint32_t j = 0; j < ncolgrps; j++)  
+	{
+		std::cout << tiles[i][j].rank << "|";
+	}
+	std::cout << "\n";
+  }
+  
+  for(uint32_t t: local_tiles)
+  {
+	uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
+    uint32_t col = t % ncolgrps;
+	//printf("%d %d %d %lu\n", tile, row, col, tiles[row][col].triples->size());
+	auto& tile = tiles[row][col];
+	for (auto& triple : *(tile.triples))
+    {
+	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
+    }
+	
+	
+    //for (std::vector<Triple>::iterator it = tiles[row][col].triples.begin() ; it != tiles[row][col].triples.end(); ++it)
+      //std::cout << ' ' << *it;
+    //std::cout << '\n';
+	
+	//std::vector<Triple*> t = tiles[row][col].triples;//->data();
+	//if(tiles[row][col].triples->size())
+	//{
+	  //printf("%d %d\n", tiles[row][col].triples->front().row, tiles[row][col].triples->front().col);
+	//}
+	//for(Triple& t: (tiles[row][col].triples))
+	//{
+		//;
+		//printf("%d %d\n", t.row, t.col);
+	//}
+  }
+}
+  
   
   
   
