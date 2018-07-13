@@ -10,6 +10,7 @@
 #include <numeric>
 #include <algorithm>
 #include <fstream>
+#include <sys/mman.h>
 
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/vector.hpp>
@@ -37,10 +38,32 @@ struct Triple {
 	: row(row), col(col) {}  
 };
 
+
+bool compare(const Triple &a, const Triple &b)
+{
+	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+	/*
+	if(a.row == b.row)
+	{
+	  return a.col < b.col;	
+	}
+	else
+	{
+      return a.row < b.row;
+	}
+	*/
+}
+
+struct CSC {
+	
+};
+
+
 struct Tile2D
 {
   //int test;
   std::vector<struct Triple >* triples;
+  //struct CSC*;
   /*
   Tile2D() { allocate_triples(); }
   ~Tile2D() { free_triples(); }
@@ -295,8 +318,8 @@ int ii = 0;
   //printf("SUM=%lu %lu %d\n", sum, sum1, 4219314 + 3983833 + 4002485 + 4571584);	
   
  
- int i = 0, j= 0;
-if(rank == 2)   
+ //int i = 0, j= 0;
+if(rank == 0)   
 {
    for (uint32_t i = 0; i < nrowgrps; i++)
   {
@@ -306,18 +329,20 @@ if(rank == 2)
 	}
 	std::cout << "\n";
   }
-  
+  uint64_t s = 0;
   for(uint32_t t: local_tiles)
   {
 	uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
     uint32_t col = t % ncolgrps;
 	//printf("%d %d %d %lu\n", tile, row, col, tiles[row][col].triples->size());
 	auto& tile = tiles[row][col];
+	/*
 	for (auto& triple : *(tile.triples))
     {
+		s++;
 	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
     }
-	
+	*/
 	
     //for (std::vector<Triple>::iterator it = tiles[row][col].triples.begin() ; it != tiles[row][col].triples.end(); ++it)
       //std::cout << ' ' << *it;
@@ -334,7 +359,93 @@ if(rank == 2)
 		//printf("%d %d\n", t.row, t.col);
 	//}
   }
+  //printf("degree=%lu\n", s);
+  
+  auto& tile = tiles[0][1];
+  uint32_t nnz = tile.triples->size() + 2;
+  uint32_t* A = (uint32_t*) mmap(nullptr, (nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  memset(A, 0, nnz);
+  uint32_t* IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  memset(IA, 0, ncols + 1);
+  uint32_t* JA = (uint32_t*) mmap(nullptr, (nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  memset(JA, 0, nnz);
+  
+  
+  triple.row = 4;
+  triple.col = 3;
+  tile.triples->push_back(triple);
+  
+  triple.row = 6;
+  triple.col = 1;
+  tile.triples->push_back(triple);
+  
+  //std::sort(tile.triples->begin(), tile.triples->end(), compareByCol);
+  std::sort(tile.triples->begin(), tile.triples->end(), compare);
+  
+  
+ 
+	for (auto& triple : *(tile.triples))
+    {
+	    printf("%d:[%d][%d]=[%d %d]\n", rank, 0, 1, triple.row, triple.col);
+    }
+
+
+  
+  
+  uint32_t i = 0;
+  uint32_t j = 1;
+  uint32_t nextRow = 0;
+  IA[0] = 0;
+  for (auto& triple : *(tile.triples))
+  {
+    if(j < triple.row)
+	{
+		//printf("<%d %d %d %d>\n", triple.row, triple.col, nextRow, j);
+		//nextRow = triple.row;
+		while(j <= triple.row)
+		{
+	      //nextRow++;
+		  //j = nextRow;
+		  j++;
+		  IA[j] = IA[j - 1];
+		}
+		  //j = nextRow;
+		  //IA[j] = IA[j - 1];
+		//}
+	}
+
+
+    A[i] = 1;
+	IA[j]++;
+	JA[i] = triple.col;	
+	i++;
+
+  }
+  
+  
+  for(i = 0; i < nnz; i++)
+  {
+	  printf("%d ", A[i]);
+  }
+  printf("\n");
+  for(i = 0; i < (ncols + 1); i++)
+  {
+	  printf("%d ", IA[i]);
+  }
+  printf("\n");
+  for(i = 0; i < nnz; i++)
+  {
+	  printf("%d ", JA[i]);
+  }
+  printf("\n");
+  
+  printf("%d %d \n", JA[0], JA[i -1]);
+  for(i = 0; i < ncolgrps + 1; i++)
+	  printf("%d ", i * tile_width);
+  
 }
+  
+  
   
   
   
