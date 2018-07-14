@@ -54,8 +54,11 @@ bool compare(const Triple &a, const Triple &b)
 	*/
 }
 
-struct CSC {
-	
+struct CSR {
+	uint32_t nnz;
+	uint32_t* A;
+	uint32_t* IA;
+	uint32_t* JA;
 };
 
 
@@ -63,7 +66,7 @@ struct Tile2D
 {
   //int test;
   std::vector<struct Triple >* triples;
-  //struct CSC*;
+  struct CSR* csr;
   /*
   Tile2D() { allocate_triples(); }
   ~Tile2D() { free_triples(); }
@@ -361,8 +364,80 @@ if(rank == 0)
   }
   //printf("degree=%lu\n", s);
   
+  for(uint32_t t: local_tiles)
+  {
+	uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
+    uint32_t col = t % ncolgrps;
+	auto& tile = tiles[row][col];
+	//struct CSR* csr = new struct CSR;
+	tile.csr = new struct CSR;
+	tile.csr->nnz = tile.triples->size();
+	tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	tile.csr->IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	
+	std::sort(tile.triples->begin(), tile.triples->end(), compare);
+	
+	for (auto& triple : *(tile.triples))
+    {
+	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
+    }
+
+    uint32_t i = 0;
+    uint32_t j = 1;
+    uint32_t nextRow = 0;
+    tile.csr->IA[0] = 0;
+    for (auto& triple : *(tile.triples))
+    {
+      while(j < triple.row)
+	  {
+	    j++;
+	    tile.csr->IA[j] = tile.csr->IA[j - 1];
+	  }
+
+      tile.csr->A[i] = 1;
+	  tile.csr->IA[j]++;
+	  tile.csr->JA[i] = triple.col;	
+	  i++;
+    }
+  
+    // Not necessary
+    while(j < (nrows + 1))
+    {
+  	  j++;
+      tile.csr->IA[j] = tile.csr->IA[j - 1];
+    }
+	
+	printf("csc:%d:[%d][%d]:\n", rank, row, col);
+	for(i = 0; i < tile.csr->nnz; i++)
+    {
+	  printf("%d ", tile.csr->A[i]);
+    }
+    printf("\n");
+    for(i = 0; i < (ncols + 1); i++)
+    {
+	  printf("%d ", tile.csr->IA[i]);
+    }
+    printf("\n");
+	
+    //for(i = 0; i < tile.csr->nnz; i++)
+    //{
+	//  printf("%d ", tile.csr->JA[i]);
+    //}
+    //printf("\n");
+	
+	
+	
+  }
+  
+  
+  
+  
+  /*
   auto& tile = tiles[0][1];
   uint32_t nnz = tile.triples->size() + 2;
+  
+  
   uint32_t* A = (uint32_t*) mmap(nullptr, (nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   memset(A, 0, nnz);
   uint32_t* IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -398,21 +473,22 @@ if(rank == 0)
   IA[0] = 0;
   for (auto& triple : *(tile.triples))
   {
-    if(j < triple.row)
-	{
-		//printf("<%d %d %d %d>\n", triple.row, triple.col, nextRow, j);
+   // if(j < triple.row)
+	//{
+		printf("<%d %d (%d,%d)>\n", triple.row, j, triple.row, triple.col);
 		//nextRow = triple.row;
-		while(j <= triple.row)
+		while(j < triple.row)
 		{
 	      //nextRow++;
 		  //j = nextRow;
 		  j++;
 		  IA[j] = IA[j - 1];
 		}
+		//printf("<%d %d (%d,%d)>\n", triple.row, j, triple.row, triple.col);
 		  //j = nextRow;
 		  //IA[j] = IA[j - 1];
 		//}
-	}
+	//}
 
 
     A[i] = 1;
@@ -422,7 +498,14 @@ if(rank == 0)
 
   }
   
-  
+  // Not necessary
+  while(j < (nrows + 1))
+  {
+	j++;
+    IA[j] = IA[j - 1];
+  }
+  */
+  /*
   for(i = 0; i < nnz; i++)
   {
 	  printf("%d ", A[i]);
@@ -443,9 +526,20 @@ if(rank == 0)
   for(i = 0; i < ncolgrps + 1; i++)
 	  printf("%d ", i * tile_width);
   
+  */
+  
 }
   
-  
+ 
+
+	for (auto& tile_r : tiles)
+    {
+	  for (auto& tile_c: tile_r)
+	  {
+		delete tile_c.triples;
+		//tile_c.free_triples();
+	  }
+    } 
   
   
   
@@ -523,20 +617,13 @@ int main(int argc, char** argv) {
 	//sum1 += tiles[row][col].triples->size();
 	
 	
-	printf("rank=%d size=%lu, s=%lu\n", rank, local_tiles.size(), tiles[0][0].triples->size());
+	//printf("rank=%d size=%lu, s=%lu\n", rank, local_tiles.size(), tiles[0][0].triples->size());
 	
 	
 	
 	
 	
-	for (auto& tile_r : tiles)
-    {
-	  for (auto& tile_c: tile_r)
-	  {
-		delete tile_c.triples;
-		//tile_c.free_triples();
-	  }
-    }
+
 	
 	MPI_Finalize();
 
