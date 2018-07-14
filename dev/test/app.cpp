@@ -26,14 +26,45 @@ int cpu_id;
 bool is_master;
 
 
+//class Empty { };
+
+//using Weight = Empty;
+
+struct Empty
+{
+ // static const Empty EMPTY;
+
+  // Dummy method to allow compilation. Never called.
+  //template <class Archive>
+  //void serialize(Archive& archive, const uint32_t version) {}
+};
+
+//const Empty Empty::EMPTY = Empty();
 
 //static const Weight uint32_t;
 
-//template <class Weight>
+template <typename Weight>
+struct Triple1 {
+  uint32_t col;
+  uint32_t row;
+  Weight weight;
+};
+
+
+template <>
+struct Triple1 <Empty> {
+  uint32_t row;
+  union {
+    uint32_t col;
+    Empty weight;
+  };
+};
+
+
 struct Triple {
   uint32_t row;
   uint32_t col;
-  //Weight weight;
+  //Empty weight;
   Triple(uint32_t row = 0, uint32_t col = 0)
 	: row(row), col(col) {}  
 };
@@ -87,6 +118,23 @@ struct Tile2D
   uint32_t ith, jth, nth;
   int32_t rank;
 };
+
+
+
+struct Triple tile_of_local_tile(uint32_t local_tile, uint32_t ncolgrps)
+{
+  //uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+  //uint32_t col = local_tiles[i] % ncolgrps;
+  return{(local_tile - (local_tile % ncolgrps)) / ncolgrps, local_tile % ncolgrps};
+}
+
+struct Triple tile_of_tiple(struct Triple triple, uint32_t tile_height, uint32_t tile_width)
+{
+  //uint32_t row_idx = triple.row / tile_height;
+  //uint32_t col_idx = triple.col / tile_width;
+  return{triple.row / tile_height, triple.col / tile_width};
+}
+  
 
 std::vector<std::vector<struct Tile2D>> tiles;
 std::vector<int> local_tiles;
@@ -233,25 +281,28 @@ int ii = 0;
   while (offset < endpos)
   {
     fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
-	uint32_t row_idx = triple.row / tile_height;
-	uint32_t col_idx = triple.col / tile_width;
+	//uint32_t row_idx = triple.row / tile_height;
+	//uint32_t col_idx = triple.col / tile_width;
+	Triple pair = tile_of_tiple(triple, tile_height, tile_height);
 	
-	
-	uint32_t local_idx = (row_idx * ncolgrps) + col_idx;
+	uint32_t local_idx = (pair.row * ncolgrps) + pair.col;
+	//uint32_t local_idx = (row_idx * ncolgrps) + col_idx;
 
     //assert(((row_idx * ncolgrps) + col_idx) == 
 	if (std::find(local_tiles.begin(), local_tiles.end(), local_idx) != local_tiles.end())
 	{
-		tiles[row_idx][col_idx].triples->push_back(triple);
-		sum++;
-	    if(!rank)
-		{
-		  if(ii == 0)
-	        std::cout << tile_height << "," << tile_width << "," << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << " " << local_idx << std::endl;	
-		ii++;
-		}
-	    assert((row_idx >= 0) and (row_idx < nrowgrps));
-	    assert((col_idx >= 0) and (col_idx < ncolgrps));
+		//tiles[row_idx][col_idx].triples->push_back(triple);
+		tiles[pair.row][pair.col].triples->push_back(triple);
+		//sum++;
+	    //if(!rank)
+		//{
+		  //if(ii == 0)
+	        //std::cout << tile_height << "," << tile_width << "," << "(" << triple.row << "," << triple.col << "):" << row_idx << " " << col_idx << " " << local_idx << std::endl;	
+		//ii++;
+		//}
+	    
+		//assert((row_idx >= 0) and (row_idx < nrowgrps));
+	    //assert((col_idx >= 0) and (col_idx < ncolgrps));
 	  
 	}
 	
@@ -263,8 +314,9 @@ int ii = 0;
 
     if ((offset & ((1L << 26) - 1L)) == 0)
     {
-      std::cout << "|" << std::endl;
-      fflush(stdout);
+		;
+      //std::cout << "| ";
+      //fflush(stdout);
     }
     offset += sizeof(Triple);
   }
@@ -295,15 +347,16 @@ int ii = 0;
   }
   */
 
-  uint64_t sum1 = 0;
+  //uint64_t sum1 = 0;
   //std::vector<std::vector<struct Triple>> outboxes(nranks);  
   
-  for(uint32_t i = 0; i < local_tiles.size(); i++) 
-  {
-	uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
-	uint32_t col = local_tiles[i] % ncolgrps;
-	  sum1 += tiles[row][col].triples->size();
-  }
+  //for(uint32_t i = 0; i < local_tiles.size(); i++) 
+  //{
+	//uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+	//uint32_t col = local_tiles[i] % ncolgrps;
+	  //sum1 += tiles[row][col].triples->size();
+  //}
+  
 	  
   
   /*
@@ -332,7 +385,7 @@ int ii = 0;
 	//}
 	//std::cout << "\n";
   //}
-  uint64_t s = 0;
+  //uint64_t s = 0;
   //for(uint32_t t: local_tiles)
   //{
 	//uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
@@ -366,9 +419,11 @@ int ii = 0;
   
   for(uint32_t t: local_tiles)
   {
-	uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
-    uint32_t col = t % ncolgrps;
-	auto& tile = tiles[row][col];
+	//uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
+    //uint32_t col = t % ncolgrps;
+	Triple pair = tile_of_local_tile(t, ncolgrps);
+	//auto& tile = tiles[row][col];
+	auto& tile = tiles[pair.row][pair.col];
 	//struct CSR* csr = new struct CSR;
 	tile.csr = new struct CSR;
 	tile.csr->nnz = tile.triples->size();
@@ -377,12 +432,13 @@ int ii = 0;
 	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	
 	std::sort(tile.triples->begin(), tile.triples->end(), compare);
-	/*
+	if(!rank)
+	{
 	for (auto& triple : *(tile.triples))
     {
-	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
+	    printf("%d:[%d][%d]=[%d %d]\n", rank, pair.row, pair.col, triple.row, triple.col);
     }
-	*/
+	}
     uint32_t i = 0;
     uint32_t j = 1;
     uint32_t nextRow = 0;
@@ -408,8 +464,9 @@ int ii = 0;
       tile.csr->IA[j] = tile.csr->IA[j - 1];
     }
 
-	/*
-	printf("csc:%d:[%d][%d]:\n", rank, row, col);
+	if(!rank)
+	{
+	printf("csc:%d:[%d][%d]:\n", rank, pair.row, pair.col);
 	for(i = 0; i < tile.csr->nnz; i++)
     {
 	  printf("%d ", tile.csr->A[i]);
@@ -427,7 +484,14 @@ int ii = 0;
     }
     printf("\n");
 	
-	*/
+	struct Triple1<Empty> tt;
+	printf("%lu\n", sizeof(tt));
+//	= new struct Triple1<Empty>;
+	//struct Triple1 tt;
+//	= new struct Triple1;
+	
+  }
+	
 	
 //  }
   
@@ -506,28 +570,31 @@ int ii = 0;
     IA[j] = IA[j - 1];
   }
   */
+  
   /*
-  for(i = 0; i < nnz; i++)
+  if(!rank)
   {
-	  printf("%d ", A[i]);
+  for(i = 0; i < tile.csr->nnz; i++)
+  {
+	  printf("%d ", tile.csr->A[i]);
   }
   printf("\n");
   for(i = 0; i < (ncols + 1); i++)
   {
-	  printf("%d ", IA[i]);
+	  printf("%d ", tile.csr->IA[i]);
   }
   printf("\n");
-  for(i = 0; i < nnz; i++)
+  for(i = 0; i < tile.csr->nnz; i++)
   {
-	  printf("%d ", JA[i]);
+	  printf("%d ", tile.csr->JA[i]);
   }
   printf("\n");
   
-  printf("%d %d \n", JA[0], JA[i -1]);
   for(i = 0; i < ncolgrps + 1; i++)
 	  printf("%d ", i * tile_width);
-  
+  }
   */
+  
   
 }
   
@@ -538,23 +605,18 @@ int ii = 0;
 	  for (auto& tile_c: tile_r)
 	  {
 		delete tile_c.triples;
+		if(tile_c.rank == rank)
+		{
+		  munmap(tile_c.csr->A, (tile_c.csr->nnz) * sizeof(uint32_t));
+		  munmap(tile_c.csr->IA, (nrows + 1) * sizeof(uint32_t));
+		  munmap(tile_c.csr->JA, (tile_c.csr->nnz) * sizeof(uint32_t));
+		  delete tile_c.csr;
+		}
 		//tile_c.free_triples();
 	  }
     } 
   
-  
-  
-  
-
-  
-  
-  
-  
-  
-  
-  
-//printf("yyyyyyyyyyyyyyyyyyyyyyyyy\n");
-  
+  //munmap(colptrs, (ncols + 1) * sizeof(uint32_t));
   
 
 }
