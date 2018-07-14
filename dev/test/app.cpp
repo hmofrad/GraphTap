@@ -322,23 +322,23 @@ int ii = 0;
   
  
  //int i = 0, j= 0;
-if(rank == 0)   
-{
-   for (uint32_t i = 0; i < nrowgrps; i++)
-  {
-	for (uint32_t j = 0; j < ncolgrps; j++)  
-	{
-		std::cout << tiles[i][j].rank << "|";
-	}
-	std::cout << "\n";
-  }
+//if(rank == 0)   
+//{
+   //for (uint32_t i = 0; i < nrowgrps; i++)
+  //{
+	//for (uint32_t j = 0; j < ncolgrps; j++)  
+	//{
+		//std::cout << tiles[i][j].rank << "|";
+	//}
+	//std::cout << "\n";
+  //}
   uint64_t s = 0;
-  for(uint32_t t: local_tiles)
-  {
-	uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
-    uint32_t col = t % ncolgrps;
+  //for(uint32_t t: local_tiles)
+  //{
+	//uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
+    //uint32_t col = t % ncolgrps;
 	//printf("%d %d %d %lu\n", tile, row, col, tiles[row][col].triples->size());
-	auto& tile = tiles[row][col];
+	//auto& tile = tiles[row][col];
 	/*
 	for (auto& triple : *(tile.triples))
     {
@@ -361,7 +361,7 @@ if(rank == 0)
 		//;
 		//printf("%d %d\n", t.row, t.col);
 	//}
-  }
+  //}
   //printf("degree=%lu\n", s);
   
   for(uint32_t t: local_tiles)
@@ -377,12 +377,12 @@ if(rank == 0)
 	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	
 	std::sort(tile.triples->begin(), tile.triples->end(), compare);
-	
+	/*
 	for (auto& triple : *(tile.triples))
     {
 	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
     }
-
+	*/
     uint32_t i = 0;
     uint32_t j = 1;
     uint32_t nextRow = 0;
@@ -407,7 +407,8 @@ if(rank == 0)
   	  j++;
       tile.csr->IA[j] = tile.csr->IA[j - 1];
     }
-	
+
+	/*
 	printf("csc:%d:[%d][%d]:\n", rank, row, col);
 	for(i = 0; i < tile.csr->nnz; i++)
     {
@@ -420,15 +421,15 @@ if(rank == 0)
     }
     printf("\n");
 	
-    //for(i = 0; i < tile.csr->nnz; i++)
-    //{
-	//  printf("%d ", tile.csr->JA[i]);
-    //}
-    //printf("\n");
+    for(i = 0; i < tile.csr->nnz; i++)
+    {
+	  printf("%d ", tile.csr->JA[i]);
+    }
+    printf("\n");
 	
+	*/
 	
-	
-  }
+//  }
   
   
   
