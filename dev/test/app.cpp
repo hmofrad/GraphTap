@@ -31,46 +31,14 @@ bool is_master;
 template<typename Weight>
 class Matrix
 {
+    Matrix();
+    ~Matrix();
+	
   	
 };
 
 
-
-//class Empty { };
-
-//using Weight = Empty;
-
-struct Empty
-{
- // static const Empty EMPTY;
-
-  // Dummy method to allow compilation. Never called.
-  //template <class Archive>
-  //void serialize(Archive& archive, const uint32_t version) 
-};
-
-//const Empty Empty::EMPTY = Empty();
-
-//static const Weight uint32_t;
-
-/*
-template <typename Weight>
-struct Triple1 {
-  uint32_t col;
-  uint32_t row;
-  Weight weight;
-};
-
-
-template <>
-struct Triple1 <Empty> {
-  uint32_t row;
-  union {
-    uint32_t col;
-    Empty weight;
-  };
-};
-*/
+struct Empty { };
 
 
 template <typename Weight>
@@ -92,43 +60,11 @@ struct Triple <Empty> {
   };
 };
 
-
-
-/*
-struct Triple {
-  uint32_t row;
-  uint32_t col;
-  //Empty weight;
-  Triple(uint32_t row = 0, uint32_t col = 0)
-	: row(row), col(col) {}  
-};
-*/
-
-
-
-
 template <typename Weight>
 static bool compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
 {
 	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
-	/*
-	if(a.row == b.row)
-	{
-	  return a.col < b.col;	
-	}
-	else
-	{
-      return a.row < b.row;
-	}
-	*/
 }
-
-
-//template <>
-//bool compare(const struct Triple<Empty>& a, const struct Triple<Empty>& b)
-//{
-//	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
-//}
 
 struct CSR {
 	uint32_t nnz;
@@ -139,26 +75,9 @@ struct CSR {
 
 template <typename Weight>
 struct Tile2D
-{
-  //int test;
+{ 
   std::vector<struct Triple<Weight>>* triples;
   struct CSR* csr;
-  /*
-  Tile2D() { allocate_triples(); }
-  ~Tile2D() { free_triples(); }
-  
-  void allocate_triples()
-  {
-    if (!triples)
-      triples = new std::vector<struct Triple>;
-  }
-  
-  void free_triples()
-  {
-    delete triples;
-    triples = nullptr;
-  }
-  */
   uint32_t rg, cg;
   uint32_t ith, jth, nth;
   int32_t rank;
@@ -167,23 +86,12 @@ struct Tile2D
 template <typename Weight>
 struct Triple<Weight> tile_of_local_tile(const struct Triple<Weight> triple, const uint32_t local_tile, const uint32_t ncolgrps)
 {
-  //uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
-  //uint32_t col = local_tiles[i] % ncolgrps;
   return{(local_tile - (local_tile % ncolgrps)) / ncolgrps, local_tile % ncolgrps};
 }
-
-
-//template <>
-//struct Triple<Empty> tile_of_local_tile(const uint32_t& local_tile, const uint32_t& ncolgrps)
-//{
-//  return{(local_tile - (local_tile % ncolgrps)) / ncolgrps, local_tile % ncolgrps};	
-//}
 
 template <typename Weight>
 struct Triple<Weight> tile_of_tiple(const struct Triple<Weight> triple, const uint32_t tile_height, const uint32_t tile_width)
 {
-  //uint32_t row_idx = triple.row / tile_height;
-  //uint32_t col_idx = triple.col / tile_width;
   return{triple.row / tile_height, triple.col / tile_width};
 }
   
@@ -192,7 +100,7 @@ std::vector<std::vector<struct Tile2D<Weight>>> tiles;
 std::vector<int> local_tiles;
 
 
-
+template <typename Weight>
 void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols)
 {
 	
