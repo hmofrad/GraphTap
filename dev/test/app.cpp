@@ -28,32 +28,65 @@ bool is_master;
 
 template <typename Weight>
 struct Triple {
-  uint32_t row;
-  uint32_t col;
-  Weight weight;
-  Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0)
-	: row(row), col(col), weight(weight) {}  
+    uint32_t row;
+    uint32_t col;
+    Weight weight;
+    Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0)
+	    : row(row), col(col), weight(weight) {}  
+    //static bool compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b);
 };
+
+//template <typename Weight>
+//bool Triple<Weight>::compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
+//{
+//	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+//}
 
 struct Empty {};
 
 template <>
 struct Triple <Empty> {
-  uint32_t row;
-  union {
-    uint32_t col;
-    Empty weight;
-  };
+    uint32_t row;
+    union {
+        uint32_t col;
+        Empty weight;
+    };
+    //static bool compare(const struct Triple<Empty>& a, const struct Triple<Empty>& b);
+};
+
+template <typename Weight>
+struct Functor
+{
+	bool operator()(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
+	{
+	    return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+	}
+};
+
+//template <>
+//bool Triple<Empty>::compare(const struct Triple<Empty>& a, const struct Triple<Empty>& b)
+//{
+//	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+//}
+
+
+struct CSR {
+	uint32_t nnz;
+	uint32_t* A;
+	uint32_t* IA;
+	uint32_t* JA;
 };
 
 template <typename Weight>
 struct Tile2D
 { 
-  std::vector<struct Triple<Weight>>* triples;
-  struct CSR* csr;
-  uint32_t rg, cg;
-  uint32_t ith, jth, nth;
-  int32_t rank;
+    template <typename Weight_>
+    friend class Matrix;
+    std::vector<struct Triple<Weight>>* triples;
+    struct CSR* csr;
+    uint32_t rg, cg;
+    uint32_t ith, jth, nth;
+    int32_t rank;
 };
 
 template<typename Weight>
@@ -141,18 +174,8 @@ Graph<Weight>::~Graph()
 	delete Graph<Weight>::A;
 };
 
-template <typename Weight>
-static bool compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
-{
-	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
-}
 
-struct CSR {
-	uint32_t nnz;
-	uint32_t* A;
-	uint32_t* IA;
-	uint32_t* JA;
-};
+
 
 
 
@@ -607,24 +630,17 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	*/
 	
 	
-	//int ii = 0;
-	//int jj = 0;
+    
     for (auto& tile_r : Graph<Weight>::A->tiles)
     {
 		
 	    for (auto& tile_c: tile_r)
 	    {
-			//jj++;
 			if(tile_c.rank == rank)
 			{
 		    tile_c.triples = new std::vector<struct Triple<Weight>>;
-			//if(!rank)
-		    //{
-		      //  printf("[>>%d %d]\n", ii, jj);	
-		    //}
 			}
 	    }
-		//ii++;
     }
 	
 	
@@ -665,16 +681,89 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 			}
 		    Graph<Weight>::A->tiles[pair.row][pair.col].triples->push_back(triple);
     	}
-		
-		
-		
-		
-		
         offset += sizeof(Triple<Weight>);
     }
     assert(offset == filesize);
     fin.close();
-	printf("done reading\n");
+	printf("done reading\n");	
+	  
+  for(uint32_t t: Graph<Weight>::A->local_tiles)
+  {
+	pair = Graph<Weight>::A->tile_of_local_tile(t);
+	auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+	tile.csr = new struct CSR;
+	tile.csr->nnz = tile.triples->size();
+	tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	tile.csr->IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	
+	if(!rank)
+	{
+	    for (auto& triple : *(Graph<Weight>::A->tiles[pair.row][pair.col].triples))
+        {
+	        printf("%d:[%d][%d]:  %d %d\n", rank, pair.row, pair.col, triple.row, triple.col);
+		}
+	}
+	Functor<Weight> f;
+	//tile.triples->sort(f);
+	//std::sort(tile.triples->begin(), tile.triples->end(), struct Triple<Weight>::compare);
+	std::sort(tile.triples->begin(), tile.triples->end(), f);
+    uint32_t i = 0;
+    uint32_t j = 1;
+    uint32_t nextRow = 0;
+    tile.csr->IA[0] = 0;
+    for (auto& triple : *(tile.triples))
+    {
+      while(j < triple.row)
+	  {
+	    j++;
+	    tile.csr->IA[j] = tile.csr->IA[j - 1];
+	  }
+
+      tile.csr->A[i] = 1;
+	  tile.csr->IA[j]++;
+	  tile.csr->JA[i] = triple.col;	
+	  i++;
+    }
+  
+    // Not necessary
+    while(j < (nrows + 1))
+    {
+  	  j++;
+      tile.csr->IA[j] = tile.csr->IA[j - 1];
+    }
+
+	if(!rank)
+	{
+	printf("csc:%d:[%d][%d]:\n", rank, pair.row, pair.col);
+	for(i = 0; i < tile.csr->nnz; i++)
+    {
+	  printf("%d ", tile.csr->A[i]);
+    }
+    printf("\n");
+    for(i = 0; i < (ncols + 1); i++)
+    {
+	  printf("%d ", tile.csr->IA[i]);
+    }
+    printf("\n");
+	
+    for(i = 0; i < tile.csr->nnz; i++)
+    {
+	  printf("%d ", tile.csr->JA[i]);
+    }
+    printf("\n");
+	//struct Triple<uint32_t> triple1 = {5, 4};
+	//struct Triple<uint32_t> triple2 = {6 ,2};
+	//printf("CMPPP = %d %lu\n",compare(triple1, triple2), sizeof(triple1) );
+	
+    }
+	
+  }
+	
+	
+	
+	
+	
 	
 	/*
 	for(uint32_t i = 0; i < Graph<Weight>::A->local_tiles.size(); i++)
