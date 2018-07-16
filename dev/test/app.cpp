@@ -98,13 +98,26 @@ struct Functor
 //	return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
 //}
 
-
-struct CSR {
+template<typename Weight>
+struct CSR
+{
 	uint32_t nnz;
+	uint32_t nrwos_plus_one;
 	uint32_t* A;
 	uint32_t* IA;
 	uint32_t* JA;
+	void free();
 };
+
+
+template<typename Weight>
+void CSR<Weight>::free()
+{
+	munmap(CSR<Weight>::A, (this->nnz) * sizeof(uint32_t));
+    munmap(CSR<Weight>::IA, (this->nrwos_plus_one) * sizeof(uint32_t));
+    munmap(CSR<Weight>::JA, (this->nnz) * sizeof(uint32_t));	
+}
+
 
 template <typename Weight>
 struct Tile2D
@@ -112,7 +125,7 @@ struct Tile2D
     template <typename Weight_>
     friend class Matrix;
     std::vector<struct Triple<Weight>>* triples;
-    struct CSR* csr;
+    struct CSR<Weight>* csr;
     uint32_t rg, cg;
     uint32_t ith, jth, nth;
     int32_t rank;
@@ -184,7 +197,7 @@ class Graph
         ~Graph();
 		
 		void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, bool directed_ = true);//uint32_t nvertices, uint32_t mvertices, uint32_t nedges);
-		
+		void free();
 	private:
 	    std::string filepath;
 	    uint32_t nvertices;
@@ -200,9 +213,28 @@ Graph<Weight>::Graph() : A(nullptr) {};
 template<typename Weight>
 Graph<Weight>::~Graph()
 {
-	
 	delete Graph<Weight>::A;
 };
+
+
+template<typename Weight>
+void Graph<Weight>::free()
+{
+	for (auto& tile_r : Graph<Weight>::A->tiles)
+    {
+	    for (auto& tile_c: tile_r)
+	    {
+			if(tile_c.rank == rank)
+			{
+				tile_c.csr->free();
+				//munmap(tile_c.csr->A, (tile_c.csr->nnz) * sizeof(uint32_t));
+				//munmap(tile_c.csr->IA, (Graph<Weight>::A->nrows + 1) * sizeof(uint32_t));
+			    //munmap(tile_c.csr->JA, (tile_c.csr->nnz) * sizeof(uint32_t));	
+			    //delete tile_c.triples;
+			}
+		}
+	}
+}
 
 
 
@@ -608,6 +640,18 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     {
 	    for (uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)  
 	    {
+			/*
+			auto& tile = Graph<Weight>::A->tiles[i][j];
+			tile.rg = i;
+            tile.cg = j;
+	        tile.rank = i;
+            if(tile.rank == rank)
+			{
+		        pair.row = i;
+		        pair.col = j;	
+			    Graph<Weight>::A->local_tiles.push_back(Graph<Weight>::A->local_tile_of_tile(pair));
+			}
+			*/
 	        Graph<Weight>::A->tiles[i][j].rg = i;
             Graph<Weight>::A->tiles[i][j].cg = j;
 	        Graph<Weight>::A->tiles[i][j].rank = i;
@@ -660,7 +704,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	*/
 	
 	
-    
+    /*
     for (auto& tile_r : Graph<Weight>::A->tiles)
     {
 		
@@ -672,8 +716,13 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 			}
 	    }
     }
-	
-	
+	*/
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+	    pair = Graph<Weight>::A->tile_of_local_tile(t);
+		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+		tile.triples = new std::vector<struct Triple<Weight>>;
+	}
 	
 	
 	struct Triple<Weight> triple;
@@ -691,7 +740,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
             std::cout << "read() failure" << std::endl;
             exit(1);
         }
-		
+		Graph<Weight>::nedges++;
 		
 	
 	    pair = Graph<Weight>::A->tile_of_triple(triple);
@@ -717,7 +766,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     }
     assert(offset == filesize);
     fin.close();
-	printf("done reading\n");	
+	printf("done reading %lu\n", Graph<Weight>::nedges);	
 	  
     // Creat the csr format
     // Allocate csr data structure
@@ -727,10 +776,11 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     {
 	    pair = Graph<Weight>::A->tile_of_local_tile(t);
     	auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
-	    tile.csr = new struct CSR;
+	    tile.csr = new struct CSR<Weight>;
     	tile.csr->nnz = tile.triples->size();
+		tile.csr->nrwos_plus_one = Graph<Weight>::A->nrows + 1;
 	    tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    	tile.csr->IA = (uint32_t*) mmap(nullptr, (Graph<Weight>::A->nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    	tile.csr->IA = (uint32_t*) mmap(nullptr, (tile.csr->nrwos_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	    tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	/*
     	if(!rank)
@@ -807,6 +857,14 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	
     }
 	
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+	    pair = Graph<Weight>::A->tile_of_local_tile(t);
+    	auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+		delete tile.triples;
+		
+	}
+	
 	
 	
 	
@@ -823,9 +881,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		//printf("size=%d\n", Graph<Weight>::A->tiles[pair.row][pair.col].triples->size());
 	}
 	*/
-	
-	
-	
+	/*
 	for (auto& tile_r : Graph<Weight>::A->tiles)
     {
 	    for (auto& tile_c: tile_r)
@@ -839,6 +895,8 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 			}
 		}
 	}
+	*/
+	
 	
 	
 	
@@ -896,6 +954,11 @@ int main(int argc, char** argv) {
 	Graph<ew_t> G;
 	G.load_binary(file_path, num_vertices, num_vertices, directed);
 	printf("done load binary\n");
+	G.free();
+	
+	
+
+	
 	
 	
 	//delete Graph<Weight>::A;
