@@ -26,21 +26,6 @@ int cpu_id;
 bool is_master;
 
 
-
-
-template<typename Weight>
-class Matrix
-{
-    Matrix();
-    ~Matrix();
-	
-  	
-};
-
-
-struct Empty { };
-
-
 template <typename Weight>
 struct Triple {
   uint32_t row;
@@ -50,6 +35,7 @@ struct Triple {
 	: row(row), col(col), weight(weight) {}  
 };
 
+struct Empty {};
 
 template <>
 struct Triple <Empty> {
@@ -58,6 +44,101 @@ struct Triple <Empty> {
     uint32_t col;
     Empty weight;
   };
+};
+
+template <typename Weight>
+struct Tile2D
+{ 
+  std::vector<struct Triple<Weight>>* triples;
+  struct CSR* csr;
+  uint32_t rg, cg;
+  uint32_t ith, jth, nth;
+  int32_t rank;
+};
+
+template<typename Weight>
+class Matrix
+{
+	template<typename Weight_>
+	friend class Graph;
+	
+	public:	
+        Matrix(uint32_t nrows, uint32_t ncols, uint32_t ntiles);
+        ~Matrix();
+
+	private:
+		const uint32_t nrows, ncols;
+		const uint32_t ntiles, nrowgrps, ncolgrps;
+	    const uint32_t tile_height, tile_width;	
+
+	    std::vector<std::vector<struct Tile2D<Weight>>> tiles;
+        std::vector<uint32_t> local_tiles;
+		std::vector<struct Tile2D<Weight>> tiles_;
+		
+		uint32_t local_tile_of_tile(const struct Triple<Weight>& pair);
+		struct Triple<Weight> tile_of_triple(const struct Triple<Weight>& triple);
+		struct Triple<Weight> tile_of_local_tile(const uint32_t local_tile);
+		
+		
+};
+
+template<typename Weight>
+Matrix<Weight>::Matrix(uint32_t nrows, uint32_t ncols, uint32_t ntiles) 
+    : nrows(nrows), ncols(ncols), ntiles(ntiles), nrowgrps(sqrt(ntiles)), ncolgrps(ntiles / nrowgrps),
+      tile_height((nrows / nrowgrps) + 1), tile_width((ncols / ncolgrps) + 1) {};
+
+template<typename Weight>
+Matrix<Weight>::~Matrix() {};
+	  
+template <typename Weight>
+uint32_t Matrix<Weight>::local_tile_of_tile(const struct Triple<Weight>& pair)
+{
+  return((pair.row * Matrix<Weight>::ncolgrps) + pair.col);
+}	  
+	  
+template <typename Weight>
+struct Triple<Weight> Matrix<Weight>::tile_of_triple(const struct Triple<Weight>& triple)
+{
+  return{triple.row / Matrix<Weight>::tile_height, triple.col / Matrix<Weight>::tile_width};
+}
+
+template <typename Weight>
+struct Triple<Weight> Matrix<Weight>::tile_of_local_tile(const uint32_t local_tile)
+{
+  return{(local_tile - (local_tile % Matrix<Weight>::ncolgrps)) / Matrix<Weight>::ncolgrps, local_tile % Matrix<Weight>::ncolgrps};
+}
+
+
+
+
+
+
+
+template<typename Weight>
+class Graph
+{
+	public:	
+        Graph();
+        ~Graph();
+		
+		void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, bool directed_ = true);//uint32_t nvertices, uint32_t mvertices, uint32_t nedges);
+		
+	private:
+	    std::string filepath;
+	    uint32_t nvertices;
+		uint32_t mvertices;
+		uint64_t nedges;
+		bool directed;
+		Matrix<Weight> *A;
+};
+
+template<typename Weight>
+Graph<Weight>::Graph() : A(nullptr) {};
+
+template<typename Weight>
+Graph<Weight>::~Graph()
+{
+	delete Graph<Weight>::A;
 };
 
 template <typename Weight>
@@ -73,40 +154,26 @@ struct CSR {
 	uint32_t* JA;
 };
 
-template <typename Weight>
-struct Tile2D
-{ 
-  std::vector<struct Triple<Weight>>* triples;
-  struct CSR* csr;
-  uint32_t rg, cg;
-  uint32_t ith, jth, nth;
-  int32_t rank;
-};
 
-template <typename Weight>
-struct Triple<Weight> tile_of_local_tile(const struct Triple<Weight> triple, const uint32_t local_tile, const uint32_t ncolgrps)
-{
-  return{(local_tile - (local_tile % ncolgrps)) / ncolgrps, local_tile % ncolgrps};
-}
 
-template <typename Weight>
-struct Triple<Weight> tile_of_tiple(const struct Triple<Weight> triple, const uint32_t tile_height, const uint32_t tile_width)
-{
-  return{triple.row / tile_height, triple.col / tile_width};
-}
+//template <typename Weight>
+//struct Triple<Weight> tile_of_local_tile(const struct Triple<Weight> triple, const uint32_t local_tile, const uint32_t ncolgrps)
+//{
+//  return{(local_tile - (local_tile % ncolgrps)) / ncolgrps, local_tile % ncolgrps};
+//}
+
+//template <typename Weight>
+//struct Triple<Weight> tile_of_triple(const struct Triple<Weight> triple, const uint32_t tile_height, const uint32_t tile_width)
+//{
+//  return{triple.row / tile_height, triple.col / tile_width};
+//}
   
-using Weight = Empty;
-std::vector<std::vector<struct Tile2D<Weight>>> tiles;
-std::vector<int> local_tiles;
 
 
-template <typename Weight>
+
+/*
 void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols)
 {
-	
-	
-	
-//  assert(A == nullptr);
 
   // Initialize graph meta.
   std::string filepath = filepath_;
@@ -187,7 +254,7 @@ if (header_present)
 
   
   
-  /* Reserve the 2D vector of tiles. */
+  // Reserve the 2D vector of tiles. 
   tiles.resize(nrowgrps);
   for (uint32_t i = 0; i < nrowgrps; i++)
     tiles[i].resize(ncolgrps);
@@ -215,16 +282,16 @@ if (header_present)
 	  //printf("\n");
     }
 	
-	/*
-	for(uint32_t i = 0; i < local_tiles.size(); i++)
-	{
+	
+	//for(uint32_t i = 0; i < local_tiles.size(); i++)
+	//{
 		
-		uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
-		uint32_t col = local_tiles[i] % ncolgrps;
-		printf("[%d][%d] = %d ", row, col, local_tiles[i]);
-	}
-    printf("\n");  
-	*/
+		//uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
+		//uint32_t col = local_tiles[i] % ncolgrps;
+		//printf("[%d][%d] = %d ", row, col, local_tiles[i]);
+	//}
+    //printf("\n");  
+	
  //}
  
   
@@ -247,7 +314,7 @@ int ii = 0;
     fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
 	//uint32_t row_idx = triple.row / tile_height;
 	//uint32_t col_idx = triple.col / tile_width;
-	struct Triple<Weight> pair = tile_of_tiple(triple, tile_height, tile_height);
+	struct Triple<Weight> pair = tile_of_triple(triple, tile_height, tile_height);
 	
 	uint32_t local_idx = (pair.row * ncolgrps) + pair.col;
 	//uint32_t local_idx = (row_idx * ncolgrps) + col_idx;
@@ -289,27 +356,25 @@ int ii = 0;
   
  
  
-/* 
-  int i = 0, j= 0;
-	  
-  for (auto& tile_r : tiles)
-  {	  
-      j = 0;
-	  //for(int j = 0; j < mvertices; j++)
-	  for (auto& tile_c: tile_r)
-	  {
-		  //std::vector<Triple> t = tiles[i][j].triples[k];
-		  //for (int k = 0; k < tiles[i][j].triples->size(); k++)
-		  for (auto& triple : *(tile_c.triples))
-		  {
-		  if(!rank);
-			printf("%d:[%d][%d]=[%d %d]\n", rank, i, j, triple.row, triple.col);
-		  }
-		  j++;
-	  }
-	  i++;
-  }
-  */
+
+  //int i = 0, j= 0;
+  //for (auto& tile_r : tiles)
+  //{	  
+      //j = 0;
+
+	  //for (auto& tile_c: tile_r)
+	  //{
+
+		//  for (auto& triple : *(tile_c.triples))
+		//  {
+	//	  if(!rank);
+//			printf("%d:[%d][%d]=[%d %d]\n", rank, i, j, triple.row, triple.col);
+		  //}
+		//  j++;
+	  //}
+	//  i++;
+  //}
+  
 
   //uint64_t sum1 = 0;
   //std::vector<std::vector<struct Triple>> outboxes(nranks);  
@@ -323,18 +388,18 @@ int ii = 0;
   
 	  
   
-  /*
-  for (uint32_t i = 0; i < nrowgrps; i++)
-  {
-	for (uint32_t j = 0; j < ncolgrps; j++)  
-	{
-	  if(tiles[i][j].rank == rank) {
-        printf("tiles[%d][%d]->%lu \n", i, j, tiles[i][j].triples->size());
-	  sum1 += tiles[i][j].triples->size();
-	  }
-	}
-  }
-  */
+  
+  //for (uint32_t i = 0; i < nrowgrps; i++)
+  //{
+	//for (uint32_t j = 0; j < ncolgrps; j++)  
+	//{
+	  //if(tiles[i][j].rank == rank) {
+        //printf("tiles[%d][%d]->%lu \n", i, j, tiles[i][j].triples->size());
+//	  sum1 += tiles[i][j].triples->size();
+	//  }
+	//}
+  //}
+  
   //printf("SUM=%lu %lu %d\n", sum, sum1, 4219314 + 3983833 + 4002485 + 4571584);	
   
  
@@ -356,13 +421,13 @@ int ii = 0;
     //uint32_t col = t % ncolgrps;
 	//printf("%d %d %d %lu\n", tile, row, col, tiles[row][col].triples->size());
 	//auto& tile = tiles[row][col];
-	/*
-	for (auto& triple : *(tile.triples))
-    {
-		s++;
-	    printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
-    }
-	*/
+	
+	//for (auto& triple : *(tile.triples))
+    //{
+		//s++;
+	    //printf("%d:[%d][%d]=[%d %d]\n", rank, row, col, triple.row, triple.col);
+    //}
+	
 	
     //for (std::vector<Triple>::iterator it = tiles[row][col].triples.begin() ; it != tiles[row][col].triples.end(); ++it)
       //std::cout << ' ' << *it;
@@ -383,22 +448,15 @@ int ii = 0;
   
   for(uint32_t t: local_tiles)
   {
-	//uint32_t row = (t - (t % ncolgrps)) / ncolgrps;
-    //uint32_t col = t % ncolgrps;
+
 	struct Triple<Weight> pair = tile_of_local_tile(triple, t, ncolgrps);
-	//struct Triple<Weight> pair;
-	//pair.row = (t - (t % ncolgrps)) / ncolgrps;
-	//pair.col = t % ncolgrps;
-	//auto& tile = tiles[row][col];
 	auto& tile = tiles[pair.row][pair.col];
-	//struct CSR* csr = new struct CSR;
 	tile.csr = new struct CSR;
 	tile.csr->nnz = tile.triples->size();
 	tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	tile.csr->IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	
-	//std::sort(tile.triples->begin(), tile.triples->end(), compare);
 	if(!rank)
 	{
 	for (auto& triple : *(tile.triples))
@@ -451,148 +509,204 @@ int ii = 0;
     }
     printf("\n");
 	
-	//struct Triple1<Empty> tt;
-	//printf("%lu\n", sizeof(tt));
-//	= new struct Triple1<Empty>;
-	//struct Triple1 tt;
-//	= new struct Triple1;
-	
   }
+
+  
+ }
+  
+}
+*/
+template<typename Weight>
+void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, bool directed_)
+{
+	// Initialize graph data
+	// Note we keep using Graph<Weight> format to avoid confusion
+	Graph<Weight>::filepath = filepath_;
+	Graph<Weight>::nvertices = nrows;
+	Graph<Weight>::mvertices = ncols;
+	Graph<Weight>::nedges = 0;
+	Graph<Weight>::directed = directed_;
 	
-	
-//  }
-  
-  
-  
-  
-  /*
-  auto& tile = tiles[0][1];
-  uint32_t nnz = tile.triples->size() + 2;
-  
-  
-  uint32_t* A = (uint32_t*) mmap(nullptr, (nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  memset(A, 0, nnz);
-  uint32_t* IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  memset(IA, 0, ncols + 1);
-  uint32_t* JA = (uint32_t*) mmap(nullptr, (nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  memset(JA, 0, nnz);
-  
-  
-  triple.row = 4;
-  triple.col = 3;
-  tile.triples->push_back(triple);
-  
-  triple.row = 6;
-  triple.col = 1;
-  tile.triples->push_back(triple);
-  
-  //std::sort(tile.triples->begin(), tile.triples->end(), compareByCol);
-  std::sort(tile.triples->begin(), tile.triples->end(), compare);
-  
-  
- 
-	for (auto& triple : *(tile.triples))
+    // Open matrix file.
+    std::ifstream fin(Graph<Weight>::filepath.c_str(), std::ios_base::binary);
+    if(!fin.is_open())
     {
-	    printf("%d:[%d][%d]=[%d %d]\n", rank, 0, 1, triple.row, triple.col);
+        std::cout << "Unable to open input file" << std::endl;
+        exit(1); 
     }
 
 
-  
-  
-  uint32_t i = 0;
-  uint32_t j = 1;
-  uint32_t nextRow = 0;
-  IA[0] = 0;
-  for (auto& triple : *(tile.triples))
-  {
-   // if(j < triple.row)
-	//{
-		printf("<%d %d (%d,%d)>\n", triple.row, j, triple.row, triple.col);
-		//nextRow = triple.row;
-		while(j < triple.row)
-		{
-	      //nextRow++;
-		  //j = nextRow;
-		  j++;
-		  IA[j] = IA[j - 1];
-		}
-		//printf("<%d %d (%d,%d)>\n", triple.row, j, triple.row, triple.col);
-		  //j = nextRow;
-		  //IA[j] = IA[j - 1];
-		//}
-	//}
-
-
-    A[i] = 1;
-	IA[j]++;
-	JA[i] = triple.col;	
-	i++;
-
-  }
-  
-  // Not necessary
-  while(j < (nrows + 1))
-  {
-	j++;
-    IA[j] = IA[j - 1];
-  }
-  */
-  
-  /*
-  if(!rank)
-  {
-  for(i = 0; i < tile.csr->nnz; i++)
-  {
-	  printf("%d ", tile.csr->A[i]);
-  }
-  printf("\n");
-  for(i = 0; i < (ncols + 1); i++)
-  {
-	  printf("%d ", tile.csr->IA[i]);
-  }
-  printf("\n");
-  for(i = 0; i < tile.csr->nnz; i++)
-  {
-	  printf("%d ", tile.csr->JA[i]);
-  }
-  printf("\n");
-  
-  for(i = 0; i < ncolgrps + 1; i++)
-	  printf("%d ", i * tile_width);
-  }
-  */
-  
-  
-}
-  
- 
-    /*
-	for (auto& tile_r : tiles)
-    {
-	  for (auto& tile_c: tile_r)
-	  {
-		delete tile_c.triples;
-		if(tile_c.rank == rank)
-		{
-		  munmap(tile_c.csr->A, (tile_c.csr->nnz) * sizeof(uint32_t));
-		  munmap(tile_c.csr->IA, (nrows + 1) * sizeof(uint32_t));
-		  munmap(tile_c.csr->JA, (tile_c.csr->nnz) * sizeof(uint32_t));
-		  delete tile_c.csr;
-		}
-	  }
-    } 
+    // Obtain filesize
+    uint64_t filesize, offset = 0;
+    fin.seekg (0, std::ios_base::end);
+    filesize = (uint64_t) fin.tellg();
+	fin.seekg(0, std::ios_base::beg);
 	
-	*/
-  
-  //munmap(colptrs, (ncols + 1) * sizeof(uint32_t));
-  
+	Graph<Weight>::A = new Matrix<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
+	
+	
+	// Reserve the 2D vector of tiles. 
+	Graph<Weight>::A->tiles.resize(Graph<Weight>::A->nrowgrps);
+    for (uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+        Graph<Weight>::A->tiles[i].resize(Graph<Weight>::A->ncolgrps);
 
+	struct Triple<Weight> pair;
+    for (uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+    {
+	    for (uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)  
+	    {
+	        Graph<Weight>::A->tiles[i][j].rg = i;
+            Graph<Weight>::A->tiles[i][j].cg = j;
+	        Graph<Weight>::A->tiles[i][j].rank = i;
+		
+			if(Graph<Weight>::A->tiles[i][j].rank == rank)
+			{
+		        pair.row = i;
+		        pair.col = j;	
+			    Graph<Weight>::A->local_tiles.push_back(Graph<Weight>::A->local_tile_of_tile(pair));
+			}
+	    }
+    }
+ 
+ /*
+    for (uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+    {
+	  for (uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)  
+	  {
+		  pair.row = i;
+		  pair.col = j;
+		  if(Graph<Weight>::A->tiles[i][j].rank == rank)
+		  {
+	        if(!rank)
+		    {
+		        printf(">>>[%d %d]\n", i, j);	
+		    }
+			//pair = Graph<Weight>::A->tile_of_local_tile(i);
+			
+		    //Graph<Weight>::A->local_tiles.push_back((i * Graph<Weight>::A->ncolgrps) + j);
+			Graph<Weight>::A->local_tiles.push_back(Graph<Weight>::A->local_tile_of_tile(pair));
+		  }
+	  }
+    }
+	*/
+	
+	/*
+	for(uint32_t i = 0; i < Graph<Weight>::A->local_tiles.size(); i++)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(i);
+		if(!rank)
+		{
+		    printf("[%d %d]\n", pair.row, pair.col);	
+		}
+		Graph<Weight>::A->tiles[pair.row][pair.col].triples = new std::vector<struct Triple<Weight>>;
+		
+		///std::vector<struct Triple<Weight> triple> = Graph<Weight>::A->tiles[pair.row][pair.col].triples;
+		//std::vector<struct Triple<Weight>>* triples;
+		// = new std::vector<struct Triple<Weight>>;
+	}
+	*/
+	
+	
+	//int ii = 0;
+	//int jj = 0;
+    for (auto& tile_r : Graph<Weight>::A->tiles)
+    {
+		
+	    for (auto& tile_c: tile_r)
+	    {
+			//jj++;
+			if(tile_c.rank == rank)
+			{
+		    tile_c.triples = new std::vector<struct Triple<Weight>>;
+			//if(!rank)
+		    //{
+		      //  printf("[>>%d %d]\n", ii, jj);	
+		    //}
+			}
+	    }
+		//ii++;
+    }
+	
+	
+	
+	
+	struct Triple<Weight> triple;
+	while (offset < filesize)
+    {
+        fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
+		
+		if(!rank)
+	    {
+		    printf("%d %d %lu\n", triple.row, triple.col, sizeof(triple));
+	    }
+		
+	    if(fin.gcount() != sizeof(Triple<Weight>))
+        {
+            std::cout << "read() failure" << std::endl;
+            exit(1);
+        }
+		
+		
+	
+	    pair = Graph<Weight>::A->tile_of_triple(triple);
+		//uint32_t local_idx = Graph<Weight>::A->local_tile_of_tile(pair);
+		//if(!rank)
+		//{
+		//    printf("%d %d %d %d\n", pair.row, pair.col,  local_idx, Graph<Weight>::A->tiles[pair.row][pair.col]);
+		//}
+	    //uint32_t local_idx = (pair.row * Graph<Weight>::A->nrowgrps) + pair.col;
+		
+		//if (std::find(Graph<Weight>::A->local_tiles.begin(), Graph<Weight>::A->local_tiles.end(), local_idx) != Graph<Weight>::A->local_tiles.end())
+		if(Graph<Weight>::A->tiles[pair.row][pair.col].rank == rank)	
+	    {
+			if(!rank)
+			{
+			  printf("%d %d\n", pair.row, pair.col);
+			}
+		    Graph<Weight>::A->tiles[pair.row][pair.col].triples->push_back(triple);
+    	}
+		
+		
+		
+		
+		
+        offset += sizeof(Triple<Weight>);
+    }
+    assert(offset == filesize);
+    fin.close();
+	printf("done reading\n");
+	
+	/*
+	for(uint32_t i = 0; i < Graph<Weight>::A->local_tiles.size(); i++)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(i);
+		//if(!rank)
+		  // printf("size=%lu %d [%d %d]\n", Graph<Weight>::A->tiles[pair.row][pair.col].triples->size(), rank, pair.row, pair.col);
+		//if(Graph<Weight>::A->tiles[pair.row][pair.col].triples->size())
+		delete Graph<Weight>::A->tiles[pair.row][pair.col].triples;
+		//printf("size=%d\n", Graph<Weight>::A->tiles[pair.row][pair.col].triples->size());
+	}
+	*/
+	
+	
+	
+	for (auto& tile_r : Graph<Weight>::A->tiles)
+    {
+	    for (auto& tile_c: tile_r)
+	    {
+			if(tile_c.rank == rank)
+			    delete tile_c.triples;
+		}
+	}
+	
+	
+	
+	
+	
 }
 
 
-
-
-
+using ew_t = Empty;
 int main(int argc, char** argv) {
 	
 	char processor_name[MPI_MAX_PROCESSOR_NAME];
@@ -634,14 +748,29 @@ int main(int argc, char** argv) {
 		std::exit(1);
 	}
 
-	std::string filepath = argv[1]; 
+	std::string file_path = argv[1]; 
 	uint32_t num_vertices = std::atoi(argv[2]);
   	uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+	bool directed = true;
+	Graph<ew_t> G;
+	G.load_binary(file_path, num_vertices, num_vertices, directed);
+	printf("done load binary\n");
+	
+	
+	//delete Graph<Weight>::A;
   	//std::cout << num_vertices << " "<< num_iterations <<  std::endl;
 	
-	load_binary(filepath, num_vertices, num_vertices);
+	//Matrix<Empty>* M = new Matrix<Empty>(num_vertices, num_vertices, nranks * nranks);
+	//if(!rank)
+		//M.gelrows()
+	   
 	
-	uint32_t i = 0;
+	
+	
+	
+	//load_binary(filepath, num_vertices, num_vertices);
+	
+	//uint32_t i = 0;
 	
 	//uint32_t row = (local_tiles[i] - (local_tiles[i] % ncolgrps)) / ncolgrps;
 	//uint32_t col = local_tiles[i] % ncolgrps;
