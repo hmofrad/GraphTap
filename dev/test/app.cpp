@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sys/mman.h>
+#include <type_traits>
 
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/vector.hpp>
@@ -27,14 +28,23 @@ bool is_master;
 
 
 template <typename Weight>
-struct Triple {
+struct Triple
+{
     uint32_t row;
     uint32_t col;
     Weight weight;
     Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0)
 	    : row(row), col(col), weight(weight) {}  
+	uint32_t get_weight() {return(this->weight);};	
     //static bool compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b);
 };
+
+//template <typename Weight>
+//uint32_t Triple<Weight>::has_weight()
+//{
+    //return(this.weight);
+//}
+
 
 //template <typename Weight>
 //bool Triple<Weight>::compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
@@ -45,14 +55,33 @@ struct Triple {
 struct Empty {};
 
 template <>
-struct Triple <Empty> {
+struct Triple <Empty>
+{
     uint32_t row;
     union {
         uint32_t col;
         Empty weight;
     };
+	uint32_t get_weight() {return 1;};
     //static bool compare(const struct Triple<Empty>& a, const struct Triple<Empty>& b);
 };
+
+//template <>
+//uint32_t Triple<Empty>::has_weight()
+//{
+    //return -1;
+//}
+
+//template <typename Weight>
+//uint32_t has_weight(const struct Triple<Weight>& triple)
+//{
+//    return(triple.weight);
+//}
+
+
+
+	  
+
 
 template <typename Weight>
 struct Functor
@@ -171,6 +200,7 @@ Graph<Weight>::Graph() : A(nullptr) {};
 template<typename Weight>
 Graph<Weight>::~Graph()
 {
+	
 	delete Graph<Weight>::A;
 };
 
@@ -650,12 +680,12 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	while (offset < filesize)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
-		
+		/*
 		if(!rank)
 	    {
 		    printf("%d %d %lu\n", triple.row, triple.col, sizeof(triple));
 	    }
-		
+		*/
 	    if(fin.gcount() != sizeof(Triple<Weight>))
         {
             std::cout << "read() failure" << std::endl;
@@ -675,10 +705,12 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		//if (std::find(Graph<Weight>::A->local_tiles.begin(), Graph<Weight>::A->local_tiles.end(), local_idx) != Graph<Weight>::A->local_tiles.end())
 		if(Graph<Weight>::A->tiles[pair.row][pair.col].rank == rank)	
 	    {
+			/*
 			if(!rank)
 			{
 			  printf("%d %d\n", pair.row, pair.col);
 			}
+			*/
 		    Graph<Weight>::A->tiles[pair.row][pair.col].triples->push_back(triple);
     	}
         offset += sizeof(Triple<Weight>);
@@ -687,52 +719,55 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     fin.close();
 	printf("done reading\n");	
 	  
-  for(uint32_t t: Graph<Weight>::A->local_tiles)
-  {
-	pair = Graph<Weight>::A->tile_of_local_tile(t);
-	auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
-	tile.csr = new struct CSR;
-	tile.csr->nnz = tile.triples->size();
-	tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	tile.csr->IA = (uint32_t*) mmap(nullptr, (nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	
-	if(!rank)
-	{
-	    for (auto& triple : *(Graph<Weight>::A->tiles[pair.row][pair.col].triples))
+    // Creat the csr format
+    // Allocate csr data structure
+    // Sort triples
+    // Populate csr 	
+    for(uint32_t t: Graph<Weight>::A->local_tiles)
+    {
+	    pair = Graph<Weight>::A->tile_of_local_tile(t);
+    	auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+	    tile.csr = new struct CSR;
+    	tile.csr->nnz = tile.triples->size();
+	    tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    	tile.csr->IA = (uint32_t*) mmap(nullptr, (Graph<Weight>::A->nrows + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	    tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	/*
+    	if(!rank)
+	    {
+	        for (auto& triple : *(Graph<Weight>::A->tiles[pair.row][pair.col].triples))
+            {
+	            printf("%d:[%d][%d]:  %d %d\n", rank, pair.row, pair.col, triple.row, triple.col);
+    		}
+	    }
+		*/
+	    Functor<Weight> f;
+		std::sort(tile.triples->begin(), tile.triples->end(), f);
+	    //std::sort(tile.triples->begin(), tile.triples->end(), struct Triple<Weight>::compare);
+        uint32_t i = 0;
+        uint32_t j = 1;
+        tile.csr->IA[0] = 0;
+        for (auto& triple : *(tile.triples))
         {
-	        printf("%d:[%d][%d]:  %d %d\n", rank, pair.row, pair.col, triple.row, triple.col);
-		}
-	}
-	Functor<Weight> f;
-	//tile.triples->sort(f);
-	//std::sort(tile.triples->begin(), tile.triples->end(), struct Triple<Weight>::compare);
-	std::sort(tile.triples->begin(), tile.triples->end(), f);
-    uint32_t i = 0;
-    uint32_t j = 1;
-    uint32_t nextRow = 0;
-    tile.csr->IA[0] = 0;
-    for (auto& triple : *(tile.triples))
-    {
-      while(j < triple.row)
-	  {
-	    j++;
-	    tile.csr->IA[j] = tile.csr->IA[j - 1];
-	  }
-
-      tile.csr->A[i] = 1;
-	  tile.csr->IA[j]++;
-	  tile.csr->JA[i] = triple.col;	
-	  i++;
-    }
+            while(j < triple.row)
+	        {
+	            j++;
+	            tile.csr->IA[j] = tile.csr->IA[j - 1];
+	        }			
+			tile.csr->A[i] = triple.get_weight(); // In case weights are important
+	        tile.csr->IA[j]++;
+	        tile.csr->JA[i] = triple.col;	
+	        i++;
+        }
   
-    // Not necessary
-    while(j < (nrows + 1))
-    {
-  	  j++;
-      tile.csr->IA[j] = tile.csr->IA[j - 1];
-    }
+        // Not necessary
+        while(j < (Graph<Weight>::A->nrows + 1))
+        {
+       	   j++;
+           tile.csr->IA[j] = tile.csr->IA[j - 1];
+        }
 
+		/*
 	if(!rank)
 	{
 	printf("csc:%d:[%d][%d]:\n", rank, pair.row, pair.col);
@@ -752,13 +787,25 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	  printf("%d ", tile.csr->JA[i]);
     }
     printf("\n");
+	
+	//struct Triple<uint32_t> triple1 = {10, 5, 4};
+	//printf("%d %d %d\n", triple1.row, triple1.col, triple1.get_weight());
+	//if (std::is_same<uint32_t, Empty>::value) 
+	//{
+	    //printf("%d %d %lu\n", triple1.row, triple1.col, sizeof(triple1));
+	//}
+	//else
+	//{
+		//printf(">> %d %d %d %lu\n", triple1.row, triple1.col, (uint32_t) triple1.weight, sizeof(triple1));
+	//}
 	//struct Triple<uint32_t> triple1 = {5, 4};
 	//struct Triple<uint32_t> triple2 = {6 ,2};
 	//printf("CMPPP = %d %lu\n",compare(triple1, triple2), sizeof(triple1) );
 	
     }
+	*/
 	
-  }
+    }
 	
 	
 	
@@ -784,7 +831,12 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	    for (auto& tile_c: tile_r)
 	    {
 			if(tile_c.rank == rank)
+			{
+				munmap(tile_c.csr->A, (tile_c.csr->nnz) * sizeof(uint32_t));
+				munmap(tile_c.csr->IA, (Graph<Weight>::A->nrows + 1) * sizeof(uint32_t));
+			    munmap(tile_c.csr->JA, (tile_c.csr->nnz) * sizeof(uint32_t));	
 			    delete tile_c.triples;
+			}
 		}
 	}
 	
