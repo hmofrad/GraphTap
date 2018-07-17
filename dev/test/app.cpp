@@ -409,14 +409,14 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     	}
         offset += sizeof(Triple<Weight>);
     }
+	fin.close();
     assert(offset == filesize);
-    fin.close();
+    
 	printf("done reading %lu\n", Graph<Weight>::nedges);	
 	  
     // Creat the csr format
     // Allocate csr data structure
-    // Sort triples
-    // Populate csr 	
+	// Sort triples and populate csr	
     for(uint32_t t: Graph<Weight>::A->local_tiles)
     {
 	    pair = Graph<Weight>::A->tile_of_local_tile(t);
@@ -608,9 +608,9 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 
     // Obtain filesize
     uint64_t filesize, offset = 0;
-    //fin.seekg (0, std::ios_base::end);
-    //filesize = (uint64_t) fin.tellg();
-	//fin.seekg(0, std::ios_base::beg);
+    fin.seekg (0, std::ios_base::end);
+    filesize = (uint64_t) fin.tellg();
+	fin.seekg(0, std::ios_base::beg);
 	
 	// Skip comments
     std::string line;
@@ -621,6 +621,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
         std::getline(fin, line);
     } while ((line[0] == '#') || (line[0] == '%'));
     fin.seekg(position, std::ios_base::beg);
+
 	
 	
 	
@@ -662,8 +663,8 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 		//else
 		//	iss >> triple1.row >> triple1.col;
 		// Solely uncoment this for debug purpose 
-		if(!rank)
-        std::cout << "(i,j,w)=" << "(" << triple.row << "," << triple.col << std::endl;// << "," << triple.get_weight() << ")" << line.empty() << std::endl;
+		//if(!rank)
+        //std::cout << "(i,j,w)=" << "(" << triple.row << "," << triple.col << "," << fin.tellg() << std::endl;// << "," << triple.get_weight() << ")" << line.empty() << std::endl;
 	    
 		
 		Graph<Weight>::nedges++;
@@ -676,48 +677,18 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 	    {
 		    Graph<Weight>::A->tiles[pair.row][pair.col].triples->push_back(triple);
     	}
+		offset = fin.tellg();
 	}
 	
-	
-	MPI_Finalize();
-	exit(0);
-	
+	//current = fin.tellg();
+	//printf("%lu %lu\n", offset, filesize);
+	fin.close();
+	assert(offset == filesize);
 
 	
-	
-	
-	while (offset < filesize)
-    {
-        fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
-		/*
-		if(!rank)
-	    {
-		    printf("%d %d %lu\n", triple.row, triple.col, sizeof(triple));
-	    }
-		*/
-	    if(fin.gcount() != sizeof(Triple<Weight>))
-        {
-            std::cout << "read() failure" << std::endl;
-            exit(1);
-        }
-		Graph<Weight>::nedges++;
-		
-	
-	    pair = Graph<Weight>::A->tile_of_triple(triple);
-		if(Graph<Weight>::A->tiles[pair.row][pair.col].rank == rank)	
-	    {
-		    Graph<Weight>::A->tiles[pair.row][pair.col].triples->push_back(triple);
-    	}
-        offset += sizeof(Triple<Weight>);
-    }
-    assert(offset == filesize);
-    fin.close();
-	printf("done reading %lu\n", Graph<Weight>::nedges);	
-	  
     // Creat the csr format
     // Allocate csr data structure
-    // Sort triples
-    // Populate csr 	
+    // Sort triples and populate csr
     for(uint32_t t: Graph<Weight>::A->local_tiles)
     {
 	    pair = Graph<Weight>::A->tile_of_local_tile(t);
@@ -795,6 +766,16 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 		delete tile.triples;
 		
 	}
+	
+		
+	
+	
+    
+	
+	//MPI_Finalize();
+	//exit(0);
+	
+
 	
 	
 	
