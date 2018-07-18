@@ -535,7 +535,7 @@ void Matrix<Weight>::init_mat()
     for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
         Matrix<Weight>::tiles[i].resize(Matrix<Weight>::ncolgrps);
 
-	struct Triple<Weight> pair;
+	
     for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
     {
 	    for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
@@ -548,23 +548,59 @@ void Matrix<Weight>::init_mat()
 				Matrix<Weight>::tiles[i][j].rank = (j % Matrix<Weight>::partitioning->rowgrp_nranks) * Matrix<Weight>::partitioning->colgrp_nranks
             			                         + (i % Matrix<Weight>::partitioning->colgrp_nranks);
 		
+			//if(Matrix<Weight>::tiles[i][j].rank == rank)
+			//{
+		    //    pair.row = i;
+		    //    pair.col = j;	
+			//    Matrix<Weight>::local_tiles.push_back(Matrix<Weight>::local_tile_of_tile(pair));
+			//}
+	    }
+    }
+
+	std::vector<uint32_t> diag(Matrix<Weight>::nrowgrps, -1);
+	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
+	{
+		for (uint32_t j = i; j < Matrix<Weight>::ncolgrps; j++)  
+		{
+			if(not (std::find(diag.begin(), diag.end(), Matrix<Weight>::tiles[j][i].rank) != diag.end()))
+			{
+				std::swap(Matrix<Weight>::tiles[j], Matrix<Weight>::tiles[i]);
+				diag[j] = Matrix<Weight>::tiles[j][i].rank;
+				break;
+			}
+			
+			
+			//printf("%d ", Matrix<Weight>::tiles[i][j].rank);
+		}
+		//printf("\n");
+	}
+		
+	struct Triple<Weight> pair;
+	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
+	{
+		for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
+		{
+			Matrix<Weight>::tiles[i][j].rg = i;
+			Matrix<Weight>::tiles[i][j].cg = j;
 			if(Matrix<Weight>::tiles[i][j].rank == rank)
 			{
 		        pair.row = i;
 		        pair.col = j;	
 			    Matrix<Weight>::local_tiles.push_back(Matrix<Weight>::local_tile_of_tile(pair));
-			}
-	    }
-    }
-    // Initialize triples 
+			}	
+		}
+	}
+	
+	// Initialize triples 
 	for(uint32_t t: Matrix<Weight>::local_tiles)
 	{
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
 		auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
 		tile.triples = new std::vector<struct Triple<Weight>>;
 	}
+		
 	if(!rank)
-	{
+	{	
 		for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
         {
 	        for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
@@ -738,7 +774,7 @@ int main(int argc, char** argv) {
   	uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
 	bool directed = true;
 	Graph<ew_t> G;
-	G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed);
+	G.load_binary(file_path, num_vertices, num_vertices, _1D_ROW, directed);
 	//G.load_text(file_path, num_vertices, num_vertices, _1D_ROW, directed);
 	//printf("done load binary\n");
 	
