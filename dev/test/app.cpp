@@ -38,7 +38,7 @@ struct Triple
     Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0)
 	    : row(row), col(col), weight(weight) {}  
 	void set_weight(Weight& w) {this->weight = w;};
-	Weight get_weight() {return(this->weight);};	
+	Weight get_weight() {return(this->weight);};
     //static bool compare(const struct Triple<Weight>& a, const struct Triple<Weight>& b);
 };
 
@@ -110,9 +110,22 @@ struct CSR
 	uint32_t* A;
 	uint32_t* IA;
 	uint32_t* JA;
+	void allocate(uint32_t nnz, uint32_t nrwos_plus_one);
 	void free();
 };
 
+template<typename Weight>
+void CSR<Weight>::allocate(uint32_t nnz, uint32_t nrwos_plus_one)
+{		
+    CSR<Weight>::nnz = nnz;
+	CSR<Weight>::nrwos_plus_one = nrwos_plus_one;
+	CSR<Weight>::A = (uint32_t*) mmap(nullptr, (CSR<Weight>::nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(CSR<Weight>::A, 0, CSR<Weight>::nnz);
+    CSR<Weight>::IA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nrwos_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(CSR<Weight>::IA, 0, CSR<Weight>::nrwos_plus_one);
+	CSR<Weight>::JA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(CSR<Weight>::JA, 0, CSR<Weight>::nnz);
+}		
 
 template<typename Weight>
 void CSR<Weight>::free()
@@ -266,6 +279,28 @@ struct Triple<Weight> Matrix<Weight>::tile_of_local_tile(const uint32_t local_ti
   return{(local_tile - (local_tile % Matrix<Weight>::ncolgrps)) / Matrix<Weight>::ncolgrps, local_tile % Matrix<Weight>::ncolgrps};
 }
 
+template<typename Weight>
+struct Segment
+{
+    uint32_t length;	
+	uint32_t* segment;	
+	void allocate();
+	void free();
+
+};
+
+template<typename Weight>
+void Segment<Weight>::allocate()
+{
+	Segment<Weight>::segment = (uint32_t*) mmap(nullptr, (this->length) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(Segment<Weight>::segment, 0, this->length);
+}
+
+template<typename Weight>
+void Segment<Weight>::free()
+{
+	munmap(Segment<Weight>::segment, (this->length) * sizeof(uint32_t));
+}
 
 template<typename Weight>
 class Graph
@@ -285,6 +320,9 @@ class Graph
 		uint64_t nedges;
 		bool directed;
 		Matrix<Weight>* A;
+		Segment<Weight> *X;
+		Segment<Weight> *Y;
+		Segment<Weight> *V;
 };
 
 template<typename Weight>
@@ -294,7 +332,7 @@ template<typename Weight>
 Graph<Weight>::~Graph()
 {
 	delete Graph<Weight>::A;
-};
+}
 
 
 template<typename Weight>
@@ -307,6 +345,7 @@ void Graph<Weight>::free()
 			if(tile_c.rank == rank)
 			{
 				tile_c.csr->free();
+				delete tile_c.csr;
 			}
 		}
 	}
@@ -381,8 +420,9 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	}
 	*/
 	Graph<Weight>::A->init_csr();
-	Graph<Weight>::A->spmv();
 	
+	Graph<Weight>::A->spmv();
+	/*
 	if(!rank)
 	{
 		for(uint32_t t: Graph<Weight>::A->local_tiles)
@@ -409,6 +449,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 			printf("\n");
 		}
 	}
+	*/
 	
 }
 
@@ -624,13 +665,22 @@ void Matrix<Weight>::init_csr()
     {
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
     	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
+		tile.csr = new struct CSR<Weight>;
+		tile.csr->allocate(tile.triples->size(),  Matrix<Weight>::nrows + 1);
+		
+		/*
 	    tile.csr = new struct CSR<Weight>;
+		
     	tile.csr->nnz = tile.triples->size();
 		tile.csr->nrwos_plus_one = Matrix<Weight>::nrows + 1;
+		
 	    tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		memset(tile.csr->A, 0, tile.csr->nnz);
     	tile.csr->IA = (uint32_t*) mmap(nullptr, (tile.csr->nrwos_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		memset(tile.csr->IA, 0, tile.csr->nrwos_plus_one);
 	    tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	    
+	    memset(tile.csr->JA, 0, tile.csr->nnz);
+		*/
 	    Functor<Weight> f;
 		std::sort(tile.triples->begin(), tile.triples->end(), f);
 
@@ -776,6 +826,7 @@ int main(int argc, char** argv) {
 	Graph<ew_t> G;
 	G.load_binary(file_path, num_vertices, num_vertices, _1D_ROW, directed);
 	//G.load_text(file_path, num_vertices, num_vertices, _1D_ROW, directed);
+	//G.A->spmv();
 	//printf("done load binary\n");
 	
 	G.free();
