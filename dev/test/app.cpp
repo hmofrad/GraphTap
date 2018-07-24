@@ -260,7 +260,7 @@ class Matrix
 
 	    std::vector<std::vector<struct Tile2D<Weight>>> tiles;
         std::vector<uint32_t> local_tiles;
-		std::vector<struct Tile2D<Weight>> tiles_;
+		std::vector<uint32_t> local_segments;
 		
 		void init_mat();
 		void del_triples();
@@ -446,11 +446,11 @@ Graph<Weight>::~Graph()
 {
 	delete Graph<Weight>::A->partitioning;
 	delete Graph<Weight>::A;
-	/*
+	
 	delete Graph<Weight>::X;
 	delete Graph<Weight>::Y;
 	delete Graph<Weight>::V;
-	*/
+	
 }
 
 
@@ -459,7 +459,6 @@ void Graph<Weight>::free()
 {
 	Graph<Weight>::A->del_csr();
 	
-	/*
 	for(uint32_t s: Graph<Weight>::X->local_segments)
 	{
 		auto& segment = Graph<Weight>::X->segments[s];
@@ -477,7 +476,7 @@ void Graph<Weight>::free()
 		auto& segment = Graph<Weight>::V->segments[s];
 		segment.free();
 	}
-	*/
+	
 	
 	
 	/*
@@ -599,10 +598,11 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		printf("Okay, what next?\n");
 	}
 	
-	Graph<Weight>::A->del_triples();
+	
 	Graph<Weight>::A->init_csr();
-	Graph<Weight>::free();
-	/*
+	
+	
+	
 	
 	
 
@@ -612,11 +612,29 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	Graph<Weight>::V = new Vector<Weight>(Graph<Weight>::nvertices, nranks * nranks);
 	
 	
-	std::vector<uint32_t> local_segments = Graph<Weight>::A->segments_of_local_tile();
-    Graph<Weight>::X->init_vec(diag_ranks, local_segments);
-	Graph<Weight>::Y->init_vec(diag_ranks, local_segments);
-	Graph<Weight>::V->init_vec(diag_ranks, local_segments);
-	*/
+	//std::vector<uint32_t> local_segments = Graph<Weight>::A->segments_of_local_tile();
+    Graph<Weight>::X->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
+	Graph<Weight>::Y->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
+	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
+	
+	
+	if(!rank)
+	{
+		for(uint32_t t: Graph<Weight>::A->local_tiles)
+			printf("%d ", t);
+		printf("\n");
+		for(uint32_t s: Graph<Weight>::X->local_segments)
+			printf("%d ", s);
+		printf("\n");
+		
+	}
+	
+	
+	
+	//Graph<Weight>::A->spmv();
+	
+	Graph<Weight>::free();
+	
 	
 	//Graph<Weight>::X->local_segments = Graph<Weight>::A->segments_of_local_tile();
 	//Graph<Weight>::Y->local_segments = (Graph<Weight>::A->segments_of_local_tile);
@@ -700,6 +718,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 	
 	Vector<Weight>::local_segments = local_segments;
 	
+	/*
 	if(!rank)
 	{
 		printf(">>>> ");
@@ -707,6 +726,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 			printf("%d ", Vector<Weight>::local_segments[i]);
 		printf("\n");
 	}
+	*/
 	
 	//local_segments
 	//for(uint32_t t: local_tiles)
@@ -839,7 +859,7 @@ void Matrix<Weight>::init_mat()
 	Matrix<Weight>::tiles.resize(Matrix<Weight>::nrowgrps);
     for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
         Matrix<Weight>::tiles[i].resize(Matrix<Weight>::ncolgrps);
-
+    
 	
     for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
     {
@@ -892,7 +912,12 @@ void Matrix<Weight>::init_mat()
 		        pair.row = i;
 		        pair.col = j;	
 			    Matrix<Weight>::local_tiles.push_back(Matrix<Weight>::local_tile_of_tile(pair));
-			}	
+				
+				if (std::find(local_segments.begin(), local_segments.end(), pair.row) == local_segments.end())
+		        {
+			        local_segments.push_back(pair.row);
+			    }	
+			}
 		}
 	}
 	
@@ -951,14 +976,14 @@ void Matrix<Weight>::init_csr()
 		*/
 	    Functor<Weight> f;
 		std::sort(tile.triples->begin(), tile.triples->end(), f);
-
+/*
 	if(!rank)
 	{
 		for(auto& tt: *(tile.triples))
 		    printf("%d[%d][%d]:%d %d\n", rank, pair.row, pair.col, tt.row, tt.col);			
 		printf("\n\n");
 	}
-
+*/
 
 		
         uint32_t i = 0;
@@ -985,6 +1010,7 @@ void Matrix<Weight>::init_csr()
         }
     }	
 	
+	Matrix<Weight>::del_triples();
 	/*
 	// Delete triples
 	for(uint32_t t: Matrix<Weight>::local_tiles)
@@ -1004,6 +1030,8 @@ void Matrix<Weight>::init_csr()
 template<typename Weight>
 void Matrix<Weight>::spmv()
 {
+	
+
 	
 	
 	/*
