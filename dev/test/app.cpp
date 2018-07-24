@@ -951,14 +951,14 @@ void Matrix<Weight>::init_csr()
 		*/
 	    Functor<Weight> f;
 		std::sort(tile.triples->begin(), tile.triples->end(), f);
-/*
+
 	if(!rank)
 	{
 		for(auto& tt: *(tile.triples))
 		    printf("%d[%d][%d]:%d %d\n", rank, pair.row, pair.col, tt.row, tt.col);			
 		printf("\n\n");
 	}
-*/
+
 
 		
         uint32_t i = 0;
