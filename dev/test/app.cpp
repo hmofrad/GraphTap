@@ -28,6 +28,14 @@ int rank;
 int cpu_id;
 bool is_master;
 
+/*
+struct delete_ptr { // Helper function to ease cleanup of container
+    template <typename P>
+    void operator () (P p) {
+        delete p;
+    }
+};
+*/ 
 
 template <typename Weight>
 struct Triple
@@ -175,6 +183,7 @@ class Partitioning
 		uint32_t rowgrp_nranks, colgrp_nranks;
 		
 		void integer_factorize(uint32_t n, uint32_t& a, uint32_t& b);
+		//void free();
 		
 };
 //Graph<Weight>::A->partitioning = new Partitioning<Weight>(nranks, rank, nranks * nranks, Graph<Weight>::A->nrowgrps, Graph<Weight>::A->ncolgrps, tiling)
@@ -205,7 +214,16 @@ Partitioning<Weight>::Partitioning(uint32_t nranks, uint32_t rank, uint32_t ntil
 };
 
 template<typename Weight>
-Partitioning<Weight>::~Partitioning() {};
+Partitioning<Weight>::~Partitioning()
+{
+	//Partitioning<Weight>::free();
+};
+
+//template<typename Weight>
+//Partitioning<Weight>::free()
+//{
+	//delete ;
+//};
 
 
 template <class Weight>
@@ -245,7 +263,9 @@ class Matrix
 		std::vector<struct Tile2D<Weight>> tiles_;
 		
 		void init_mat();
+		void del_triples();
 		void init_csr();
+		void del_csr();
 		void spmv();
 		
 		uint32_t local_tile_of_tile(const struct Triple<Weight>& pair);
@@ -305,6 +325,37 @@ std::vector<uint32_t> Matrix<Weight>::segments_of_local_tile()
 }
 
 template<typename Weight>
+void Matrix<Weight>::del_triples()
+{
+	// Delete triples
+	Triple<Weight> pair;
+	for(uint32_t t: Matrix<Weight>::local_tiles)
+	{
+	    pair = Matrix<Weight>::tile_of_local_tile(t);
+    	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
+		//std::for_each(tile.triples->begin(), tile.triples->end(), delete_ptr());
+        //tile.triples->clear();
+	    //for(auto& triple: *(tile.triples))	
+		    //delete triple;		
+		delete tile.triples;		
+	}
+	
+}
+
+template <typename Weight> 
+void Matrix<Weight>::del_csr()
+{
+	Triple<Weight> pair;
+	for(uint32_t t: Matrix<Weight>::local_tiles)
+	{
+		pair = Matrix<Weight>::tile_of_local_tile(t);
+		auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
+		tile.csr->free();
+		delete tile.csr;
+	}
+}
+
+template<typename Weight>
 struct Segment
 {
 	template<typename Weight_>
@@ -330,6 +381,9 @@ void Segment<Weight>::free()
 {
 	munmap(Segment<Weight>::data, (this->n) * sizeof(uint32_t));
 }
+
+
+
 
 
 template<typename Weight>
@@ -390,30 +444,40 @@ Graph<Weight>::Graph() : A(nullptr) {};
 template<typename Weight>
 Graph<Weight>::~Graph()
 {
+	delete Graph<Weight>::A->partitioning;
 	delete Graph<Weight>::A;
+	/*
 	delete Graph<Weight>::X;
 	delete Graph<Weight>::Y;
 	delete Graph<Weight>::V;
+	*/
 }
 
 
 template<typename Weight>
 void Graph<Weight>::free()
 {
-	Triple<Weight> pair;
-	for(uint32_t t: Graph<Weight>::A->local_tiles)
-	{
-		pair = Graph<Weight>::A->tile_of_local_tile(t);
-		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
-		tile.csr->free();
-		delete tile.csr;
-	}
+	Graph<Weight>::A->del_csr();
 	
+	/*
 	for(uint32_t s: Graph<Weight>::X->local_segments)
 	{
 		auto& segment = Graph<Weight>::X->segments[s];
 		segment.free();
 	}
+	
+	for(uint32_t s: Graph<Weight>::Y->local_segments)
+	{
+		auto& segment = Graph<Weight>::Y->segments[s];
+		segment.free();
+	}
+	
+	for(uint32_t s: Graph<Weight>::V->local_segments)
+	{
+		auto& segment = Graph<Weight>::V->segments[s];
+		segment.free();
+	}
+	*/
 	
 	
 	/*
@@ -515,6 +579,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     }
 	fin.close();
     assert(offset == filesize);
+	
 	/*
     if(!rank)
 	{
@@ -528,7 +593,19 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		}
 	}
 	*/
+	
+	if(!rank)
+	{
+		printf("Okay, what next?\n");
+	}
+	
+	Graph<Weight>::A->del_triples();
 	Graph<Weight>::A->init_csr();
+	Graph<Weight>::free();
+	/*
+	
+	
+
 	
 	Graph<Weight>::X = new Vector<Weight>(Graph<Weight>::nvertices, nranks * nranks);
 	Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices, nranks * nranks);
@@ -539,7 +616,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     Graph<Weight>::X->init_vec(diag_ranks, local_segments);
 	Graph<Weight>::Y->init_vec(diag_ranks, local_segments);
 	Graph<Weight>::V->init_vec(diag_ranks, local_segments);
-	
+	*/
 	
 	//Graph<Weight>::X->local_segments = Graph<Weight>::A->segments_of_local_tile();
 	//Graph<Weight>::Y->local_segments = (Graph<Weight>::A->segments_of_local_tile);
@@ -571,7 +648,9 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	*/
 	
 	
-	Graph<Weight>::A->spmv();
+	//Graph<Weight>::A->spmv();
+	//Graph<Weight>::free();
+	
 	/*
 	if(!rank)
 	{
@@ -602,6 +681,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	*/
 	
 }
+
 
 template<typename Weight>
 void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments)
@@ -718,8 +798,9 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 	}
 	*/
 	
-	Graph<Weight>::A->init_csr();
-	Graph<Weight>::A->spmv();
+	//Graph<Weight>::A->init_csr();
+	//Graph<Weight>::A->spmv();
+	//Graph<Weight>::free();
 	/*
 	if(!rank)
 	{
@@ -846,10 +927,14 @@ void Matrix<Weight>::init_csr()
 	struct Triple<Weight> pair;
     for(uint32_t t: Matrix<Weight>::local_tiles)
     {
+		if(!rank)
+		{
+			printf("local=%d\n", t);
+		}
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
     	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
 		tile.csr = new struct CSR<Weight>;
-		tile.csr->allocate(tile.triples->size(),  Matrix<Weight>::nrows + 1);
+		tile.csr->allocate(tile.triples->size(), Matrix<Weight>::nrows + 1);
 		
 		/*
 	    tile.csr = new struct CSR<Weight>;
@@ -866,14 +951,14 @@ void Matrix<Weight>::init_csr()
 		*/
 	    Functor<Weight> f;
 		std::sort(tile.triples->begin(), tile.triples->end(), f);
-
+/*
 	if(!rank)
 	{
 		for(auto& tt: *(tile.triples))
 		    printf("%d[%d][%d]:%d %d\n", rank, pair.row, pair.col, tt.row, tt.col);			
 		printf("\n\n");
 	}
-
+*/
 
 		
         uint32_t i = 0;
@@ -900,19 +985,28 @@ void Matrix<Weight>::init_csr()
         }
     }	
 	
+	/*
 	// Delete triples
 	for(uint32_t t: Matrix<Weight>::local_tiles)
 	{
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
     	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
+		//std::for_each(tile.triples->begin(), tile.triples->end(), delete_ptr());
+        //tile.triples->clear();
+	    //for(auto& triple: *(tile.triples))	
+		    //delete triple;		
 		delete tile.triples;		
 	}
+	*/
 
 }
 
 template<typename Weight>
 void Matrix<Weight>::spmv()
 {
+	
+	
+	/*
 	
 	uint32_t X[Matrix<Weight>::nrows]; 
 	for(uint32_t i = 0; i < Matrix<Weight>::nrows; i++)
@@ -955,7 +1049,8 @@ void Matrix<Weight>::spmv()
 		    printf("%d ", Y[i]);
 		printf("\n");
 	}
-	//IA[i+1] - IA[i] --> row i
+	*/
+	
 	
 }
 
@@ -1006,13 +1101,14 @@ int main(int argc, char** argv) {
 	uint32_t num_vertices = std::atoi(argv[2]);
   	uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
 	bool directed = true;
+	
 	Graph<ew_t> G;
 	G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed);
 	//G.load_text(file_path, num_vertices, num_vertices, _1D_ROW, directed);
 	//G.A->spmv();
-	//printf("done load binary\n");
+	printf("done load binary\n");
 	
-	G.free();
+	//G.free();
 	
 	
 	
