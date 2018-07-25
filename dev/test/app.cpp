@@ -92,7 +92,15 @@ struct Triple <Empty>
 
 
 
-	  
+
+template <typename Weight>
+struct Functor1
+{
+	bool operator()(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
+	{
+	    return(((a.row == b.row) and (a.col == b.col)) ? true : false);
+	}
+};	  
 
 
 template <typename Weight>
@@ -114,23 +122,23 @@ template<typename Weight>
 struct CSR
 {
 	uint32_t nnz;
-	uint32_t nrwos_plus_one;
+	uint32_t nrows_plus_one;
 	uint32_t* A;
 	uint32_t* IA;
 	uint32_t* JA;
-	void allocate(uint32_t nnz, uint32_t nrwos_plus_one);
+	void allocate(uint32_t nnz, uint32_t nrows_plus_one);
 	void free();
 };
 
 template<typename Weight>
-void CSR<Weight>::allocate(uint32_t nnz, uint32_t nrwos_plus_one)
+void CSR<Weight>::allocate(uint32_t nnz, uint32_t nrows_plus_one)
 {		
     CSR<Weight>::nnz = nnz;
-	CSR<Weight>::nrwos_plus_one = nrwos_plus_one;
+	CSR<Weight>::nrows_plus_one = nrows_plus_one;
 	CSR<Weight>::A = (uint32_t*) mmap(nullptr, (CSR<Weight>::nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	memset(CSR<Weight>::A, 0, CSR<Weight>::nnz);
-    CSR<Weight>::IA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nrwos_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	memset(CSR<Weight>::IA, 0, CSR<Weight>::nrwos_plus_one);
+    CSR<Weight>::IA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nrows_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(CSR<Weight>::IA, 0, CSR<Weight>::nrows_plus_one);
 	CSR<Weight>::JA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	memset(CSR<Weight>::JA, 0, CSR<Weight>::nnz);
 }		
@@ -139,7 +147,7 @@ template<typename Weight>
 void CSR<Weight>::free()
 {
 	munmap(CSR<Weight>::A, (this->nnz) * sizeof(uint32_t));
-    munmap(CSR<Weight>::IA, (this->nrwos_plus_one) * sizeof(uint32_t));
+    munmap(CSR<Weight>::IA, (this->nrows_plus_one) * sizeof(uint32_t));
     munmap(CSR<Weight>::JA, (this->nnz) * sizeof(uint32_t));	
 }
 
@@ -266,11 +274,12 @@ class Matrix
 		void del_triples();
 		void init_csr();
 		void del_csr();
-		void spmv();
 		
 		uint32_t local_tile_of_tile(const struct Triple<Weight>& pair);
+		uint32_t segment_of_tile(const struct Triple<Weight>& pair);
 		struct Triple<Weight> tile_of_triple(const struct Triple<Weight>& triple);
 		struct Triple<Weight> tile_of_local_tile(const uint32_t local_tile);
+		
 		std::vector<uint32_t> segments_of_local_tile();
 };
 
@@ -301,6 +310,13 @@ struct Triple<Weight> Matrix<Weight>::tile_of_local_tile(const uint32_t local_ti
 }
 
 template <typename Weight> 
+uint32_t Matrix<Weight>::segment_of_tile(const struct Triple<Weight>& pair)
+{
+	return(pair.row);
+}
+
+
+template <typename Weight> 
 std::vector<uint32_t> Matrix<Weight>::segments_of_local_tile()
 {
 	//if(!rank)
@@ -313,15 +329,13 @@ std::vector<uint32_t> Matrix<Weight>::segments_of_local_tile()
 		if (std::find(local_segments.begin(), local_segments.end(), pair.row) == local_segments.end())
 		{
 			local_segments.push_back(pair.row);
-		//	if(!rank)
-	//		printf("%d ", local_segments[i]);
-		//i++;
 		}
 		
 	}
+	return(local_segments);
 	//if(!rank)
 	//printf("\n");
-    return(local_segments);
+    
 }
 
 template<typename Weight>
@@ -422,10 +436,9 @@ class Graph
         Graph();
         ~Graph();
 		
-		void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true);//uint32_t nvertices, uint32_t mvertices, uint32_t nedges);
+		void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true);
         void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true);
-		
-		void free();
+
 	private:
 	    std::string filepath;
 	    uint32_t nvertices;
@@ -436,6 +449,9 @@ class Graph
 		Vector<Weight>* X;
 		Vector<Weight>* Y;
 		Vector<Weight>* V;
+		
+		void spmv();
+		void free();
 };
 
 template<typename Weight>
@@ -618,20 +634,10 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
 	
 	
-	if(!rank)
-	{
-		for(uint32_t t: Graph<Weight>::A->local_tiles)
-			printf("%d ", t);
-		printf("\n");
-		for(uint32_t s: Graph<Weight>::X->local_segments)
-			printf("%d ", s);
-		printf("\n");
-		
-	}
+
 	
 	
-	
-	//Graph<Weight>::A->spmv();
+	Graph<Weight>::spmv();
 	
 	Graph<Weight>::free();
 	
@@ -683,7 +689,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 			  printf("%d ", tile.csr->A[i]);
 			}
 			printf("\nIA=");
-			for(uint32_t i = 0; i < (tile.csr->nrwos_plus_one); i++)
+			for(uint32_t i = 0; i < (tile.csr->nrows_plus_one); i++)
 			{
 			  printf("%d ", tile.csr->IA[i]);
 			}
@@ -717,6 +723,11 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 	}
 	
 	Vector<Weight>::local_segments = local_segments;
+	
+	for(uint32_t t: Vector<Weight>::local_segments)
+	{
+		Vector<Weight>::segments[t].allocate();
+	}
 	
 	/*
 	if(!rank)
@@ -835,7 +846,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
 			  printf("%d ", tile.csr->A[i]);
 			}
 			printf("\n");
-			for(uint32_t i = 0; i < (tile.csr->nrwos_plus_one); i++)
+			for(uint32_t i = 0; i < (tile.csr->nrows_plus_one); i++)
 			{
 			  printf("%d ", tile.csr->IA[i]);
 			}
@@ -952,30 +963,36 @@ void Matrix<Weight>::init_csr()
 	struct Triple<Weight> pair;
     for(uint32_t t: Matrix<Weight>::local_tiles)
     {
-		if(!rank)
-		{
-			printf("local=%d\n", t);
-		}
+
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
     	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
 		tile.csr = new struct CSR<Weight>;
 		tile.csr->allocate(tile.triples->size(), Matrix<Weight>::nrows + 1);
 		
+		//if(!rank)
+		//{/
+			//printf("local=%d %d %d\n", t, tile.triples->size(), (Matrix<Weight>::nrows + 1));
+		//}		
 		/*
 	    tile.csr = new struct CSR<Weight>;
 		
     	tile.csr->nnz = tile.triples->size();
-		tile.csr->nrwos_plus_one = Matrix<Weight>::nrows + 1;
+		tile.csr->nrows_plus_one = Matrix<Weight>::nrows + 1;
 		
 	    tile.csr->A = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 		memset(tile.csr->A, 0, tile.csr->nnz);
-    	tile.csr->IA = (uint32_t*) mmap(nullptr, (tile.csr->nrwos_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-		memset(tile.csr->IA, 0, tile.csr->nrwos_plus_one);
+    	tile.csr->IA = (uint32_t*) mmap(nullptr, (tile.csr->nrows_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		memset(tile.csr->IA, 0, tile.csr->nrows_plus_one);
 	    tile.csr->JA = (uint32_t*) mmap(nullptr, (tile.csr->nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	    memset(tile.csr->JA, 0, tile.csr->nnz);
 		*/
 	    Functor<Weight> f;
 		std::sort(tile.triples->begin(), tile.triples->end(), f);
+		
+		// *** DO NOT DELETE
+		//Functor1<Weight> f1;
+		//tile.triples->erase(std::unique(tile.triples->begin(), tile.triples->end(), f1), tile.triples->end());
+
 /*
 	if(!rank)
 	{
@@ -1028,8 +1045,82 @@ void Matrix<Weight>::init_csr()
 }
 
 template<typename Weight>
-void Matrix<Weight>::spmv()
+void Graph<Weight>::spmv()
 {
+	Triple<Weight> pair;
+	if(!rank)
+	{
+		for(uint32_t t: Graph<Weight>::A->local_tiles)
+		{
+			pair = Graph<Weight>::A->tile_of_local_tile(t);
+		    auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+			
+			uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
+			auto& seg_x = Graph<Weight>::X->segments[s];
+			uint32_t n = seg_x.n;
+			
+			printf("(%d %d %d %d %d)", t, tile.csr->nnz, tile.csr->nrows_plus_one, s, n);
+		}
+		printf("\n");
+		
+		/*
+		for(uint32_t s: Graph<Weight>::A->local_segments)
+		{
+			auto& seg_x = Graph<Weight>::X->segments[s];
+			auto& seg_y = Graph<Weight>::Y->segments[s];
+			uint32_t n = seg_x.n;
+			printf("(%d %d)", s, n);
+		}
+		printf("\n");
+		*/
+	}
+	
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(t);
+		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
+		//printf("(%d %d)", s, Graph<Weight>::X->segments[s].n);
+		
+		auto& seg_x = Graph<Weight>::X->segments[s];
+		auto& seg_y = Graph<Weight>::Y->segments[s];
+		uint32_t n = seg_x.n;
+		for(uint32_t i = 0; i < n; i++)
+		{
+			seg_x.data[i] = 1;
+			seg_y.data[i] = 0;
+		}
+		
+		
+	}
+	
+	/*
+	for(uint32_t s: Graph<Weight>::A->local_segments)
+	{
+		
+		auto& seg_x = Graph<Weight>::X->segments[s];
+		auto& seg_y = Graph<Weight>::Y->segments[s];
+		uint32_t n = seg_x.n;
+		for(uint32_t i = 0; i < n; i++)
+		{
+			seg_x.data[i] = 1;
+			seg_y.data[i] = 0;
+		}
+				
+		
+	}
+	*/
+	//printf("\n");
+	
+	
+	//Vector<Weight>::segments[i].n
+	
+	
+	//for(uint32_t t: Graph<Weight>::X->local_segments)
+	//{
+	//	Graph<Weight>::X
+		
+	//}
 	
 
 	
@@ -1052,7 +1143,7 @@ void Matrix<Weight>::spmv()
 		{
 			printf("[%d][%d]\n", pair.row, pair.col);
 			uint32_t i = 0, j = 0, k = 0 ,l = 0;
-			for(i = 0; i < tile.csr->nrwos_plus_one - 1; i++)
+			for(i = 0; i < tile.csr->nrows_plus_one - 1; i++)
 			{
 			   // printf("%d[ ", tile.csr->IA[i + 1] - tile.csr->IA[i]);
 				if(tile.csr->IA[i + 1] - tile.csr->IA[i])
