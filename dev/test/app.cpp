@@ -279,6 +279,8 @@ class Matrix
 		uint32_t segment_of_tile(const struct Triple<Weight>& pair);
 		struct Triple<Weight> tile_of_triple(const struct Triple<Weight>& triple);
 		struct Triple<Weight> tile_of_local_tile(const uint32_t local_tile);
+		struct Triple<Weight>  rebase(const struct Triple<Weight>& pair);
+		struct Triple<Weight>  base(const struct Triple<Weight>& pair);
 		
 		std::vector<uint32_t> segments_of_local_tile();
 };
@@ -300,7 +302,7 @@ uint32_t Matrix<Weight>::local_tile_of_tile(const struct Triple<Weight>& pair)
 template <typename Weight>
 struct Triple<Weight> Matrix<Weight>::tile_of_triple(const struct Triple<Weight>& triple)
 {
-  return{triple.row / Matrix<Weight>::tile_height, triple.col / Matrix<Weight>::tile_width};
+  return{(triple.row / Matrix<Weight>::tile_height), (triple.col / Matrix<Weight>::tile_width)};
 }
 
 template <typename Weight>
@@ -313,6 +315,11 @@ template <typename Weight>
 uint32_t Matrix<Weight>::segment_of_tile(const struct Triple<Weight>& pair)
 {
 	return(pair.row);
+}
+template <typename Weight> 
+struct Triple<Weight>  Matrix<Weight>::rebase(const struct Triple<Weight>& pair)
+{
+	return{(pair.row % Matrix<Weight>::tile_height), (pair.col % Matrix<Weight>::tile_width)};
 }
 
 
@@ -611,7 +618,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	
 	if(!rank)
 	{
-		printf("Okay, what next?\n");
+		printf("[x]Reading\n");
 	}
 	
 	
@@ -640,6 +647,11 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	Graph<Weight>::spmv();
 	
 	Graph<Weight>::free();
+	
+	if(!rank)
+	{
+		printf("[x]SPMV\n");
+	}
 	
 	
 	//Graph<Weight>::X->local_segments = Graph<Weight>::A->segments_of_local_tile();
@@ -967,7 +979,8 @@ void Matrix<Weight>::init_csr()
 	    pair = Matrix<Weight>::tile_of_local_tile(t);
     	auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
 		tile.csr = new struct CSR<Weight>;
-		tile.csr->allocate(tile.triples->size(), Matrix<Weight>::nrows + 1);
+		//tile.csr->allocate(tile.triples->size(), Matrix<Weight>::nrows + 1);
+		tile.csr->allocate(tile.triples->size(), Matrix<Weight>::tile_height);
 		
 		//if(!rank)
 		//{/
@@ -1002,29 +1015,47 @@ void Matrix<Weight>::init_csr()
 	}
 */
 
+MPI_Barrier(MPI_COMM_WORLD);
+if(!rank)
+{
+	printf(">>>Creating csr\n");
+
+
 		
         uint32_t i = 0;
         uint32_t j = 1;
         tile.csr->IA[0] = 0;
         for (auto& triple : *(tile.triples))
         {
-            while((j - 1) != triple.row)
+			pair = rebase(triple);
+			if(!rank and t == 14 and triple.row > 1048508)
+            {
+            	printf("t=%d,j=%d,height=%d,row/h=(%d,%d),(%d %d)(%d %d)\n", t, j, Matrix<Weight>::tile_height, (triple.row % Matrix<Weight>::tile_height), (triple.col % Matrix<Weight>::tile_width)
+				, triple.row, triple.col, pair.row, pair.col);
+            }
+			
+            while((j - 1) != pair.row)
+			//while((j - 1) != (triple.row % Matrix<Weight>::tile_height))
 	        {
 	            j++;
 	            tile.csr->IA[j] = tile.csr->IA[j - 1];
 	        }			
-			tile.csr->A[i] = triple.get_weight(); // In case weights are important
+			tile.csr->A[i] = triple.get_weight(); // In case weights are implemented
 	        tile.csr->IA[j]++;
-	        tile.csr->JA[i] = triple.col;	
+	        tile.csr->JA[i] = pair.col;	
 	        i++;
         }
-  
+        if(!rank)
+		{
+			printf("after=%d\n", j);
+		}
         // Not necessary
-        while(j < (Matrix<Weight>::nrows + 1))
+        while(j < (Matrix<Weight>::tile_height))
         {
        	   j++;
            tile.csr->IA[j] = tile.csr->IA[j - 1];
         }
+}
     }	
 	
 	Matrix<Weight>::del_triples();
@@ -1103,7 +1134,7 @@ void Graph<Weight>::spmv()
 			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
 			for(j = 0; j < nnz_per_row; j++)
 			{
-				printf("TILE[%d][%d]: A[%d]=%d, JA[%d]=%d \n", pair.row, pair.col, k, tile.csr->A[k], k, tile.csr->JA[k]);
+				printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k]);
 				k++;
 				
 			}
@@ -1123,8 +1154,9 @@ void Graph<Weight>::spmv()
 			//}
 			
 		}
-		}
 		
+		}
+		break;
 	}
 	
 	/*
@@ -1258,7 +1290,12 @@ int main(int argc, char** argv) {
 	G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed);
 	//G.load_text(file_path, num_vertices, num_vertices, _1D_ROW, directed);
 	//G.A->spmv();
-	printf("done load binary\n");
+	
+	
+	if(!rank)
+	{
+		printf("[x]MAIN\n");
+	}
 	
 	//G.free();
 	
