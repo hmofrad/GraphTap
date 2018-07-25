@@ -1090,7 +1090,40 @@ void Graph<Weight>::spmv()
 			seg_x.data[i] = 1;
 			seg_y.data[i] = 0;
 		}
+		uint32_t i = 0, j = 0, k = 0 ,l = 0;
 		
+		
+		if(!rank)
+		{
+		uint32_t i = 0, j = 0, k = 0, l = 0;	
+		//while(i < tile.csr->nnz)
+		//for(i = 0; i < tile.csr->nnz; i++)
+		for(i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+		{
+			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
+			for(j = 0; j < nnz_per_row; j++)
+			{
+				printf("TILE[%d][%d]: A[%d]=%d, JA[%d]=%d \n", pair.row, pair.col, k, tile.csr->A[k], k, tile.csr->JA[k]);
+				k++;
+				
+			}
+			
+		    //if(tile.csr->IA[i + 1] - tile.csr->IA[i])
+			//{
+			//	printf("%d ", i);
+			//}
+			
+			//for(j = 0; j < tile.csr->IA[i + 1] - tile.csr->IA[i]; j++)
+			//{
+				//printf("(%d %d %d) ", tile.csr->A[k], tile.csr->JA[k], tile.csr->A[k] * X[tile.csr->JA[k]]);
+				//Y[tile.csr->JA[k]] = tile.csr->A[k] * X[tile.csr->JA[k]];
+				//k++;
+				//if(j + 1 == tile.csr->IA[i + 1] - tile.csr->IA[i])
+					//printf(" \n");
+			//}
+			
+		}
+		}
 		
 	}
 	
