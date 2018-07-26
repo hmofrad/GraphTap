@@ -728,7 +728,9 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 
 	for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
     {
+		Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
 		Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
+		Vector<Weight>::segments[i].rg = i;
 		Vector<Weight>::segments[i].cg = i;
 		Vector<Weight>::segments[i].rank = diag_ranks[i];
 	}
@@ -1091,8 +1093,8 @@ void Graph<Weight>::spmv()
 		    auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
 			
 			uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
-			auto& seg_x = Graph<Weight>::X->segments[s];
-			uint32_t n = seg_x.n;
+			auto& x_seg = Graph<Weight>::X->segments[s];
+			uint32_t n = x_seg.n;
 			
 			printf("t=%d(nnz=%d,nrow+1=%d,s=%d,n=%d)\n", t, tile.csr->nnz, tile.csr->nrows_plus_one, s, n);
 		}
@@ -1101,9 +1103,9 @@ void Graph<Weight>::spmv()
 		/*
 		for(uint32_t s: Graph<Weight>::A->local_segments)
 		{
-			auto& seg_x = Graph<Weight>::X->segments[s];
-			auto& seg_y = Graph<Weight>::Y->segments[s];
-			uint32_t n = seg_x.n;
+			auto& x_seg = Graph<Weight>::X->segments[s];
+			auto& y_seg = Graph<Weight>::Y->segments[s];
+			uint32_t n = x_seg.n;
 			printf("(%d %d)", s, n);
 		}
 		printf("\n");
@@ -1111,22 +1113,25 @@ void Graph<Weight>::spmv()
 	}
 //if(!rank)
 //{	
+    //uint32_t i = 0, j = 0, k = 0 ,l = 0;
 	for(uint32_t t: Graph<Weight>::A->local_tiles)
 	{
 		pair = Graph<Weight>::A->tile_of_local_tile(t);
 		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
 		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
+		uint32_t x_c = pair.col;
+		uint32_t y_r = pair.row;
 		//printf("(%d %d)", s, Graph<Weight>::X->segments[s].ncols);
 		
-		auto& seg_x = Graph<Weight>::X->segments[s];
-		auto& seg_y = Graph<Weight>::Y->segments[s];
-		//uint32_t nrows = seg_x.ncols;
-		for(uint32_t i = 0; i < seg_x.ncols; i++)
+		auto& x_seg = Graph<Weight>::X->segments[s];
+		auto& y_seg = Graph<Weight>::Y->segments[s];
+		//uint32_t nrows = x_seg.ncols;
+		for(uint32_t i = 0; i < x_seg.ncols; i++)
 		{
-			seg_x.data[i] = 1;
-			seg_y.data[i] = 0;
+			x_seg.data[i] = 1;
+			y_seg.data[i] = 0;
 		}
-		uint32_t i = 0, j = 0, k = 0 ,l = 0;
+		
 		
 		//if(!rank)
 		//{
@@ -1134,37 +1139,63 @@ void Graph<Weight>::spmv()
 		
 		//while(i < tile.csr->nnz)
 		//for(i = 0; i < tile.csr->nnz; i++)
-		
-		for(i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+		uint32_t 	k = 0;
+		for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
 		{
 			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
-			for(j = 0; j < nnz_per_row; j++)
+			for(uint32_t j = 0; j < nnz_per_row; j++)
 			{
-				//if(t == 12 or t == 14)
-				//printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d, Y[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, seg_x.data[i], i, seg_y.data[i]);
+				//if(!rank)
+				//printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d, Y[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, x_seg.data[i], i, y_seg.data[i]);
 			
-				seg_y.data[i] += tile.csr->A[k] * seg_x.data[i];
+				y_seg.data[i] += tile.csr->A[k] * x_seg.data[i];
 				k++;
 			}
 			
 		}
-		
-		//}
-		//break;
 	}
+	
+	uint32_t v = 0;
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(t);
+		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
+		auto& y_seg = Graph<Weight>::Y->segments[s];
+		if(y_seg.rank == rank)
+		{
+			for(uint32_t i = 0; i < y_seg.ncols; i++)
+		    {
+				v += y_seg.data[i];
+			}
+		}			
+		else
+		{
+           ;
+			
+		}
+		
+				
+	}
+	
+	if(!rank)
+		printf("SUM=%d\n", v);
+	
+	//Vector<Weight>::segments[i].rank
+	
 //}
 	
 	/*
 	for(uint32_t s: Graph<Weight>::A->local_segments)
 	{
 		
-		auto& seg_x = Graph<Weight>::X->segments[s];
-		auto& seg_y = Graph<Weight>::Y->segments[s];
-		uint32_t n = seg_x.n;
+		auto& x_seg = Graph<Weight>::X->segments[s];
+		auto& y_seg = Graph<Weight>::Y->segments[s];
+		uint32_t n = x_seg.n;
 		for(uint32_t i = 0; i < n; i++)
 		{
-			seg_x.data[i] = 1;
-			seg_y.data[i] = 0;
+			x_seg.data[i] = 1;
+			y_seg.data[i] = 0;
 		}
 				
 		
