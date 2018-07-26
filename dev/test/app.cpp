@@ -957,11 +957,12 @@ void Matrix<Weight>::init_mat()
         {
 	        for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
 	        {
-				printf("%d ", Matrix<Weight>::tiles[i][j].rank);
+				printf("%02d ", Matrix<Weight>::tiles[i][j].rank);
 		    }
 			printf("\n");
 	    }
 	}
+	MPI_Barrier(MPI_COMM_WORLD);
 	
 }
 
@@ -1139,8 +1140,8 @@ void Graph<Weight>::spmv()
 			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
 			for(j = 0; j < nnz_per_row; j++)
 			{
-				if(t == 12 or t == 14)
-				printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d, Y[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, seg_x.data[i], i, seg_y.data[i]);
+				//if(t == 12 or t == 14)
+				//printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d, Y[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, seg_x.data[i], i, seg_y.data[i]);
 			
 				seg_y.data[i] += tile.csr->A[k] * seg_x.data[i];
 				k++;
