@@ -393,14 +393,14 @@ struct Segment
 template<typename Weight>
 void Segment<Weight>::allocate()
 {
-	Segment<Weight>::data = (uint32_t*) mmap(nullptr, (this->nrows) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	memset(Segment<Weight>::data, 0, this->nrows);
+	Segment<Weight>::data = (uint32_t*) mmap(nullptr, (this->ncols) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(Segment<Weight>::data, 0, this->ncols);
 }
 
 template<typename Weight>
 void Segment<Weight>::free()
 {
-	munmap(Segment<Weight>::data, (this->nrows) * sizeof(uint32_t));
+	munmap(Segment<Weight>::data, (this->ncols) * sizeof(uint32_t));
 }
 
 
@@ -728,7 +728,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 
 	for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
     {
-		Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_height;
+		Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
 		Vector<Weight>::segments[i].cg = i;
 		Vector<Weight>::segments[i].rank = diag_ranks[i];
 	}
@@ -1108,13 +1108,14 @@ void Graph<Weight>::spmv()
 		printf("\n");
 		*/
 	}
-	
+//if(!rank)
+//{	
 	for(uint32_t t: Graph<Weight>::A->local_tiles)
 	{
 		pair = Graph<Weight>::A->tile_of_local_tile(t);
 		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
 		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
-		printf("(%d %d)", s, Graph<Weight>::X->segments[s].ncols);
+		//printf("(%d %d)", s, Graph<Weight>::X->segments[s].ncols);
 		
 		auto& seg_x = Graph<Weight>::X->segments[s];
 		auto& seg_y = Graph<Weight>::Y->segments[s];
@@ -1126,19 +1127,21 @@ void Graph<Weight>::spmv()
 		}
 		uint32_t i = 0, j = 0, k = 0 ,l = 0;
 		
-		
 		//if(!rank)
 		//{
 		//printf("T[%d][%d] S[%d]\n", pair.row, pair.col, s);
 		
 		//while(i < tile.csr->nnz)
 		//for(i = 0; i < tile.csr->nnz; i++)
+		
 		for(i = 0; i < tile.csr->nrows_plus_one - 1; i++)
 		{
 			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
 			for(j = 0; j < nnz_per_row; j++)
 			{
-				//printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, seg_x.data[i]);
+				if(t == 12 or t == 14)
+				printf("TILE[%d][%d]:%d: A[%d]=%d, JA[%d]=%d, X[%d]=%d, Y[%d]=%d \n", pair.row, pair.col, i, k, tile.csr->A[k], k, tile.csr->JA[k], i, seg_x.data[i], i, seg_y.data[i]);
+			
 				seg_y.data[i] += tile.csr->A[k] * seg_x.data[i];
 				k++;
 			}
@@ -1148,7 +1151,7 @@ void Graph<Weight>::spmv()
 		//}
 		//break;
 	}
-	
+//}
 	
 	/*
 	for(uint32_t s: Graph<Weight>::A->local_segments)
