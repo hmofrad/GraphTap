@@ -269,6 +269,8 @@ class Matrix
 	    std::vector<std::vector<struct Tile2D<Weight>>> tiles;
         std::vector<uint32_t> local_tiles;
 		std::vector<uint32_t> local_segments;
+		std::vector<uint32_t> local_col_segments;
+		std::vector<uint32_t> local_row_segments;
 		
 		void init_mat();
 		void del_triples();
@@ -282,7 +284,7 @@ class Matrix
 		struct Triple<Weight>  rebase(const struct Triple<Weight>& pair);
 		struct Triple<Weight>  base(const struct Triple<Weight>& pair);
 		
-		std::vector<uint32_t> segments_of_local_tile();
+		//std::vector<uint32_t> segments_of_local_tile();
 };
 
 template<typename Weight>
@@ -322,7 +324,7 @@ struct Triple<Weight>  Matrix<Weight>::rebase(const struct Triple<Weight>& pair)
 	return{(pair.row % Matrix<Weight>::tile_height), (pair.col % Matrix<Weight>::tile_width)};
 }
 
-
+/*
 template <typename Weight> 
 std::vector<uint32_t> Matrix<Weight>::segments_of_local_tile()
 {
@@ -344,7 +346,7 @@ std::vector<uint32_t> Matrix<Weight>::segments_of_local_tile()
 	//printf("\n");
     
 }
-
+*/
 template<typename Weight>
 void Matrix<Weight>::del_triples()
 {
@@ -635,8 +637,8 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	
 	
 	//std::vector<uint32_t> local_segments = Graph<Weight>::A->segments_of_local_tile();
-    Graph<Weight>::X->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
-	Graph<Weight>::Y->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
+    Graph<Weight>::X->init_vec(diag_ranks, Graph<Weight>::A->local_col_segments);
+	Graph<Weight>::Y->init_vec(diag_ranks, Graph<Weight>::A->local_row_segments);
 	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
 	
 	
@@ -741,23 +743,6 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 	{
 		Vector<Weight>::segments[t].allocate();
 	}
-	
-	/*
-	if(!rank)
-	{
-		printf(">>>> ");
-		for(uint32_t i = 0; i < Vector<Weight>::local_segments.size(); i++)
-			printf("%d ", Vector<Weight>::local_segments[i]);
-		printf("\n");
-	}
-	*/
-	
-	//local_segments
-	//for(uint32_t t: local_tiles)
-	//{
-	//	Vector<Weight>::segments[t].allocate();
-	//}
-	
 }
 
 
@@ -941,6 +926,17 @@ void Matrix<Weight>::init_mat()
 		        {
 			        local_segments.push_back(pair.col);
 			    }	
+				
+				if (std::find(Matrix<Weight>::local_row_segments.begin(), Matrix<Weight>::local_row_segments.end(), pair.row) == local_row_segments.end())
+		        {
+			        local_row_segments.push_back(pair.row);
+			    }	
+				
+				if (std::find(Matrix<Weight>::local_col_segments.begin(), Matrix<Weight>::local_col_segments.end(), pair.col) == local_col_segments.end())
+		        {
+			        local_col_segments.push_back(pair.col);
+			    }	
+				
 			}
 		}
 	}
@@ -1114,23 +1110,75 @@ void Graph<Weight>::spmv()
 //if(!rank)
 //{	
     //uint32_t i = 0, j = 0, k = 0 ,l = 0;
+	
+	uint32_t x_c = 0, y_r = 0, y_r_old = 0;
+	// Data initialization
 	for(uint32_t t: Graph<Weight>::A->local_tiles)
 	{
 		pair = Graph<Weight>::A->tile_of_local_tile(t);
 		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
 		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
-		uint32_t x_c = pair.col;
-		uint32_t y_r = pair.row;
-		//printf("(%d %d)", s, Graph<Weight>::X->segments[s].ncols);
+		x_c = pair.col;
+        y_r = pair.row;
 		
-		auto& x_seg = Graph<Weight>::X->segments[s];
-		auto& y_seg = Graph<Weight>::Y->segments[s];
-		//uint32_t nrows = x_seg.ncols;
-		for(uint32_t i = 0; i < x_seg.ncols; i++)
+		auto& x_seg = Graph<Weight>::X->segments[x_c];
+		auto& y_seg = Graph<Weight>::Y->segments[y_r];
+		
+		uint32_t nitems = x_seg.ncols;
+		for(uint32_t i = 0; i < nitems; i++)
 		{
 			x_seg.data[i] = 1;
 			y_seg.data[i] = 0;
 		}
+		
+	}	
+	
+	
+	// Data processing 
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(t);
+		auto& tile = Graph<Weight>::A->tiles[pair.row][pair.col];
+		uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
+		x_c = pair.col;
+		y_r = pair.row;
+		
+		if(y_r != y_r_old)
+		{
+		    y_r_old = y_r;
+			if(!rank)
+			{
+				printf("Communication\n");
+			}
+			
+		}
+		else
+		{
+			if(!rank)
+			{
+				printf("Computation\n");
+			}
+		}
+		
+       //if(!rank)
+		//printf("(%d %d)\n", Graph<Weight>::A->tiles[pair.row][pair.col].rg, Graph<Weight>::A->tiles[pair.row][pair.col].cg);
+		
+		auto& x_seg = Graph<Weight>::X->segments[x_c];
+		auto& y_seg = Graph<Weight>::Y->segments[y_r];
+		
+		//uint32_t nrows = x_seg.ncols;
+		/*
+		for(uint32_t i = 0; i < x_seg.ncols; i++)
+		{
+			x_seg.data[i] = 1;
+			//y_seg.data[i] = 0;
+		}
+		
+		for(uint32_t i = 0; i < y_seg.nrows; i++)
+		{
+			y_seg.data[i] = 0;
+		}
+		*/
 		
 		
 		//if(!rank)
@@ -1139,7 +1187,7 @@ void Graph<Weight>::spmv()
 		
 		//while(i < tile.csr->nnz)
 		//for(i = 0; i < tile.csr->nnz; i++)
-		uint32_t 	k = 0;
+		uint32_t k = 0;
 		for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
 		{
 			uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
@@ -1155,6 +1203,7 @@ void Graph<Weight>::spmv()
 		}
 	}
 	
+	/*
 	uint32_t v = 0;
 	for(uint32_t t: Graph<Weight>::A->local_tiles)
 	{
@@ -1180,7 +1229,7 @@ void Graph<Weight>::spmv()
 	
 	if(!rank)
 		printf("SUM=%d\n", v);
-	
+	*/
 	//Vector<Weight>::segments[i].rank
 	
 //}
