@@ -174,9 +174,12 @@ enum Tiling
 
 template<typename Weight>
 class Partitioning
-{
+{	
     template<typename Weight_>
 	friend class Matrix;
+
+	template<typename Weight__>
+	friend class Graph;
 	
 	public:	
 		Partitioning(uint32_t nranks, uint32_t rank, uint32_t ntiles, uint32_t nrowgrps, uint32_t ncolgrps, Tiling tiling);
@@ -385,6 +388,7 @@ struct Segment
 	friend class Vector;
 	
 	uint32_t* data;	
+	uint32_t n;
     uint32_t nrows, ncols;
 	uint32_t rg, cg;
 	uint32_t rank;
@@ -395,14 +399,14 @@ struct Segment
 template<typename Weight>
 void Segment<Weight>::allocate()
 {
-	Segment<Weight>::data = (uint32_t*) mmap(nullptr, (this->ncols) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	memset(Segment<Weight>::data, 0, this->ncols);
+	Segment<Weight>::data = (uint32_t*) mmap(nullptr, (this->n) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memset(Segment<Weight>::data, 0, this->n);
 }
 
 template<typename Weight>
 void Segment<Weight>::free()
 {
-	munmap(Segment<Weight>::data, (this->ncols) * sizeof(uint32_t));
+	munmap(Segment<Weight>::data, (this->n) * sizeof(uint32_t));
 }
 
 
@@ -639,7 +643,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	//std::vector<uint32_t> local_segments = Graph<Weight>::A->segments_of_local_tile();
     Graph<Weight>::X->init_vec(diag_ranks, Graph<Weight>::A->local_col_segments);
 	Graph<Weight>::Y->init_vec(diag_ranks, Graph<Weight>::A->local_row_segments);
-	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments);
+	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments); // CHANGE THIS
 	
 	
 
@@ -730,6 +734,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 
 	for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
     {
+		Vector<Weight>::segments[i].n = Vector<Weight>::tile_height;
 		Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
 		Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
 		Vector<Weight>::segments[i].rg = i;
@@ -739,10 +744,21 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 	
 	Vector<Weight>::local_segments = local_segments;
 	
-	for(uint32_t t: Vector<Weight>::local_segments)
+	for(uint32_t s: Vector<Weight>::local_segments)
 	{
-		Vector<Weight>::segments[t].allocate();
+		Vector<Weight>::segments[s].allocate();
 	}
+	/*
+	if(!rank)
+	{
+	for(uint32_t s: Vector<Weight>::local_segments)
+	{
+		printf("%d ", s);
+	}
+	printf("\n");
+	}
+	*/
+	
 }
 
 
@@ -877,10 +893,20 @@ void Matrix<Weight>::init_mat()
 	        Matrix<Weight>::tiles[i][j].rg = i;
             Matrix<Weight>::tiles[i][j].cg = j;
 			if(Matrix<Weight>::partitioning->tiling == Tiling::_1D_ROW)
+			{
 	            Matrix<Weight>::tiles[i][j].rank = i;
+				Matrix<Weight>::tiles[i][j].ith = Matrix<Weight>::tiles[i][j].rg / Matrix<Weight>::partitioning->colgrp_nranks;
+                Matrix<Weight>::tiles[i][j].jth = Matrix<Weight>::tiles[i][j].cg / Matrix<Weight>::partitioning->rowgrp_nranks;
+				Matrix<Weight>::tiles[i][j].nth = Matrix<Weight>::tiles[i][j].ith * Matrix<Weight>::partitioning->rank_ncolgrps + Matrix<Weight>::tiles[i][j].jth;
+			}
 			else if(Matrix<Weight>::partitioning->tiling == Tiling::_2D_)
+			{
 				Matrix<Weight>::tiles[i][j].rank = (j % Matrix<Weight>::partitioning->rowgrp_nranks) * Matrix<Weight>::partitioning->colgrp_nranks
             			                         + (i % Matrix<Weight>::partitioning->colgrp_nranks);
+				Matrix<Weight>::tiles[i][j].ith = Matrix<Weight>::tiles[i][j].rg / Matrix<Weight>::partitioning->colgrp_nranks;
+                Matrix<Weight>::tiles[i][j].jth = Matrix<Weight>::tiles[i][j].cg / Matrix<Weight>::partitioning->rowgrp_nranks;
+				Matrix<Weight>::tiles[i][j].nth = Matrix<Weight>::tiles[i][j].ith * Matrix<Weight>::partitioning->rank_ncolgrps + Matrix<Weight>::tiles[i][j].jth;
+			}
 		
 			//if(Matrix<Weight>::tiles[i][j].rank == rank)
 			//{
@@ -921,20 +947,20 @@ void Matrix<Weight>::init_mat()
 		        pair.row = i;
 		        pair.col = j;	
 			    Matrix<Weight>::local_tiles.push_back(Matrix<Weight>::local_tile_of_tile(pair));
-				
+				/*
 				if (std::find(local_segments.begin(), local_segments.end(), pair.col) == local_segments.end())
 		        {
 			        local_segments.push_back(pair.col);
 			    }	
-				
+				*/
 				if (std::find(Matrix<Weight>::local_row_segments.begin(), Matrix<Weight>::local_row_segments.end(), pair.row) == local_row_segments.end())
 		        {
-			        local_row_segments.push_back(pair.row);
+			        Matrix<Weight>::local_row_segments.push_back(pair.row);
 			    }	
 				
 				if (std::find(Matrix<Weight>::local_col_segments.begin(), Matrix<Weight>::local_col_segments.end(), pair.col) == local_col_segments.end())
 		        {
-			        local_col_segments.push_back(pair.col);
+			        Matrix<Weight>::local_col_segments.push_back(pair.col);
 			    }	
 				
 			}
@@ -1124,7 +1150,7 @@ void Graph<Weight>::spmv()
 		auto& x_seg = Graph<Weight>::X->segments[x_c];
 		auto& y_seg = Graph<Weight>::Y->segments[y_r];
 		
-		uint32_t nitems = x_seg.ncols;
+		uint32_t nitems = x_seg.n;
 		for(uint32_t i = 0; i < nitems; i++)
 		{
 			x_seg.data[i] = 1;
@@ -1143,23 +1169,23 @@ void Graph<Weight>::spmv()
 		x_c = pair.col;
 		y_r = pair.row;
 		
+		/*
 		if(y_r != y_r_old)
 		{
 		    y_r_old = y_r;
 			if(!rank)
 			{
-				printf("Communication\n");
+				printf("Communication + Computation %d %d\n", tile.nth, tile.ith);
 			}
-			
 		}
 		else
 		{
 			if(!rank)
 			{
-				printf("Computation\n");
+				printf("Computation %d %d\n", tile.nth, tile.ith);
 			}
 		}
-		
+		*/
        //if(!rank)
 		//printf("(%d %d)\n", Graph<Weight>::A->tiles[pair.row][pair.col].rg, Graph<Weight>::A->tiles[pair.row][pair.col].cg);
 		
@@ -1199,9 +1225,39 @@ void Graph<Weight>::spmv()
 				y_seg.data[i] += tile.csr->A[k] * x_seg.data[i];
 				k++;
 			}
-			
 		}
+		
+		bool communication = ((tile.nth + 1) % Graph<Weight>::A->partitioning->colgrp_nranks == 0);
+		
+		if(rank == 0 or rank == k)
+		{
+		if(communication)
+		{
+			if(y_seg.rank == rank)
+			{
+				//MPI_Recv
+				printf("receive(%d)\n", rank);
+			}
+			else
+			{
+				//MPI_Send
+				//int MPI_Send(y_seg.data, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
+				printf("send(%d)\n", rank);
+			}
+		}
+		}
+		
+		
+		if(!rank)
+		{
+		    printf("[%d %d] %d %d %d %d %d %d\n",x_c, y_r, tile.ith, tile.jth,  tile.nth, Graph<Weight>::A->partitioning->colgrp_nranks, (tile.nth + 1) % Graph<Weight>::A->partitioning->colgrp_nranks, communication);	
+		}
+		
+		
 	}
+
+	
+	
 	
 	/*
 	uint32_t v = 0;
