@@ -270,10 +270,12 @@ class Matrix
 		Partitioning<Weight>* partitioning;
 
 	    std::vector<std::vector<struct Tile2D<Weight>>> tiles;
+		std::vector<uint32_t> diag_ranks;
         std::vector<uint32_t> local_tiles;
 		std::vector<uint32_t> local_segments;
 		std::vector<uint32_t> local_col_segments;
 		std::vector<uint32_t> local_row_segments;
+		
 		
 		void init_mat();
 		void del_triples();
@@ -392,7 +394,7 @@ struct Segment
     uint32_t nrows, ncols;
 	uint32_t rg, cg;
 	uint32_t rank;
-	std::vector<std::vector<uint32_t>> other_ranks;
+	std::vector<uint32_t> other_ranks;
 	void allocate();
 	void free();
 };
@@ -564,29 +566,30 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	//	printf("rank_ntiles = %d\n", Graph<Weight>::A->partitioning->rank_ntiles);
 		
 	Graph<Weight>::A->init_mat();
-	
+	/*
 	std::vector<uint32_t> diag_ranks(Graph<Weight>::A->nrowgrps, -1);
 	for(uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
 	{
 		diag_ranks[i] = Graph<Weight>::A->tiles[i][i].rank;
 	}
+	*/
 	
+	std::vector<uint32_t> other_ranks;
+	//other_ranks.resize(Graph<Weight>::A->partitioning->rank_nrowgrps); Uncomment if ranks per row are different
 	
-	std::vector<std::vector<uint32_t>> other_ranks;
-	other_ranks.resize(Graph<Weight>::A->partitioning->rank_nrowgrps);
 	//rowgrp_nranks.resize(Graph<Weight>::A->partitioning->colgrp_nranks - 1);
 	//for(uint32_t i = 0; i < Graph<Weight>::A->partitioning->rowgrp_nranks; i++)
 		//rowgrp_nranks[i].resize(Graph<Weight>::A->partitioning->rowgrp_nranks - 1);
 	
 	
 	struct Triple<Weight> pair;
-	uint32_t i = 0;
-	uint32_t prev_row = -1;
-	if(!rank)
-	{	
-	for(uint32_t t: Graph<Weight>::A->local_tiles)
-	{
-		pair = Graph<Weight>::A->tile_of_local_tile(t);
+	//uint32_t i = 0;
+	//uint32_t prev_row = -1;
+	//if(!rank)
+	//{	
+	//for(uint32_t t: Graph<Weight>::A->local_tiles)
+	//{
+		pair = Graph<Weight>::A->tile_of_local_tile(0);
 		//if(prev_row != -1)
 		//    prev_row = pair.row;
 		
@@ -594,28 +597,30 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		//uint32_t j = pair.col;
 		
 		//printf("[%d %d %d %d %d %d %d %d %d]\n", prev_row, pair.row, pair.col, i, prev_row, Graph<Weight>::A->partitioning->rank_nrowgrps, Graph<Weight>::A->partitioning->rank_ncolgrps, Graph<Weight>::A->partitioning->rowgrp_nranks, Graph<Weight>::A->partitioning->colgrp_nranks);
-		if(prev_row != pair.row)
-		{
+		//if(prev_row != pair.row)
+		//{
             for(uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)
 	    	{
 		    	if((pair.row != j) and (Graph<Weight>::A->tiles[pair.row][j].rank != rank))
 			    {
-				    if (std::find(other_ranks[i].begin(), other_ranks[i].end(), Graph<Weight>::A->tiles[pair.row][j].rank) == other_ranks[i].end())
+				    if (std::find(other_ranks.begin(), other_ranks.end(), Graph<Weight>::A->tiles[pair.row][j].rank) == other_ranks.end())
     				{
-	    				other_ranks[i].push_back(Graph<Weight>::A->tiles[pair.row][j].rank);
-						//printf("PUSH %d %d\n", i, Graph<Weight>::A->tiles[pair.row][j].rank);
+	    				other_ranks.push_back(Graph<Weight>::A->tiles[pair.row][j].rank);
+						if(!rank)
+						printf("PUSH %d\n", Graph<Weight>::A->tiles[pair.row][j].rank);
 		    		}
 			    }
 		    }
-			i++;
+			//i++;
 			/*
 			for(uint32_t ii; ii < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; ii++)
 		    {
 			    printf("%d\n", rowgrp_nranks[i - 1][ii]);
 		    }
 			*/
-		}
-		prev_row = pair.row;
+		//}
+		//prev_row = pair.row;
+		//break; // Remove if 
 	    
 	    
 		
@@ -631,7 +636,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		*/
 		
 		
-	}
+	//}
 
 
     /*
@@ -655,7 +660,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	}
     
 	*/
-	}
+	//}
 
 	
 	
@@ -730,9 +735,9 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	
 	
 	//std::vector<uint32_t> local_segments = Graph<Weight>::A->segments_of_local_tile();
-    Graph<Weight>::X->init_vec(diag_ranks, Graph<Weight>::A->local_col_segments);
-	Graph<Weight>::Y->init_vec(diag_ranks, Graph<Weight>::A->local_row_segments);
-	Graph<Weight>::V->init_vec(diag_ranks, Graph<Weight>::A->local_segments); // CHANGE THIS
+    Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
+	Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_row_segments);
+	Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_segments); // CHANGE THIS
 	
 	
 
@@ -1006,16 +1011,16 @@ void Matrix<Weight>::init_mat()
 			//}
 	    }
     }
-
-	std::vector<uint32_t> diag_ranks(Matrix<Weight>::nrowgrps, -1);
+    Matrix<Weight>::diag_ranks.resize(Matrix<Weight>::nrowgrps);
+	//std::vector<uint32_t> diag_ranks(Matrix<Weight>::nrowgrps, -1);
 	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
 	{
 		for (uint32_t j = i; j < Matrix<Weight>::ncolgrps; j++)  
 		{
-			if(not (std::find(diag_ranks.begin(), diag_ranks.end(), Matrix<Weight>::tiles[j][i].rank) != diag_ranks.end()))
+			if(not (std::find(Matrix<Weight>::diag_ranks.begin(), Matrix<Weight>::diag_ranks.end(), Matrix<Weight>::tiles[j][i].rank) != Matrix<Weight>::diag_ranks.end()))
 			{
 				std::swap(Matrix<Weight>::tiles[j], Matrix<Weight>::tiles[i]);
-				diag_ranks[j] = Matrix<Weight>::tiles[j][i].rank;
+				Matrix<Weight>::diag_ranks[j] = Matrix<Weight>::tiles[j][i].rank;
 				break;
 			}
 			
@@ -1024,7 +1029,19 @@ void Matrix<Weight>::init_mat()
 		}
 		//printf("\n");
 	}
-		
+	
+	
+	
+	
+	
+	/*
+	if(!rank){
+	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
+		printf("%d ", diag_ranks[i]);
+	
+	printf("\n");
+	}
+	*/
 	struct Triple<Weight> pair;
 	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
 	{
@@ -1037,12 +1054,14 @@ void Matrix<Weight>::init_mat()
 		        pair.row = i;
 		        pair.col = j;	
 			    Matrix<Weight>::local_tiles.push_back(Matrix<Weight>::local_tile_of_tile(pair));
+				
 				/*
 				if (std::find(local_segments.begin(), local_segments.end(), pair.col) == local_segments.end())
 		        {
 			        local_segments.push_back(pair.col);
 			    }	
 				*/
+				
 				if (std::find(Matrix<Weight>::local_row_segments.begin(), Matrix<Weight>::local_row_segments.end(), pair.row) == local_row_segments.end())
 		        {
 			        Matrix<Weight>::local_row_segments.push_back(pair.row);
