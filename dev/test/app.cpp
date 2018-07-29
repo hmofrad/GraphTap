@@ -392,6 +392,7 @@ struct Segment
     uint32_t nrows, ncols;
 	uint32_t rg, cg;
 	uint32_t rank;
+	std::vector<std::vector<uint32_t>> other_ranks;
 	void allocate();
 	void free();
 };
@@ -563,10 +564,98 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	//	printf("rank_ntiles = %d\n", Graph<Weight>::A->partitioning->rank_ntiles);
 		
 	Graph<Weight>::A->init_mat();
-	std::vector<uint32_t> diag_ranks(Graph<Weight>::A->nrowgrps, -1);
-	for (uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
-		diag_ranks[i] = Graph<Weight>::A->tiles[i][i].rank;
 	
+	std::vector<uint32_t> diag_ranks(Graph<Weight>::A->nrowgrps, -1);
+	for(uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+	{
+		diag_ranks[i] = Graph<Weight>::A->tiles[i][i].rank;
+	}
+	
+	
+	std::vector<std::vector<uint32_t>> other_ranks;
+	other_ranks.resize(Graph<Weight>::A->partitioning->rank_nrowgrps);
+	//rowgrp_nranks.resize(Graph<Weight>::A->partitioning->colgrp_nranks - 1);
+	//for(uint32_t i = 0; i < Graph<Weight>::A->partitioning->rowgrp_nranks; i++)
+		//rowgrp_nranks[i].resize(Graph<Weight>::A->partitioning->rowgrp_nranks - 1);
+	
+	
+	struct Triple<Weight> pair;
+	uint32_t i = 0;
+	uint32_t prev_row = -1;
+	if(!rank)
+	{	
+	for(uint32_t t: Graph<Weight>::A->local_tiles)
+	{
+		pair = Graph<Weight>::A->tile_of_local_tile(t);
+		//if(prev_row != -1)
+		//    prev_row = pair.row;
+		
+		//uint32_t i = pair.row;
+		//uint32_t j = pair.col;
+		
+		//printf("[%d %d %d %d %d %d %d %d %d]\n", prev_row, pair.row, pair.col, i, prev_row, Graph<Weight>::A->partitioning->rank_nrowgrps, Graph<Weight>::A->partitioning->rank_ncolgrps, Graph<Weight>::A->partitioning->rowgrp_nranks, Graph<Weight>::A->partitioning->colgrp_nranks);
+		if(prev_row != pair.row)
+		{
+            for(uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)
+	    	{
+		    	if((pair.row != j) and (Graph<Weight>::A->tiles[pair.row][j].rank != rank))
+			    {
+				    if (std::find(other_ranks[i].begin(), other_ranks[i].end(), Graph<Weight>::A->tiles[pair.row][j].rank) == other_ranks[i].end())
+    				{
+	    				other_ranks[i].push_back(Graph<Weight>::A->tiles[pair.row][j].rank);
+						//printf("PUSH %d %d\n", i, Graph<Weight>::A->tiles[pair.row][j].rank);
+		    		}
+			    }
+		    }
+			i++;
+			/*
+			for(uint32_t ii; ii < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; ii++)
+		    {
+			    printf("%d\n", rowgrp_nranks[i - 1][ii]);
+		    }
+			*/
+		}
+		prev_row = pair.row;
+	    
+	    
+		
+		
+		/*
+		for(uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+		{
+			if (std::find(rowgrp_nranks[i].begin(), rowgrp_nranks[i].end(), Graph<Weight>::A->tiles[i][j].rank) == rowgrp_nranks[i].end())
+			{
+				
+			}
+		}
+		*/
+		
+		
+	}
+
+
+    /*
+	for(uint32_t i = 0; i < Graph<Weight>::A->nrowgrps; i++)
+	{
+		//rowgrp_nranks.push_back(Graph<Weight>::A->tiles[i][j].rank);
+		uint32_t k = 0;
+		for(uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)
+		{
+			if(i != j)
+			{
+				//rowgrp_nranks[i][k].push_back(Graph<Weight>::A->tiles[i][j].rank);
+		        if (std::find(rowgrp_nranks[i].begin(), rowgrp_nranks[i].end(), Graph<Weight>::A->tiles[i][j].rank) == rowgrp_nranks[i].end())
+		        {
+					printf("%d %d %d\n", i,j,k);
+				   // rowgrp_nranks[i][k] = Graph<Weight>::A->tiles[i][j].rank;
+					k++;
+		        }
+			}
+		}
+	}
+    
+	*/
+	}
 
 	
 	
@@ -587,7 +676,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	fin.seekg(0, std::ios_base::beg);
 	
 	struct Triple<Weight> triple;
-	struct Triple<Weight> pair;
+
 	while (offset < filesize)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
@@ -748,6 +837,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
 	{
 		Vector<Weight>::segments[s].allocate();
 	}
+
 	/*
 	if(!rank)
 	{
@@ -1229,20 +1319,21 @@ void Graph<Weight>::spmv()
 		
 		bool communication = ((tile.nth + 1) % Graph<Weight>::A->partitioning->colgrp_nranks == 0);
 		
-		if(rank == 0 or rank == k)
+		if((rank == 0 or rank == 4 or  rank == 8 or  rank == 12) and pair.row == 0)
 		{
 		if(communication)
 		{
 			if(y_seg.rank == rank)
 			{
-				//MPI_Recv
+				// MPI_Recv
 				printf("receive(%d)\n", rank);
 			}
 			else
 			{
-				//MPI_Send
-				//int MPI_Send(y_seg.data, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
-				printf("send(%d)\n", rank);
+				// MPI_Send
+				// int MPI_Send(y_seg.data, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
+				
+				printf("send(%d) to %d\n", rank, y_seg.rank);
 			}
 		}
 		}
