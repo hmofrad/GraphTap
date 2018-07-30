@@ -270,11 +270,14 @@ class Matrix
 		Partitioning<Weight>* partitioning;
 
 	    std::vector<std::vector<struct Tile2D<Weight>>> tiles;
-		std::vector<uint32_t> diag_ranks;
+		
         std::vector<uint32_t> local_tiles;
 		std::vector<uint32_t> local_segments;
 		std::vector<uint32_t> local_col_segments;
 		std::vector<uint32_t> local_row_segments;
+		
+		std::vector<uint32_t> diag_ranks;
+		std::vector<uint32_t> other_ranks;
 		
 		
 		void init_mat();
@@ -582,14 +585,14 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		//rowgrp_nranks[i].resize(Graph<Weight>::A->partitioning->rowgrp_nranks - 1);
 	
 	
-	struct Triple<Weight> pair;
+
 	//uint32_t i = 0;
 	//uint32_t prev_row = -1;
 	//if(!rank)
 	//{	
 	//for(uint32_t t: Graph<Weight>::A->local_tiles)
 	//{
-		pair = Graph<Weight>::A->tile_of_local_tile(0);
+		//pair = Graph<Weight>::A->tile_of_local_tile(0);
 		//if(prev_row != -1)
 		//    prev_row = pair.row;
 		
@@ -599,6 +602,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		//printf("[%d %d %d %d %d %d %d %d %d]\n", prev_row, pair.row, pair.col, i, prev_row, Graph<Weight>::A->partitioning->rank_nrowgrps, Graph<Weight>::A->partitioning->rank_ncolgrps, Graph<Weight>::A->partitioning->rowgrp_nranks, Graph<Weight>::A->partitioning->colgrp_nranks);
 		//if(prev_row != pair.row)
 		//{
+			/*
             for(uint32_t j = 0; j < Graph<Weight>::A->ncolgrps; j++)
 	    	{
 		    	if((pair.row != j) and (Graph<Weight>::A->tiles[pair.row][j].rank != rank))
@@ -611,6 +615,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 		    		}
 			    }
 		    }
+			*/
 			//i++;
 			/*
 			for(uint32_t ii; ii < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; ii++)
@@ -681,7 +686,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	fin.seekg(0, std::ios_base::beg);
 	
 	struct Triple<Weight> triple;
-
+	struct Triple<Weight> pair;
 	while (offset < filesize)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
@@ -726,7 +731,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 	Graph<Weight>::A->init_csr();
 	
 	
-	
+	 //Matrix<Weight>::other_ranks
 	
 	
 	Graph<Weight>::X = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
@@ -1011,7 +1016,7 @@ void Matrix<Weight>::init_mat()
 			//}
 	    }
     }
-    Matrix<Weight>::diag_ranks.resize(Matrix<Weight>::nrowgrps);
+    Matrix<Weight>::diag_ranks.resize(Matrix<Weight>::nrowgrps, -1);
 	//std::vector<uint32_t> diag_ranks(Matrix<Weight>::nrowgrps, -1);
 	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
 	{
@@ -1031,6 +1036,19 @@ void Matrix<Weight>::init_mat()
 	}
 	
 	
+	struct Triple<Weight> pair;
+	pair = Matrix<Weight>::tile_of_local_tile(0);
+	
+	for(uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)
+	{
+		if((pair.row != j) and (Matrix<Weight>::tiles[pair.row][j].rank != rank))
+		{
+			if (std::find(other_ranks.begin(), other_ranks.end(), Matrix<Weight>::tiles[pair.row][j].rank) == other_ranks.end())
+			{
+				Matrix<Weight>::other_ranks.push_back(Matrix<Weight>::tiles[pair.row][j].rank);
+			}
+		}
+	}
 	
 	
 	
@@ -1042,7 +1060,7 @@ void Matrix<Weight>::init_mat()
 	printf("\n");
 	}
 	*/
-	struct Triple<Weight> pair;
+	
 	for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
 	{
 		for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
@@ -1095,6 +1113,9 @@ void Matrix<Weight>::init_mat()
 			printf("\n");
 	    }
 	}
+	
+	
+	
 	MPI_Barrier(MPI_COMM_WORLD);
 	
 }
@@ -1345,7 +1366,10 @@ void Graph<Weight>::spmv()
 			if(y_seg.rank == rank)
 			{
 				// MPI_Recv
-				printf("receive(%d)\n", rank);
+				printf("receive(%d) from: ", rank);
+				for(uint32_t i = 0; i < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; i++)
+					printf("%d ", Graph<Weight>::A->other_ranks[i]);
+				printf("\n");
 			}
 			else
 			{
