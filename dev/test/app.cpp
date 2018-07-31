@@ -376,8 +376,8 @@ class Graph
         Graph();
         ~Graph();
         
-        void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true);
-        void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true);
+        void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
+        void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
 
     private:
         std::string filepath;
@@ -385,6 +385,7 @@ class Graph
         uint32_t mvertices;
         uint64_t nedges;
         bool directed;
+        bool transpose;
         Matrix<Weight>* A;
         Vector<Weight>* X;
         Vector<Weight>* Y;
@@ -441,7 +442,7 @@ void Graph<Weight>::free()
 }
 
 template<typename Weight>
-void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_)
+void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_)
 {
     // Initialize graph data
     // Note we keep using Graph<Weight> format to avoid confusion
@@ -450,6 +451,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     Graph<Weight>::mvertices = ncols;
     Graph<Weight>::nedges = 0;
     Graph<Weight>::directed = directed_;
+    Graph<Weight>::transpose = transpose_;
     
     Graph<Weight>::A = new Matrix<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, tiling);
     Graph<Weight>::A->partitioning = new Partitioning<Weight>(nranks, rank, nranks * nranks, Graph<Weight>::A->nrowgrps, Graph<Weight>::A->ncolgrps, tiling);
@@ -474,6 +476,12 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     while (offset < filesize)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
+        
+        if(Graph<Weight>::transpose)
+        {
+            std::swap(triple.row, triple.col);
+        }
+        
         if(fin.gcount() != sizeof(Triple<Weight>))
         {
             std::cout << "read() failure" << std::endl;
@@ -493,7 +501,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     assert(offset == filesize);
     
     /*
-    if(!rank)
+    if(rank == 3)
     {
         for(uint32_t t: Graph<Weight>::A->local_tiles)
         {
@@ -540,16 +548,17 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
 
 
 template<typename Weight>
-void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_)
+void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_)
 {
     
     // Initialize graph data
     // Note we keep using Graph<Weight> format to avoid confusion
-    Graph<Weight>::filepath = filepath_;
+    Graph<Weight>::filepath  = filepath_;
     Graph<Weight>::nvertices = nrows;
     Graph<Weight>::mvertices = ncols;
-    Graph<Weight>::nedges = 0;
-    Graph<Weight>::directed = directed_;
+    Graph<Weight>::nedges    = 0;
+    Graph<Weight>::directed  = directed_;
+    Graph<Weight>::transpose = transpose_;
     
     Graph<Weight>::A = new Matrix<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, tiling);
     Graph<Weight>::A->partitioning = new Partitioning<Weight>(nranks, rank, nranks * nranks, Graph<Weight>::A->nrowgrps, Graph<Weight>::A->ncolgrps, tiling);
@@ -593,7 +602,15 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
             exit(1);
         }
         
-        iss >> triple.row >> triple.col;
+        if(Graph<Weight>::transpose)
+        {
+            iss >> triple.col >> triple.row;
+        }
+        else
+        {
+            iss >> triple.row >> triple.col;
+        }
+        
         Graph<Weight>::nedges++;
     
         pair = Graph<Weight>::A->tile_of_triple(triple);
@@ -605,6 +622,13 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     }
     fin.close();
     assert(offset == filesize);
+    
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(!rank)
+    {
+        printf("[x]Reading\n");
+    }
     
     Graph<Weight>::A->init_csr();
 
@@ -623,6 +647,12 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     
     Graph<Weight>::spmv();
     Graph<Weight>::free();
+    
+    if(!rank)
+    {
+        printf("[x]SPMV\n");
+    }
+    
 }
 
 template<typename Weight>
@@ -954,15 +984,15 @@ int main(int argc, char** argv) {
     uint32_t num_vertices = std::atoi(argv[2]);
       uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
-
+    bool transpose = true;
     if(!rank)
     {
         printf("[x]MAIN\n");
     }
     
     Graph<ew_t> G;
-    G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed);
-    //G.load_text(file_path, num_vertices, num_vertices, _1D_ROW, directed);
+    //G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
+    G.load_text(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
     //G.A->spmv();
     
     
