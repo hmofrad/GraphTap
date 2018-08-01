@@ -219,8 +219,8 @@ class Matrix
         uint32_t segment_of_tile(const struct Triple<Weight>& pair);
         struct Triple<Weight> tile_of_triple(const struct Triple<Weight>& triple);
         struct Triple<Weight> tile_of_local_tile(const uint32_t local_tile);
-        struct Triple<Weight>  rebase(const struct Triple<Weight>& pair);
-        struct Triple<Weight>  base(const struct Triple<Weight>& pair);
+        struct Triple<Weight> rebase(const struct Triple<Weight>& pair);
+        struct Triple<Weight> base(const struct Triple<Weight>& pair, uint32_t rowgrp, uint32_t colgrp);
 };
 
 template<typename Weight>
@@ -255,10 +255,18 @@ uint32_t Matrix<Weight>::segment_of_tile(const struct Triple<Weight>& pair)
     return(pair.col);
 }
 template <typename Weight> 
-struct Triple<Weight>  Matrix<Weight>::rebase(const struct Triple<Weight>& pair)
+struct Triple<Weight> Matrix<Weight>::rebase(const struct Triple<Weight>& pair)
 {
     return{(pair.row % Matrix<Weight>::tile_height), (pair.col % Matrix<Weight>::tile_width)};
 }
+
+template <typename Weight>
+struct Triple<Weight> Matrix<Weight>::base(const struct Triple<Weight>& pair, uint32_t rowgrp, uint32_t colgrp)
+{
+   return{(pair.row + (rowgrp * Matrix<Weight>::tile_height)), (pair.col + (colgrp * Matrix<Weight>::tile_width))};
+}
+
+
 
 template<typename Weight>
 void Matrix<Weight>::del_triples()
@@ -393,6 +401,7 @@ class Graph
         Vector<Weight>* V;
         
         void spmv();
+        void pr();
         void free();
 };
 
@@ -455,17 +464,6 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     
     Graph<Weight>::A = new Matrix<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, tiling);
     Graph<Weight>::A->partitioning = new Partitioning<Weight>(nranks, rank, nranks * nranks, Graph<Weight>::A->nrowgrps, Graph<Weight>::A->ncolgrps, tiling);
-    
-    /*
-    if(tiling == Tiling::_1D_ROW)
-    {
-        
-    } 
-    else if (tiling == Tiling::_2D_)
-    {
-        
-    }
-    */
     Graph<Weight>::A->init_mat();
 
     // Open matrix file.
@@ -831,6 +829,7 @@ template<typename Weight>
 void Graph<Weight>::spmv()
 {
     Triple<Weight> pair;
+    Triple<Weight> pair1;
     uint32_t x_c = 0, y_r = 0, y_r_old = 0;
     // Data initialization
     for(uint32_t t: Graph<Weight>::A->local_tiles)
@@ -926,6 +925,19 @@ void Graph<Weight>::spmv()
                     }
                 }
                 
+                uint32_t v_r = Graph<Weight>::V->local_segments[0];
+                auto& v_seg = Graph<Weight>::V->segments[v_r];
+                for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+                {
+                    //printf("R(%d),v[%d]=%d, rg=%d cg=%d, %d %d \n",  rank, i + tile.rg * Graph<Weight>::A->tile_width, v_seg.data[i], tile.rg, tile.cg, Graph<Weight>::A->tile_width, tile.rg * Graph<Weight>::A->tile_width);
+                    pair.row = i;
+                    pair.col = 0;
+                    pair1 = Graph<Weight>::A->base(pair, tile.rg, tile.cg);
+                    printf("R(%d),v[%d]=%d\n",  rank, pair1.row, v_seg.data[i]);
+                    //printf("R(%d),v[%d]=%d, %d %d %d %d\n",  rank, i + tile.rg * Graph<Weight>::A->tile_width, v_seg.data[i], pair1.row, pair1.col, tile.rg, tile.cg);
+                }
+                
+                
                 /*
                 if(rank == 11)
                 {
@@ -963,8 +975,16 @@ void Graph<Weight>::spmv()
                 //printf("ROW=%d: send(%d) to (%d) of size [%d %d] %d\n",  pair.row, rank, y_seg.rank, Graph<Weight>::A->tile_width, y_seg.n, y_seg.data[65524]);
             }
             //printf("[%d %d] %d %d %d %d %d %d\n",x_seg.rank, y_seg.rank, tile.ith, tile.jth,  tile.nth, Graph<Weight>::A->partitioning->colgrp_nranks, (tile.nth + 1) % Graph<Weight>::A->partitioning->colgrp_nranks, communication);    
+
         }
     }
+}
+
+
+template<typename Weight>
+void Graph<Weight>::pr()
+{
+    printf("PageRank goes here!\n");
 }
 
 
@@ -1009,10 +1029,10 @@ int main(int argc, char** argv) {
          MPI_Finalize();
         std::exit(1);
     }
-
+    
     std::string file_path = argv[1]; 
     uint32_t num_vertices = std::atoi(argv[2]);
-      uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+    uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
     bool transpose = true;
     if(!rank)
@@ -1021,8 +1041,8 @@ int main(int argc, char** argv) {
     }
     
     Graph<ew_t> G;
-    //G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
-    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
+    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     //G.A->spmv();
     
     
