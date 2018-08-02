@@ -399,6 +399,7 @@ class Graph
         Vector<Weight>* Y;
         Vector<Weight>* Z;
         Vector<Weight>* V;
+        Vector<Weight>* S;
         
         void spmv();
         void degree();
@@ -419,6 +420,7 @@ Graph<Weight>::~Graph()
     delete Graph<Weight>::Y;
     delete Graph<Weight>::Z;
     delete Graph<Weight>::V;
+    //delete Graph<Weight>::S;
 }
 
 template<typename Weight>
@@ -449,6 +451,13 @@ void Graph<Weight>::free()
         auto& segment = Graph<Weight>::V->segments[s];
         segment.free();
     }
+    /*
+    for(uint32_t s: Graph<Weight>::S->local_segments)
+    {
+        auto& segment = Graph<Weight>::S->segments[s];
+        segment.free();
+    }
+    */
 }
 
 template<typename Weight>
@@ -536,7 +545,8 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
     Graph<Weight>::Z = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
     Graph<Weight>::V = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
-
+    //Graph<Weight>::S = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks);
+    
     Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
     Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_row_segments);
     Graph<Weight>::Z->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->other_ranks);
@@ -544,6 +554,9 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     uint32_t row = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));
     my_row.push_back(row);
     Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks, my_row);
+    //Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks, my_row);
+    
+    
     
     //Graph<Weight>::spmv();
     Graph<Weight>::degree();
