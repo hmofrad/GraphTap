@@ -1104,7 +1104,7 @@ void Graph<Weight>::degree()
         uint32_t s = Graph<Weight>::A->segment_of_tile(pair);
         xt_c = pair.col;
         yt_r = pair.row;
-        auto& xt_seg = Graph<Weight>::Xt->segments[xt_c];
+        //auto& xt_seg = Graph<Weight>::Xt->segments[xt_c];
         auto& yt_seg = Graph<Weight>::Yt->segments[yt_r];
 
         // Local computation, no need to put it on X
@@ -1310,11 +1310,9 @@ void Graph<Weight>::pagerank()
     
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    
-    
-
-    
     MPI_Barrier(MPI_COMM_WORLD);
+    
+    
     
     
     //}
