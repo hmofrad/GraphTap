@@ -1274,10 +1274,12 @@ void Graph<Weight>::pagerank()
     {
         //if(!rank)
           //  printf("V=%d", *((uint32_t *) x_seg.data1 + i));
-      
-      x_data[i] = v_data[i] / s_data[i];
-       if (std::isinf(x_data[i]))
-           x_data[i] = 0;
+      if(s_data[i])
+      {
+          x_data[i] = v_data[i] / s_data[i];
+      }
+       //if (std::isinf(x_data[i]))
+         //  x_data[i] = 0;
       //*((fp_t *) x_seg.data + i) = *((fp_t *) v_seg.data + i) / *((fp_t *) s_seg.data + i); // v / s
        //if (std::isinf(*((fp_t *) x_seg.data + i)))
        //    *((fp_t *) x_seg.data + i) = 0;
@@ -1439,20 +1441,18 @@ void Graph<Weight>::pagerank()
                 
                 if(iter == niters)
                 {
-                vi = Graph<Weight>::V->diag_segment;
-                auto& v_seg = Graph<Weight>::V->segments[vi];
-                auto *v_data = (fp_t *) v_seg.data;
-                nitems = v_seg.n;
-                for(uint32_t i = 0; i < nitems; i++)
-                {
-                    pair.row = i;
-                    pair.col = 0;
-                    pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
-                    printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
+                    vi = Graph<Weight>::V->diag_segment;
+                    auto& v_seg = Graph<Weight>::V->segments[vi];
+                    auto *v_data = (fp_t *) v_seg.data;
+                    nitems = v_seg.n;
+                    for(uint32_t i = 0; i < nitems; i++)
+                    {
+                        pair.row = i;
+                        pair.col = 0;
+                        pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
+                        printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
+                    }
                 }
-                }
-                
-                
             }
             else
             {
@@ -1523,8 +1523,8 @@ int main(int argc, char** argv) {
     }
     
     Graph<ew_t> G;
-    G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
-    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    //G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
+    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     //G.A->spmv();
     
     
