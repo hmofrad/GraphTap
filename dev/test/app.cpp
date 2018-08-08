@@ -1,5 +1,5 @@
 /*
- * Test app 
+ * app.cpp
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -107,9 +107,7 @@ void CSR<Weight>::free()
     //    fprintf(stderr, "Error unmapping memory\n");
       //  exit(1);
     //}
-    
-    
-    
+
     munmap(CSR<Weight>::IA, (this->nrows_plus_one) * sizeof(uint32_t));
     munmap(CSR<Weight>::JA, (this->nnz) * sizeof(uint32_t));    
 }
@@ -322,9 +320,7 @@ struct Segment
 {
     template<typename Weight_>
     friend class Vector;
-    
-    //uint32_t *data1;    
-    //
+
     void *data;    
     uint32_t n;
     uint64_t nbytes;
@@ -333,37 +329,19 @@ struct Segment
     uint32_t rank;
     void allocate();
     void free();
-    uint64_t get_nbytes();
     
     void allocate1();
     void free1();
 };
 
-/*
-template<typename Weight>
-void Segment<Weight>::allocate1()
-{
-    Segment<Weight>::data = (uint32_t*) mmap(nullptr, (this->n) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    memset(Segment<Weight>::data, 0, this->n * sizeof(uint32_t));
-}
-
-template<typename Weight>
-void Segment<Weight>::free1()
-{
-    munmap(Segment<Weight>::data, (this->n) * sizeof(uint32_t));
-}
-*/
-
 template<typename Weight>
 void Segment<Weight>::allocate()
 {
     if((Segment<Weight>::data = mmap(nullptr, this->nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    //if((void *) Segment<Weight>::data1 == (void*) -1)
     {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
-        
     memset(Segment<Weight>::data, 0, this->nbytes);
 }
 
@@ -375,14 +353,9 @@ void Segment<Weight>::free()
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
-    //munmap(Segment<Weight>::data1, this->nbytes);
 }
 
-template<typename Weight>
-uint64_t Segment<Weight>::get_nbytes()
-{
-    return(this->nbytes);
-}
+
 
 
 
@@ -405,8 +378,6 @@ class Vector
         std::vector<struct Segment<Weight>> segments;
         std::vector<uint32_t> local_segments;
         
-        //void init_vec1(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments);
-        //void init_vec1(std::vector<uint32_t>& diag_ranks);
         void init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments);
         void init_vec(std::vector<uint32_t>& diag_ranks);
 };
@@ -419,68 +390,12 @@ Vector<Weight>::Vector(uint32_t nrows, uint32_t ncols, uint32_t ntiles, uint32_t
 
 template<typename Weight>
 Vector<Weight>::~Vector() {};
-/*
-template<typename Weight>
-void Vector<Weight>::init_vec1(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments)
-{
-    // Reserve the 1D vector of segments. 
-    Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
-
-    for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
-    {
-        Vector<Weight>::segments[i].n = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
-        Vector<Weight>::segments[i].rg = i;
-        Vector<Weight>::segments[i].cg = i;
-        Vector<Weight>::segments[i].rank = diag_ranks[i];
-        if(diag_ranks[i] == rank)
-        {
-           Vector<Weight>::segments[i].allocate1();    
-        }
-    }
-    
-    Vector<Weight>::local_segments = local_segments;
-    
-    for(uint32_t s: Vector<Weight>::local_segments)
-    {
-        if(Vector<Weight>::segments[s].rank != rank)
-            Vector<Weight>::segments[s].allocate1();
-    }
-}
-
-template<typename Weight>
-void Vector<Weight>::init_vec1(std::vector<uint32_t>& diag_ranks)
-{
-    // Reserve the 1D vector of segments. 
-    Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
-
-    for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
-    {
-        Vector<Weight>::segments[i].n = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
-        Vector<Weight>::segments[i].rg = i;
-        Vector<Weight>::segments[i].cg = i;
-        Vector<Weight>::segments[i].rank = diag_ranks[i];
-        if(diag_ranks[i] == rank)
-        {
-           Vector<Weight>::segments[i].allocate1();    
-           Vector<Weight>::local_segments.push_back(i);
-        }
-    }
-}
-
-*/
 
 template<typename Weight>
 void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments)
 {
     // Reserve the 1D vector of segments. 
     Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
-    
-
-    
 
     for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
     {
@@ -496,8 +411,6 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
         if(diag_ranks[i] == rank)
         {
            Vector<Weight>::segments[i].allocate();    
-           //if(!rank)
-          //printf("SIZEEEEEE=%d fp=%lu nb=%lu\n", Vector<Weight>::segments[i].n, sizeof(fp_t), Vector<Weight>::segments[i].nbytes);
         }
     }
     
@@ -530,9 +443,6 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks)
         {
            Vector<Weight>::segments[i].allocate();
            Vector<Weight>::local_segments.push_back(i);
-         // if(!rank)
-           //   printf("SIZEEEEEE=%d fp=%lu nb=%lu d=%lu\n", Vector<Weight>::tile_height, sizeof(fp_t), Vector<Weight>::segments[i].nbytes, sizeof(Vector<Weight>::segments[i].data));
-
         }
     }
 }
@@ -549,7 +459,8 @@ class Graph
         void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
         void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
         void degree();
-        void pagerank();
+        void pagerank(uint32_t niters);
+        void initialize(Graph<Weight> &G);
         void free();
 
     private:
@@ -568,19 +479,11 @@ class Graph
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
         
-
-        void init(fp_t x, fp_t y, fp_t v, fp_t s);
+        void init(fp_t x, fp_t y, fp_t v, fp_t s, bool skip_state = true);
         void scatter(fp_t (*f)(fp_t x, fp_t y, fp_t v, fp_t s));
-        //void scatter(void (*f)(int x));
-        //void scatter(std::function<fp_t (void)> f);
         void gather();
-        void combine();
+        void combine(fp_t (*f)(fp_t x, fp_t y, fp_t v, fp_t s));
         void apply();
-
-        //static fp_t ones();
-        //fp_t ones(fp_t x, fp_t y, fp_t v, fp_t s);
-        //fp_t div(fp_t x, fp_t y, fp_t v, fp_t s);
-        
 };
 
 
@@ -603,28 +506,40 @@ struct Generic_functions
             return(0);
         }
     }
+    
+    static fp_t assign(fp_t x, fp_t y, fp_t v, fp_t s)
+    {
+        return(y);
+    }
+    
+    static fp_t rank(fp_t x, fp_t y, fp_t v, fp_t s)
+    {
+        fp_t alpha = 0.1;
+        return(alpha + (1 - alpha) * y);
+    }
 };
 
-/*
-template <typename Weight>
-class Generic_functions
-{
-    public: 
-        Generic_functions() {};
-        virtual fp_t ones()
-        {
-            return(1);
-        }
-};
-*/
 
-/*
 template<typename Weight>
-fp_t div(fp_t x, fp_t y, fp_t v, fp_t s)
+void Graph<Weight>::initialize(Graph<Weight> &G)
 {
-    return((fp_t) v / s);
+    uint32_t vi = G.V->diag_segment;
+    auto &v_seg = G.V->segments[vi];
+    auto *v_data = (fp_t *) v_seg.data;
+    uint32_t v_nitems = v_seg.n;
+    
+    uint32_t si = Graph<Weight>::S->diag_segment;
+    auto &s_seg = Graph<Weight>::S->segments[si];
+    auto *s_data = (fp_t *) s_seg.data;
+    uint32_t s_nitems = s_seg.n;
+    
+    assert(v_nitems == s_nitems);
+    
+    for(uint32_t i = 0; i < s_nitems; i++)
+    {
+        s_data[i] = v_data[i];
+    }
 }
-*/
 
 template<typename Weight>
 Graph<Weight>::Graph() : A(nullptr) {};
@@ -746,22 +661,9 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     
     */
     
-    if(!rank)
-    {
-        printf("[x]Reading\n");
-    }
-    
     Graph<Weight>::A->init_csr();
     
-    //std::vector<uint32_t> my_segment;
-    uint32_t diag_segment = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));
-    //my_segment.push_back(diag_segment);
-    
-    //uint32_t index = distance(Graph<Weight>::A->rowgrp_ranks.begin(), find(Graph<Weight>::A->rowgrp_ranks.begin(), Graph<Weight>::A->rowgrp_ranks.end(), rank));
-    //uint32_t accu_segment = Graph<Weight>::A->rowgrp_ranks[index];
-    //Graph<Weight>::A->rowgrp_ranks_accu_seg[index] = diag_segment;
-    
-    
+    uint32_t diag_segment = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));    
     
     Graph<Weight>::X = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, diag_segment);
     Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, diag_segment);
@@ -770,60 +672,8 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     
     Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
     Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);    
-    Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);//, my_segment);
-    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
-    
-
-    
-    
-    
-    //Graph<Weight>::XX = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::XX->init_vec1(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
-    
-    //Graph<Weight>::T = new Vector<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::T->init_vec1(Graph<Weight>::A->diag_ranks);    
-    
-
-    
-    
-    if(rank == 0)
-    {
-        //uint32_t index = distance(Graph<Weight>::A->rowgrp_ranks.begin(), find(Graph<Weight>::A->rowgrp_ranks.begin(), Graph<Weight>::A->rowgrp_ranks.end(), rank));
-        //uint32_t accu_seg = Graph<Weight>::A->rowgrp_ranks[index];
-        //printf("%d %d %d\n", index, accu_seg, diag_segment);
-        //Graph<Weight>::A->rowgrp_ranks_accu_seg[index] = diag_segment;
-        for(uint32_t i = 0; i < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; i++)
-        {
-            printf("[%d %d] ", Graph<Weight>::A->other_rowgrp_ranks[i], Graph<Weight>::A->rowgrp_ranks_accu_seg[i]);
-        }
-        printf("\n");
-        
-        for(uint32_t i = 0; i < Graph<Weight>::A->partitioning->colgrp_nranks - 1; i++)
-        {
-            printf("[%d] ", Graph<Weight>::A->other_colgrp_ranks[i]);
-        }
-        printf("\n");
-
-        for(uint32_t i = 0; i < Graph<Weight>::A->local_col_segments.size(); i++)
-        {
-            printf("%d ", Graph<Weight>::A->local_col_segments[i]);
-        }
-        printf(" %d\n", diag_segment);
-        
-    }
-    
-    
-    Graph<Weight>::degree();
-    Graph<Weight>::pagerank();
-    
-    if(!rank)
-    {
-        printf("[x]DEGREE\n");
-    }
-    
-    Graph<Weight>::free();
-    
-    
+    Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
+    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);    
 }
 
 
@@ -955,7 +805,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     
     //if(!rank)
     //    printf("SZ=%lu\n", sizeof(Graph<Weight>::T->segments[diag_segment].nbytes));
-
+/*
     if(rank == 0)
     {
         //uint32_t index = distance(Graph<Weight>::A->rowgrp_ranks.begin(), find(Graph<Weight>::A->rowgrp_ranks.begin(), Graph<Weight>::A->rowgrp_ranks.end(), rank));
@@ -981,7 +831,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
         printf(" %d\n", diag_segment);
         
     }
-
+*/
     
     
     
@@ -1163,7 +1013,7 @@ void Matrix<Weight>::init_csr()
 }
 
 template<typename Weight>
-void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s)
+void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s, bool clean_state)
 {
     for(uint32_t t: Graph<Weight>::A->local_tiles)
     {
@@ -1219,20 +1069,23 @@ void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s)
         memset(v_seg.data, v, v_seg.nbytes);
     }
     
-    uint32_t si = Graph<Weight>::S->diag_segment;
-    auto &s_seg = Graph<Weight>::S->segments[vi];
-    if(s)
+    if(clean_state)
     {
-        auto *s_data = (fp_t *) s_seg.data;
-        uint32_t nitems = s_seg.n;
-        for(uint32_t i = 0; i < nitems; i++)
+        uint32_t si = Graph<Weight>::S->diag_segment;
+        auto &s_seg = Graph<Weight>::S->segments[vi];
+        if(s)
         {
-            s_data[i] = s;
+            auto *s_data = (fp_t *) s_seg.data;
+            uint32_t nitems = s_seg.n;
+            for(uint32_t i = 0; i < nitems; i++)
+            {
+                s_data[i] = s;
+            }
+        } 
+        else
+        {
+            memset(s_seg.data, s, s_seg.nbytes);
         }
-    } 
-    else
-    {
-        memset(s_seg.data, s, s_seg.nbytes);
     }
 }
 
@@ -1324,7 +1177,7 @@ void Graph<Weight>::scatter(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
     
     for(uint32_t i = 0; i < nitems; i++)
     {
-        x_data[i] = (*f)(x_data[i], y_data[i], v_data[i], s_data[i]);//f(0, 0, 0, 0); // e.g. ones(1, 0, 0, 0, ones)
+        x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);//(x_data[i], y_data[i], v_data[i], s_data[i]);//f(0, 0, 0, 0); // e.g. ones(1, 0, 0, 0, ones)
     }
     
     MPI_Request request;
@@ -1375,7 +1228,7 @@ void Graph<Weight>::gather()
 }
 
 template<typename Weight>
-void Graph<Weight>::combine()
+void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
 {
     uint32_t xi, yi, yj, si, vi;
     
@@ -1417,7 +1270,8 @@ void Graph<Weight>::combine()
                         vi = Graph<Weight>::V->diag_segment;
                         auto &v_seg = Graph<Weight>::V->segments[vi];
                         auto *v_data = (fp_t *) v_seg.data;
-                        v_data[i] = y_data[i];
+                        //v_data[i] = y_data[i];
+                        v_data[i] = (*f)(0, y_data[i], 0, 0);
                     }
                 }
                 else if(Graph<Weight>::A->partitioning->tiling == Tiling::_2D_)
@@ -1443,10 +1297,12 @@ void Graph<Weight>::combine()
                         vi = Graph<Weight>::V->diag_segment;
                         auto &v_seg = Graph<Weight>::V->segments[vi];
                         auto *v_data = (fp_t *) v_seg.data;
-                        v_data[i] = y_data[i];
+                        v_data[i] = (*f)(0, y_data[i], 0, 0);
+                        //v_data[i] = y_data[i];
+                        //v_data[i] = alpha + ((1 - alpha) * y_data[i]);
                     }
                 }
-                
+                /*
                 vi = Graph<Weight>::V->diag_segment;
                 auto &v_seg = Graph<Weight>::V->segments[vi];
                 auto *v_data = (fp_t *) v_seg.data;
@@ -1459,6 +1315,7 @@ void Graph<Weight>::combine()
                     auto pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
                     printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
                 }   
+                */
             }
             else
             {
@@ -1485,21 +1342,14 @@ void Graph<Weight>::degree()
     // x, y, v, s, Graph<Weight>::ones;
     
     Graph<Weight>::gather();
-    Graph<Weight>::combine();
+    Graph<Weight>::combine(f.assign);
 }
 
 
 template<typename Weight>
-void Graph<Weight>::pagerank()
+void Graph<Weight>::pagerank(uint32_t niters)
 {
-    double alpha = 0.3;
-    fp_t x = 0;
-    fp_t y = 0;
-    fp_t v = alpha;
-    fp_t s = 0;    
-    Graph<Weight>::init(x, y, v, s);
-    
-    Generic_functions<Weight> f;
+
     
     
 
@@ -1509,8 +1359,36 @@ void Graph<Weight>::pagerank()
     uint32_t xi, si, vi, yi, yj;
     uint32_t nitems;
     
-    uint32_t niters = 1;
-    static uint32_t iter = 0;
+    //uint32_t niters = 5;
+    uint32_t iter = 0;
+    
+    
+    
+
+
+  
+
+    double alpha = 0.1;
+    fp_t x = 0;
+    fp_t y = 0;
+    fp_t v = alpha;
+    fp_t s = 0;    
+    Graph<Weight>::init(x, y, v, s, false);
+    
+    
+  
+    
+    
+    Generic_functions<Weight> f;  
+    
+    while(iter < niters)
+    {
+        iter++;
+        Graph<Weight>::scatter(f.div);
+        Graph<Weight>::gather();
+        Graph<Weight>::combine(f.rank);
+    }
+
     
     /*
     // Init
@@ -1536,13 +1414,10 @@ void Graph<Weight>::pagerank()
         //*((fp_t *) v_seg.data + i) = alpha;
     }
     */
-
+    /*
     while(iter < niters)
     {
     iter++;
-    Graph<Weight>::scatter(f.div);
-    Graph<Weight>::gather();
-    /*
     xi = Graph<Weight>::X->diag_segment;
     //auto& x_seg = Graph<Weight>::X->segments[xi];
     auto &x_seg = Graph<Weight>::X->segments[xi];
@@ -1623,8 +1498,9 @@ void Graph<Weight>::pagerank()
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Barrier(MPI_COMM_WORLD);
-    */
+    
     // Combine
+    
     for(uint32_t t: Graph<Weight>::A->local_tiles)
     {
         pair = Graph<Weight>::A->tile_of_local_tile(t);
@@ -1719,6 +1595,7 @@ void Graph<Weight>::pagerank()
                 
                 if(iter == niters)
                 {
+                    
                     vi = Graph<Weight>::V->diag_segment;
                     auto& v_seg = Graph<Weight>::V->segments[vi];
                     auto *v_data = (fp_t *) v_seg.data;
@@ -1730,6 +1607,7 @@ void Graph<Weight>::pagerank()
                         pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
                         printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
                     }
+                    
                 }
             }
             else
@@ -1740,8 +1618,10 @@ void Graph<Weight>::pagerank()
         }
         
     }
-    }
     
+    
+    }
+    */
 
 }
 
@@ -1802,12 +1682,18 @@ int main(int argc, char** argv) {
     
     Graph<ew_t> G;
     //G.load_binary(file_path, num_vertices, num_vertices, _2D_, directed, transpose);
-    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     G.degree();
     //G.pagerank();
+    
+    transpose = true;
+    
+    Graph<ew_t> GR;
+    GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    GR.initialize(G);
     G.free();
-    
-    
+    GR.pagerank(num_iterations);
+    GR.free();
     //printf(">>%f\n", generic_function(ones1));
     //G.A->spmv();
     
