@@ -494,9 +494,9 @@ class Graph
         void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
         void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
         void degree();
-        void pagerank(uint32_t niters, bool clean_state = false);
+        void pagerank(uint32_t niters, bool clear_state = false);
         void initialize(Graph<Weight> &G);
-        void free(bool clean_state = true);
+        void free(bool clear_state = true);
 
     private:
         std::string filepath;
@@ -514,7 +514,7 @@ class Graph
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
         
-        void init(fp_t x, fp_t y, fp_t v, fp_t s, bool clean_state = true);
+        void init(fp_t x, fp_t y, fp_t v, fp_t s, bool clear_state = true);
         void scatter(fp_t (*f)(fp_t x, fp_t y, fp_t v, fp_t s));
         void gather();
         void combine(fp_t (*f)(fp_t x, fp_t y, fp_t v, fp_t s));
@@ -537,7 +537,7 @@ Graph<Weight>::~Graph()
 }
 
 template<typename Weight>
-void Graph<Weight>::free(bool clean_state)
+void Graph<Weight>::free(bool clear_state)
 {
     Graph<Weight>::A->del_csr();
     
@@ -553,7 +553,7 @@ void Graph<Weight>::free(bool clean_state)
         segment.free();
     }
 
-    if(clean_state)
+    if(clear_state)
     {
         for(uint32_t s: Graph<Weight>::V->local_segments)
         {
@@ -995,7 +995,7 @@ void Matrix<Weight>::init_csr()
 }
 
 template<typename Weight>
-void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s, bool clean_state)
+void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s, bool clear_state)
 {
     for(uint32_t t: Graph<Weight>::A->local_tiles)
     {
@@ -1052,7 +1052,7 @@ void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s, bool clean_state)
         memset(v_seg.data, v, v_seg.nbytes);
     }
 
-    if(clean_state)
+    if(clear_state)
     { 
         uint32_t si = Graph<Weight>::S->diag_segment;
         auto &s_seg = Graph<Weight>::S->segments[si];
@@ -1222,7 +1222,7 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                         //v_data[i] = alpha + ((1 - alpha) * y_data[i]);
                     }
                 }
-                
+                /*
                 vi = Graph<Weight>::V->diag_segment;
                 auto &v_seg = Graph<Weight>::V->segments[vi];
                 auto *v_data = (fp_t *) v_seg.data;
@@ -1235,6 +1235,7 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                     auto pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
                     printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
                 }   
+                */
                 
             }
             else
@@ -1259,14 +1260,14 @@ void Graph<Weight>::degree()
 
 
 template<typename Weight>
-void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
+void Graph<Weight>::pagerank(uint32_t niters, bool clear_state)
 {
     
     
-    uint32_t si = Graph<Weight>::S->diag_segment;
-    auto &s_seg = Graph<Weight>::S->segments[si];
-    auto *s_data = (fp_t *) s_seg.data;
-    uint32_t s_nitems = s_seg.n;
+    //uint32_t si = Graph<Weight>::S->diag_segment;
+    //auto &s_seg = Graph<Weight>::S->segments[si];
+    //auto *s_data = (fp_t *) s_seg.data;
+    //uint32_t s_nitems = s_seg.n;
  /*
     uint32_t vi = G.V->diag_segment;
     auto &v_seg = G.V->segments[vi];
@@ -1284,10 +1285,7 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
 
     fp_t alpha = 0.1;
     fp_t x = 0, y = 0, v = alpha, s = 0;
-    Graph<Weight>::init(x, y, v, s, clean_state);
-
-
-
+    Graph<Weight>::init(x, y, v, s, clear_state);
     
     /*
     uint32_t si = Graph<Weight>::S->diag_segment;
@@ -1295,7 +1293,7 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
     auto *s_data = (fp_t *) s_seg.data;
     uint32_t s_nitems = s_seg.n;
     */
-    
+    /*
      Triple<Weight> pair;
      Triple<Weight> pair1;
     for(uint32_t i = 0; i < s_nitems; i++)
@@ -1305,7 +1303,7 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
         auto pair1 = Graph<Weight>::A->base(pair, s_seg.rg, s_seg.cg);
         printf("R(%d),SD[%d]=%f\n",  rank, pair1.row, s_data[i]);
     }  
-    
+    */
     
     
     Generic_functions<Weight> f;  
@@ -1317,6 +1315,22 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
         Graph<Weight>::gather();
         Graph<Weight>::combine(f.rank);
     }
+    /*
+    Triple<Weight> pair;
+    Triple<Weight> pair1;
+    uint32_t vi = Graph<Weight>::V->diag_segment;
+    auto &v_seg = Graph<Weight>::V->segments[vi];
+    auto *v_data = (fp_t *) v_seg.data;
+    uint32_t nitems = v_seg.n;
+    
+    for(uint32_t i = 0; i < nitems; i++)
+    {
+        pair.row = i;
+        pair.col = 0;
+        auto pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
+        printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
+    }   
+    */
 }
 
 
@@ -1369,18 +1383,18 @@ int main(int argc, char** argv) {
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
     bool transpose = false;
-    bool clean_state = false;
+    bool clear_state = false;
 
     Graph<ew_t> G;
-    //G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
     G.degree();
-    G.free(clean_state);
+    G.free(clear_state);
     //printf("PageRank(%d)\n", rank);
     transpose = true;
     Graph<ew_t> GR;
-    //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    //GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     GR.initialize(G);
     
     GR.pagerank(num_iterations);
