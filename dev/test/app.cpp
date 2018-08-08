@@ -380,8 +380,8 @@ class Vector
         std::vector<struct Segment<Weight>> segments;
         std::vector<uint32_t> local_segments;
         
-        void init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments, bool copy_state = false);
-        void init_vec(std::vector<uint32_t>& diag_ranks, bool copy_state = false);
+        void init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments);
+        void init_vec(std::vector<uint32_t>& diag_ranks);
 };
 
 template<typename Weight>
@@ -394,7 +394,7 @@ template<typename Weight>
 Vector<Weight>::~Vector() {};
 
 template<typename Weight>
-void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments, bool copy_state)
+void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments)
 {
     // Reserve the 1D vector of segments. 
     Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
@@ -411,14 +411,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
         
         if(diag_ranks[i] == rank)
         {
-           if(copy_state)
-            {
-                Vector<Weight>::segments[i].shallow_copy();
-            }
-            else
-            {
-                Vector<Weight>::segments[i].allocate();
-            }  
+            Vector<Weight>::segments[i].allocate();  
         }
     }
     
@@ -428,21 +421,14 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uin
     {
         if(Vector<Weight>::segments[s].rank != rank)
         {
-            if(copy_state)
-            {
-                Vector<Weight>::segments[s].shallow_copy();
-            }
-            else
-            {
-                Vector<Weight>::segments[s].allocate();
-            }
+            Vector<Weight>::segments[s].allocate();
         }
     }
 }
 
 
 template<typename Weight>
-void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, bool copy_state)
+void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks)
 {
     // Reserve the 1D vector of segments. 
     Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
@@ -458,14 +444,7 @@ void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, bool copy_state
         Vector<Weight>::segments[i].rank = diag_ranks[i];
         if(diag_ranks[i] == rank)
         {
-            if(copy_state)
-            {
-                Vector<Weight>::segments[i].shallow_copy();
-            }
-            else
-            {
-                Vector<Weight>::segments[i].allocate();
-            }
+            Vector<Weight>::segments[i].allocate();
             Vector<Weight>::local_segments.push_back(i);
         }
     }
@@ -512,10 +491,10 @@ class Graph
         Graph();
         ~Graph();
         
-        void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false, bool copy_state = false);
-        void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false, bool copy_state = false);
+        void load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
+        void load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_ = true, bool transpose_ = false);
         void degree();
-        void pagerank(uint32_t niters, Graph<Weight> &G);
+        void pagerank(uint32_t niters, bool clean_state = false);
         void initialize(Graph<Weight> &G);
         void free(bool clean_state = true);
 
@@ -607,17 +586,30 @@ void Graph<Weight>::initialize(Graph<Weight> &G)
     uint32_t v_nitems = v_seg.n;
     
     assert(v_nitems == s_nitems);
-    if(!rank)
-        std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << std::endl;
+    
+    for(uint32_t i = 0; i < s_nitems; i++)
+    {
+        s_data[i] = v_data[i];
+    }
+    
+    for(uint32_t s: G.V->local_segments)
+    {
+        auto& segment = G.V->segments[s];
+        segment.free();
+    }
+    
+    
+    //if(!rank)
+      //  std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << std::endl;
     //G.S->segments[si].data = &G.V->segments[vi].data;
     //uintptr_t addr = reinterpret_cast<uintptr_t>(&foo);
     //s_data = (fp_t *) reinterpret_cast<void *>(G.V->segments[vi].data);
     //s_data = v_data;
-    G.V->segments[vi].pdata = (void **) &v_data;
+    //G.V->segments[vi].pdata = (void **) &v_data;
     //std::shared_ptr<void>(my_mapped_ptr, reinterpret_cast<void *>(my_mapped_ptr.get()));
     
-    if(!rank)
-      std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << " " << v_data[0] << " " << *G.V->segments[vi].pdata << ", " << &G.V->segments[vi].pdata[0] << std::endl;
+   // if(!rank)
+     // std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << " " << v_data[0] << " " << *G.V->segments[vi].pdata << ", " << &G.V->segments[vi].pdata[0] << std::endl;
     
     
    /*              
@@ -654,7 +646,7 @@ void Graph<Weight>::initialize(Graph<Weight> &G)
 }
 
 template<typename Weight>
-void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_, bool copy_state)
+void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_)
 {
     // Initialize graph data
     // Note we keep using Graph<Weight> format to avoid confusion
@@ -740,11 +732,11 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
     Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);    
     Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks, copy_state);    
+    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);    
 }
 
 template<typename Weight>
-void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_, bool copy_state)
+void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t ncols, Tiling tiling, bool directed_, bool transpose_)
 {
     
     // Initialize graph data
@@ -834,7 +826,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
     Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
     Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks, copy_state);
+    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
    // if(!rank)
      //   std::cout << "ALLOC:" << Graph<Weight>::S->segments[diag_segment].data << " " << Graph<Weight>::V->segments[diag_segment].data << std::endl;
 }
@@ -1267,7 +1259,7 @@ void Graph<Weight>::degree()
 
 
 template<typename Weight>
-void Graph<Weight>::pagerank(uint32_t niters, Graph<Weight> &G)
+void Graph<Weight>::pagerank(uint32_t niters, bool clean_state)
 {
     
     
@@ -1275,7 +1267,7 @@ void Graph<Weight>::pagerank(uint32_t niters, Graph<Weight> &G)
     auto &s_seg = Graph<Weight>::S->segments[si];
     auto *s_data = (fp_t *) s_seg.data;
     uint32_t s_nitems = s_seg.n;
- 
+ /*
     uint32_t vi = G.V->diag_segment;
     auto &v_seg = G.V->segments[vi];
     auto *v_data = (fp_t *) v_seg.data;
@@ -1288,11 +1280,11 @@ void Graph<Weight>::pagerank(uint32_t niters, Graph<Weight> &G)
     
     if(!rank)
         std::cout << s_data << ", " << v_data << std::endl;
-
+*/
 
     fp_t alpha = 0.1;
     fp_t x = 0, y = 0, v = alpha, s = 0;
-    Graph<Weight>::init(x, y, v, s, false);
+    Graph<Weight>::init(x, y, v, s, clean_state);
 
 
 
@@ -1377,7 +1369,6 @@ int main(int argc, char** argv) {
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
     bool transpose = false;
-    bool copy_state = false;
     bool clean_state = false;
 
     Graph<ew_t> G;
@@ -1387,13 +1378,12 @@ int main(int argc, char** argv) {
     G.free(clean_state);
     //printf("PageRank(%d)\n", rank);
     transpose = true;
-    copy_state = true;
     Graph<ew_t> GR;
     //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose, copy_state);
+    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     GR.initialize(G);
     
-    GR.pagerank(num_iterations, G);
+    GR.pagerank(num_iterations);
     GR.free();
     
     MPI_Finalize();
