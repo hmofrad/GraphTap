@@ -2,8 +2,8 @@
 
 CXX = g++
 MPI_CXX = mpicxx
-CXX_FLAGS = -std=c++14
-
+CXX_FLAGS = -std=c++14 -fpermissive
+DEBUG = -g
 obj=app
 
 .PHONY: all clean
@@ -11,7 +11,7 @@ obj=app
 all: clean app
 
 app:
-	$(MPI_CXX) $(CXX_FLAGS) -o $(obj) $(obj).cpp
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) -o $(obj) $(obj).cpp
 clean:
 	rm -rf $(obj)
 	
