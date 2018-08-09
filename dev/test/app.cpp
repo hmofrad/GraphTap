@@ -12,6 +12,12 @@
 #include <numeric>
 #include <algorithm>
 #include <functional>
+#include <time.h>
+#include <sys/time.h>
+#include <ctime>
+#include <chrono>
+
+
 
 
 #include <sys/mman.h>
@@ -597,52 +603,6 @@ void Graph<Weight>::initialize(Graph<Weight> &G)
         auto& segment = G.V->segments[s];
         segment.free();
     }
-    
-    
-    //if(!rank)
-      //  std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << std::endl;
-    //G.S->segments[si].data = &G.V->segments[vi].data;
-    //uintptr_t addr = reinterpret_cast<uintptr_t>(&foo);
-    //s_data = (fp_t *) reinterpret_cast<void *>(G.V->segments[vi].data);
-    //s_data = v_data;
-    //G.V->segments[vi].pdata = (void **) &v_data;
-    //std::shared_ptr<void>(my_mapped_ptr, reinterpret_cast<void *>(my_mapped_ptr.get()));
-    
-   // if(!rank)
-     // std::cout << G.S->segments[si].data << " " << G.V->segments[vi].data << " " << v_data[0] << " " << *G.V->segments[vi].pdata << ", " << &G.V->segments[vi].pdata[0] << std::endl;
-    
-    
-   /*              
-                 Triple<Weight> pair;
-                 Triple<Weight> pair1;
-                for(uint32_t i = 0; i < s_nitems; i++)
-                {
-                    pair.row = i;
-                    pair.col = 0;
-                    auto pair1 = Graph<Weight>::A->base(pair, s_seg.rg, s_seg.cg);
-                    printf("R(%d),SD[%d]=%f\n",  rank, pair1.row, s_data[i]);
-                }   
-    */
-    
-    
-    /*
-    uint32_t vi = G.V->diag_segment;
-    auto &v_seg = G.V->segments[vi];
-    auto *v_data = (fp_t *) v_seg.data;
-    uint32_t v_nitems = v_seg.n;
-    
-    uint32_t si = Graph<Weight>::S->diag_segment;
-    auto &s_seg = Graph<Weight>::S->segments[si];
-    auto *s_data = (fp_t *) s_seg.data;
-    
-    
-    assert(v_nitems == s_nitems);
-    
-    for(uint32_t i = 0; i < s_nitems; i++)
-    {
-        s_data[i] = v_data[i];
-    }
-    */
 }
 
 template<typename Weight>
@@ -827,8 +787,6 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
     Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
     Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
-   // if(!rank)
-     //   std::cout << "ALLOC:" << Graph<Weight>::S->segments[diag_segment].data << " " << Graph<Weight>::V->segments[diag_segment].data << std::endl;
 }
 
 template<typename Weight>
@@ -945,6 +903,7 @@ void Matrix<Weight>::init_mat()
             }
             printf("\n");
         }
+        printf("\n");
     }
 }
 
@@ -1262,49 +1221,9 @@ void Graph<Weight>::degree()
 template<typename Weight>
 void Graph<Weight>::pagerank(uint32_t niters, bool clear_state)
 {
-    
-    
-    //uint32_t si = Graph<Weight>::S->diag_segment;
-    //auto &s_seg = Graph<Weight>::S->segments[si];
-    //auto *s_data = (fp_t *) s_seg.data;
-    //uint32_t s_nitems = s_seg.n;
- /*
-    uint32_t vi = G.V->diag_segment;
-    auto &v_seg = G.V->segments[vi];
-    auto *v_data = (fp_t *) v_seg.data;
-    uint32_t v_nitems = v_seg.n;
-    fp_t *p = (fp_t *) *G.V->segments[vi].pdata;
-    if(!rank)
-        std::cout << s_data << ", " << v_data << " >>" << *G.V->segments[vi].pdata  << " ,HEHEHE" << p[0] <<  std::endl;
-    
-    //s_data = &v_data;
-    
-    if(!rank)
-        std::cout << s_data << ", " << v_data << std::endl;
-*/
-
     fp_t alpha = 0.1;
     fp_t x = 0, y = 0, v = alpha, s = 0;
     Graph<Weight>::init(x, y, v, s, clear_state);
-    
-    /*
-    uint32_t si = Graph<Weight>::S->diag_segment;
-    auto &s_seg = Graph<Weight>::S->segments[si];
-    auto *s_data = (fp_t *) s_seg.data;
-    uint32_t s_nitems = s_seg.n;
-    */
-    /*
-     Triple<Weight> pair;
-     Triple<Weight> pair1;
-    for(uint32_t i = 0; i < s_nitems; i++)
-    {
-        pair.row = i;
-        pair.col = 0;
-        auto pair1 = Graph<Weight>::A->base(pair, s_seg.rg, s_seg.cg);
-        printf("R(%d),SD[%d]=%f\n",  rank, pair1.row, s_data[i]);
-    }  
-    */
-    
     
     Generic_functions<Weight> f;  
     uint32_t iter = 0;
@@ -1337,8 +1256,36 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clear_state)
 
 using ew_t = Empty;
 
-int main(int argc, char** argv) {
-    
+
+
+struct Timer
+{
+    struct timeval t1, t2;
+    double elapsedTime;
+    void tick();
+    void tock(std::string info);
+};
+void Timer::tick()
+{
+//    srand(time(NULL));
+  
+
+
+    //struct timeval t1, t2;
+	//double elapsedTime;
+    gettimeofday(&this->t1, NULL);
+}
+
+void Timer::tock(std::string info)
+{
+    gettimeofday(&this->t2, NULL);
+    this->elapsedTime  = (this->t2.tv_sec - this->t1.tv_sec) * 1000;      // sec to ms
+    this->elapsedTime += (this->t2.tv_usec - this->t1.tv_usec) / 1000;   // us to ms
+    printf("%s: %.2lf seconds | %.0f milliseconds\n", info.c_str(), this->elapsedTime / 1000, this->elapsedTime);    
+}
+
+int main(int argc, char** argv)
+{    
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int processor_name_len;
     
@@ -1385,22 +1332,86 @@ int main(int argc, char** argv) {
     bool transpose = false;
     bool clear_state = false;
 
+    //struct Timer timer;    
+    //if(is_master)
+    //{
+    //    timer.tick();
+    //}
+    
     Graph<ew_t> G;
     G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
     //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    //if(is_master)
+    //{
+    //    std::string info("Ingress");
+    //    timer.tock(info);
+    //}
+
+    //if(is_master)
+    //{
+    //   timer.tick();
+    //}
+    
+    
+    
     G.degree();
+    
+    //if(is_master)
+    //{
+    //   std::string info("Degree");
+    //   timer.tock(info);
+    //}
+    
     G.free(clear_state);
+    
+    
+    
+    
     //printf("PageRank(%d)\n", rank);
     transpose = true;
     Graph<ew_t> GR;
     GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     //GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    
+    //struct Timer timer1;    
+    //if(!rank)
+    //{
+    //    timer1.tick();
+    //}
+    
+    
     GR.initialize(G);
     
+//std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+  double start=MPI_Wtime();  
+
+    
     GR.pagerank(num_iterations);
+    double finish=MPI_Wtime();
+    if(!rank)
+    printf("Parallel Elapsed time: %f seconds\n", finish-start); 
+
+//std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
+
+//if(!rank)
+//{
+    //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() <<std::endl;
+  //  std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
+//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() <<std::endl;
+//}
+    
+    //if(!rank)
+   // {
+     //   std::string info("PageRank");
+    //    timer1.tock(info);
+    //}
+    
     GR.free();
     
     MPI_Finalize();
+
+    
 
     return(0);
 
