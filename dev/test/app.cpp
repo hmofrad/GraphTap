@@ -902,8 +902,18 @@ void Matrix<Weight>::init_mat()
             for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
             {
                 printf("%02d ", Matrix<Weight>::tiles[i][j].rank);
+                if(j > 15)
+                {
+                    printf("...");
+                    break;
+                }
             }
             printf("\n");
+            if(i > 15)
+            {
+                printf(".\n.\n.\n");
+                break;
+            }
         }
         printf("\n");
     }
@@ -1165,6 +1175,7 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                         auto &yj_seg = Graph<Weight>::Y->segments[yj];
                         MPI_Recv(yj_seg.data, yj_seg.nbytes, MPI_BYTE, other_rank, pair.row, MPI_COMM_WORLD, &status);
                     }
+                    
                     for(uint32_t j = 0; j < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; j++)
                     {
                         for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
@@ -1178,7 +1189,6 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                     }
                     for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
                     {
-                    
                         vi = Graph<Weight>::V->diag_segment;
                         auto &v_seg = Graph<Weight>::V->segments[vi];
                         auto *v_data = (fp_t *) v_seg.data;
@@ -1204,6 +1214,7 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                         //v_data[i] = alpha + ((1 - alpha) * y_data[i]);
                     }
                     */
+                    
                 }
                 /*
                 vi = Graph<Weight>::V->diag_segment;
@@ -1309,26 +1320,27 @@ void Timer::tock(std::string info)
 }
 
 int main(int argc, char** argv)
-{    
+{ 
+    
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int processor_name_len;
     
     int required = MPI_THREAD_MULTIPLE;
     int provided = -1;
-      MPI_Init_thread(nullptr, nullptr, required, &provided);
-      assert((provided >= MPI_THREAD_SINGLE) && (provided <= MPI_THREAD_MULTIPLE));
-
+    MPI_Init_thread(nullptr, nullptr, required, &provided);
+    assert((provided >= MPI_THREAD_SINGLE) && (provided <= MPI_THREAD_MULTIPLE));
 
     nranks = -1;
-      MPI_Comm_size(MPI_COMM_WORLD, &nranks);
-      assert(nranks >= 0);
+    MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+    assert(nranks >= 0);
 
-      rank   = -1;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
+    rank = -1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     assert(rank >= 0);
+
     
     MPI_Get_processor_name(processor_name, &processor_name_len);
-
     cpu_id = sched_getcpu();
     //std::cout << "Rank " << rank << " of " << nranks << 
     //               ", hostname " << processor_name << ", CPU " << cpu_id << std::endl;
@@ -1345,9 +1357,11 @@ int main(int argc, char** argv)
                       << std::endl;
         }    
         MPI_Barrier(MPI_COMM_WORLD);
-         MPI_Finalize();
+        MPI_Finalize();
         std::exit(1);
     }
+    
+    double start, finish;
     
     std::string file_path = argv[1]; 
     uint32_t num_vertices = std::atoi(argv[2]);
@@ -1356,80 +1370,37 @@ int main(int argc, char** argv)
     bool transpose = false;
     bool clear_state = false;
 
-    //struct Timer timer;    
-    //if(is_master)
-    //{
-    //    timer.tick();
-    //}
-    
-    Graph<ew_t> G;
-    //G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    //if(is_master)
-    //{
-    //    std::string info("Ingress");
-    //    timer.tock(info);
-    //}
 
-    //if(is_master)
-    //{
-    //   timer.tick();
-    //}
+    Graph<ew_t> G;
     
+    start = MPI_Wtime();
+    G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    finish = MPI_Wtime();
+    if(!rank)
+        printf("Ingree: %f seconds\n", finish-start); 
     
-    
+    start = MPI_Wtime();
     G.degree();
-    
-    //if(is_master)
-    //{
-    //   std::string info("Degree");
-    //   timer.tock(info);
-    //}
+    finish = MPI_Wtime();
+    if(!rank)
+        printf("Degree: %f seconds\n", finish-start); 
     
     G.free(clear_state);
     
-    
-    
-    
-    //printf("PageRank(%d)\n", rank);
     transpose = true;
     Graph<ew_t> GR;
-    //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    
-    //struct Timer timer1;    
-    //if(!rank)
-    //{
-    //    timer1.tick();
-    //}
-    
-    
+    GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    //GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+        
     GR.initialize(G);
     
-//std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-  double start=MPI_Wtime();  
-
-    
+    start = MPI_Wtime();  
     GR.pagerank(num_iterations);
-    double finish=MPI_Wtime();
+    finish = MPI_Wtime();
     if(!rank)
-        printf("Pagerank: %f seconds\n", finish-start); 
-
-//std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
-
-//if(!rank)
-//{
-    //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() <<std::endl;
-  //  std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() <<std::endl;
-//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() <<std::endl;
-//}
-    
-    //if(!rank)
-   // {
-     //   std::string info("PageRank");
-    //    timer1.tock(info);
-    //}
+        printf("Pagerank: %f seconds\n", finish - start); 
     
     GR.free();
     
