@@ -19,14 +19,8 @@
 #include <cmath>
 #include <cstring>
 
-
-
-
 #include <sys/mman.h>
 #include <type_traits>
-
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/vector.hpp>
 
 #include <mpi.h>
 #include <sched.h>
@@ -76,11 +70,46 @@ struct Functor
     }
 };
 
+
+struct basic_storage
+{
+    void *data;
+    uint32_t nbytes;
+    void allocate(uint32_t n);
+    void free();
+};
+
+void basic_storage::allocate(uint32_t n)
+{
+    basic_storage::nbytes = n;
+    
+    if((this->data = mmap(nullptr, basic_storage::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
+    {    
+        fprintf(stderr, "Error mapping memory\n");
+        std::exit(1);
+    }
+    memset(basic_storage::data, 0, basic_storage::nbytes);
+}
+
+void basic_storage::free()
+{
+    if(munmap(basic_storage::data, basic_storage::nbytes) == -1)
+    {
+        fprintf(stderr, "Error unmapping memory\n");
+        std::exit(1);
+    }
+}
+
+struct BV : basic_storage {};
+
+
+
 template<typename Weight>
 struct CSR
 {
     uint32_t nnz;
     uint32_t nrows_plus_one;
+    uint32_t nnz_rows;
     uint32_t* A;
     uint32_t* IA;
     uint32_t* JA;
@@ -127,9 +156,10 @@ struct Tile2D
     friend class Matrix;
     std::vector<struct Triple<Weight>>* triples;
     struct CSR<Weight>* csr;
+    struct BV* bv;
     uint32_t rg, cg;
     uint32_t ith, jth, nth;
-    int32_t rank;
+    uint32_t rank;
 };
 
 enum Tiling
@@ -241,6 +271,7 @@ class Matrix
         void init_mat();
         void del_triples();
         void init_csr();
+        void init_bv();
         void del_csr();
         
         uint32_t local_tile_of_tile(const struct Triple<Weight>& pair);
@@ -320,6 +351,9 @@ void Matrix<Weight>::del_csr()
         auto& tile = Matrix<Weight>::tiles[pair.row][pair.col];
         tile.csr->free();
         delete tile.csr;
+        
+        tile.bv->free();
+        delete tile.bv;
     }
 }
 
@@ -330,7 +364,6 @@ struct Segment
     friend class Vector;
 
     void *data;    
-    void **pdata;    
     uint32_t n;
     uint64_t nbytes;
     uint32_t nrows, ncols;
@@ -683,6 +716,7 @@ void Graph<Weight>::load_binary(std::string filepath_, uint32_t nrows, uint32_t 
     */
     
     Graph<Weight>::A->init_csr();
+    Graph<Weight>::A->init_bv();
     
     uint32_t diag_segment = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));    
     
@@ -777,6 +811,7 @@ void Graph<Weight>::load_text(std::string filepath_, uint32_t nrows, uint32_t nc
     MPI_Barrier(MPI_COMM_WORLD);
     
     Graph<Weight>::A->init_csr();
+    Graph<Weight>::A->init_bv();
     
     uint32_t diag_segment = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));
     
@@ -938,7 +973,7 @@ void Matrix<Weight>::init_csr()
         std::sort(tile.triples->begin(), tile.triples->end(), f);
 
         uint32_t i = 0;
-        uint32_t j = 1;
+        uint32_t j = 1; // Row index
         tile.csr->IA[0] = 0;
         for (auto& triple : *(tile.triples))
         {
@@ -957,13 +992,118 @@ void Matrix<Weight>::init_csr()
         // Not necessary
         while(j < (Matrix<Weight>::tile_height))
         {
-              j++;
-           tile.csr->IA[j] = tile.csr->IA[j - 1];
+            j++;
+            tile.csr->IA[j] = tile.csr->IA[j - 1];
         }
+
+              //  printf("%d tile, %d'th row has %d\n", t, i, nnz_per_row);
+                //else
+                  //  printf("%d'th row has %d", i, nnz_per_row);
+            //}
+            //for(uint32_t j = 0; j < nnz_per_row; j++)
+            //{
+             //   y_data[i] += tile.csr->A[k] * x_data[tile.csr->JA[k]];
+               // k++;
+            //}
+        //}
+        /*
+        if(!rank)
+        {
+            if(tile.csr->nnz_rows == (tile.csr->nrows_plus_one - 1))
+            {
+                printf("Skip bitvector compression\n", );
+            }
+            else
+            {
+                printf("Compress\n");
+            }
+        }
+        */
+
     }
    
     Matrix<Weight>::del_triples();
 }
+
+template<typename Weight>
+void Matrix<Weight>::init_bv()
+{
+    struct Triple<Weight> pair;
+    for(uint32_t t: Matrix<Weight>::local_tiles)
+    {
+        pair = Matrix<Weight>::tile_of_local_tile(t);
+        auto &tile = Matrix<Weight>::tiles[pair.row][pair.col];
+     
+        tile.csr->nnz_rows = 0;
+        tile.bv = new struct BV;
+        tile.bv->allocate(Matrix<Weight>::tile_height);
+        auto *bv_seg = (char *) tile.bv->data;
+        
+        for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+        {
+            uint32_t nnz_per_row = tile.csr->IA[i + 1] - tile.csr->IA[i];
+            if(nnz_per_row)
+            {
+                tile.csr->nnz_rows++;
+                bv_seg[i] = 1;
+            }
+            else
+            {
+                bv_seg[i] = 0;
+            }
+        }
+    }
+    
+    //MPI_Barrier(MPI_COMM_WORLD);
+    
+    std::vector<struct BV> bv_union;
+    std::vector<struct BV> bv_others(Matrix<Weight>::partitioning->rowgrp_nranks - 1);
+    uint32_t k = 0;
+    for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
+    {
+        uint32_t leader = Matrix<Weight>::tiles[i][i].rank;
+        uint32_t tag = Matrix<Weight>::tiles[i][i].rg;
+        if(!rank)
+            printf("%d %d %d\n", rank, leader, tag);
+        for (uint32_t j = 0; j < Matrix<Weight>::ncolgrps; j++)  
+        {
+            auto &tile = Matrix<Weight>::tiles[i][j];
+            if(tile.rank == leader)
+            {
+                if(i == j)
+                {
+                    MPI_Status status;
+                    for(uint32_t j = 0; j < Matrix<Weight>::partitioning->rowgrp_nranks - 1; j++)
+                    {
+                        uint32_t other_rank = Matrix<Weight>::other_rowgrp_ranks[j];
+                        auto& bv_seg = bv_others[j];
+                        bv_seg.allocate(Matrix<Weight>::tile_height);
+                        MPI_Recv(bv_seg.data, bv_seg.nbytes, MPI_BYTE, other_rank, tag, MPI_COMM_WORLD, &status);
+                        //auto &yj_seg = Graph<Weight>::Y->segments[yj];
+                    }
+                } 
+                else
+                {
+                    
+                }
+            }
+            else
+            {
+                auto& bv_seg = tile.bv;
+                MPI_Send(bv_seg->data, bv_seg->nbytes, MPI_BYTE, leader, tag, MPI_COMM_WORLD);
+            }
+        }
+        break;
+    }
+    if(!rank)
+        printf("DONE INIT BIT VECTOR\n");
+    
+    
+    
+    
+}
+
+
 
 template<typename Weight>
 void Graph<Weight>::init(fp_t x, fp_t y, fp_t v, fp_t s, bool clear_state)
@@ -1268,6 +1408,8 @@ void Graph<Weight>::pagerank(uint32_t niters, bool clear_state)
         Graph<Weight>::scatter(f.div);
         Graph<Weight>::gather();
         Graph<Weight>::combine(f.rank);
+        if(!rank)
+            printf("Pagerank,iter=%d\n", iter);
     }
     /*
     Triple<Weight> pair;
@@ -1374,25 +1516,32 @@ int main(int argc, char** argv)
     Graph<ew_t> G;
     
     start = MPI_Wtime();
-    G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    //G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
     finish = MPI_Wtime();
     if(!rank)
-        printf("Ingree: %f seconds\n", finish-start); 
+        printf("Ingress: %f seconds\n", finish - start); 
     
     start = MPI_Wtime();
     G.degree();
     finish = MPI_Wtime();
     if(!rank)
-        printf("Degree: %f seconds\n", finish-start); 
-    
+        printf("Degree: %f seconds\n", finish - start); 
+    G.free();
+    /*
     G.free(clear_state);
     
     transpose = true;
     Graph<ew_t> GR;
-    GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    //GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-        
+    start = MPI_Wtime();
+    //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    finish = MPI_Wtime();
+    if(!rank)
+        printf("Ingress T: %f seconds\n", finish - start); 
+
+
+    
     GR.initialize(G);
     
 
@@ -1403,7 +1552,7 @@ int main(int argc, char** argv)
         printf("Pagerank: %f seconds\n", finish - start); 
     
     GR.free();
-    
+    */
     MPI_Finalize();
 
     
