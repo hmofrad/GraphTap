@@ -16,6 +16,8 @@
 #include <sys/time.h>
 #include <ctime>
 #include <chrono>
+#include <cmath>
+#include <cstring>
 
 
 
@@ -1163,6 +1165,27 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                         auto &yj_seg = Graph<Weight>::Y->segments[yj];
                         MPI_Recv(yj_seg.data, yj_seg.nbytes, MPI_BYTE, other_rank, pair.row, MPI_COMM_WORLD, &status);
                     }
+                    for(uint32_t j = 0; j < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; j++)
+                    {
+                        for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+                        {
+                            yj = Graph<Weight>::A->rowgrp_ranks_accu_seg[j];
+                            auto &yj_seg = Graph<Weight>::Y->segments[yj];
+                            auto *yj_data = (fp_t *) yj_seg.data;
+                            y_data[i] += yj_data[i];
+                        }                           
+                       
+                    }
+                    for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
+                    {
+                    
+                        vi = Graph<Weight>::V->diag_segment;
+                        auto &v_seg = Graph<Weight>::V->segments[vi];
+                        auto *v_data = (fp_t *) v_seg.data;
+                        v_data[i] = (*f)(0, y_data[i], 0, 0); 
+                    }
+                    
+                    /*
                     for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
                     {
                         for(uint32_t j = 0; j < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; j++)
@@ -1180,6 +1203,7 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                         //v_data[i] = y_data[i];
                         //v_data[i] = alpha + ((1 - alpha) * y_data[i]);
                     }
+                    */
                 }
                 /*
                 vi = Graph<Weight>::V->diag_segment;
@@ -1339,8 +1363,8 @@ int main(int argc, char** argv)
     //}
     
     Graph<ew_t> G;
-    G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    //G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
     //if(is_master)
     //{
     //    std::string info("Ingress");
@@ -1370,8 +1394,8 @@ int main(int argc, char** argv)
     //printf("PageRank(%d)\n", rank);
     transpose = true;
     Graph<ew_t> GR;
-    GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    //GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
+    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
     
     //struct Timer timer1;    
     //if(!rank)
@@ -1390,7 +1414,7 @@ int main(int argc, char** argv)
     GR.pagerank(num_iterations);
     double finish=MPI_Wtime();
     if(!rank)
-    printf("Parallel Elapsed time: %f seconds\n", finish-start); 
+        printf("Pagerank: %f seconds\n", finish-start); 
 
 //std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
 
