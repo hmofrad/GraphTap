@@ -4,6 +4,8 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
+//#include "ds.hpp" 
+ 
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -35,17 +37,37 @@ int rank;
 int cpu_id;
 bool is_master;
 
+
 template <typename Weight>
 struct Triple
 {
     uint32_t row;
     uint32_t col;
     Weight weight;
-    Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0)
-        : row(row), col(col), weight(weight) {}  
-    void set_weight(Weight& w) {this->weight = w;};
-    Weight get_weight() {return(this->weight);};
+    Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0);
+    ~Triple();
+    void set_weight(Weight &w);
+    Weight get_weight();
 };
+
+template <typename Weight>
+Triple<Weight>::Triple(uint32_t row, uint32_t col, Weight weight)
+      : row(row), col(col), weight(weight) {};
+
+template <typename Weight>
+Triple<Weight>::~Triple() {};
+      
+template <typename Weight>
+void Triple<Weight>::set_weight(Weight &w)
+{
+    Triple<Weight>::weight = w;
+}
+
+template <typename Weight>
+Weight Triple<Weight>::get_weight()
+{
+    return(Triple<Weight>::weight);
+}
 
 struct Empty {};
 
@@ -58,7 +80,7 @@ struct Triple <Empty>
         Empty weight;
     };
     void set_weight(Empty& w) {};
-    bool get_weight() {return 1;};
+    bool get_weight() {return(1);};
 };
 
 template <typename Weight>
@@ -105,7 +127,6 @@ void basic_storage<Type>::free()
 
 template <typename Type>
 struct BV : basic_storage<Type> {};
-
 
 
 
@@ -1466,6 +1487,23 @@ void Graph<Weight>::degree()
     Graph<Weight>::scatter(f.ones);    
     Graph<Weight>::gather();
     Graph<Weight>::combine(f.assign);
+    
+    Triple<Weight> pair;
+    Triple<Weight> pair1;
+    uint32_t vi = Graph<Weight>::V->diag_segment;
+    auto &v_seg = Graph<Weight>::V->segments[vi];
+    auto *v_data = (fp_t *) v_seg.data;
+    uint32_t nitems = v_seg.n;
+    
+    for(uint32_t i = 0; i < nitems; i++)
+    {
+        pair.row = i;
+        pair.col = 0;
+        auto pair1 = Graph<Weight>::A->base(pair, v_seg.rg, v_seg.cg);
+        printf("R(%d),S[%d]=%f\n",  rank, pair1.row, v_data[i]);
+    }   
+    
+    
 }
 
 
