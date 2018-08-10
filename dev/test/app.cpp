@@ -70,37 +70,43 @@ struct Functor
     }
 };
 
-
+template <typename Type = void>
 struct basic_storage
 {
-    void *data;
-    uint32_t nbytes;
-    void allocate(uint32_t n);
+    Type *data;
+    uint64_t n;
+    uint64_t nbytes;
+    void allocate(uint64_t n);
     void free();
 };
 
-void basic_storage::allocate(uint32_t n)
+template <typename Type>
+void basic_storage<Type>::allocate(uint64_t n)
 {
-    basic_storage::nbytes = n;
+    basic_storage<Type>::nbytes = n;
     
-    if((this->data = mmap(nullptr, basic_storage::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
+    if((this->data = (Type *) mmap(nullptr, basic_storage<Type>::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
     {    
         fprintf(stderr, "Error mapping memory\n");
         std::exit(1);
     }
-    memset(basic_storage::data, 0, basic_storage::nbytes);
+    memset(basic_storage<Type>::data, 0, basic_storage<Type>::nbytes);
 }
 
-void basic_storage::free()
+template <typename Type>
+void basic_storage<Type>::free()
 {
-    if(munmap(basic_storage::data, basic_storage::nbytes) == -1)
+    if(munmap(basic_storage<Type>::data, basic_storage<Type>::nbytes) == -1)
     {
         fprintf(stderr, "Error unmapping memory\n");
         std::exit(1);
     }
 }
 
-struct BV : basic_storage {};
+template <typename Type>
+struct BV : basic_storage<Type> {};
+
+
 
 
 
@@ -156,7 +162,7 @@ struct Tile2D
     friend class Matrix;
     std::vector<struct Triple<Weight>>* triples;
     struct CSR<Weight>* csr;
-    struct BV* bv;
+    struct BV<char> *bv;
     uint32_t rg, cg;
     uint32_t ith, jth, nth;
     uint32_t rank;
@@ -352,8 +358,8 @@ void Matrix<Weight>::del_csr()
         tile.csr->free();
         delete tile.csr;
         
-        tile.bv->free();
-        delete tile.bv;
+        //tile.bv->free();
+        //delete tile.bv;
     }
 }
 
@@ -1028,6 +1034,8 @@ void Matrix<Weight>::init_csr()
 template<typename Weight>
 void Matrix<Weight>::init_bv()
 {
+    
+/*    
     struct Triple<Weight> pair;
     for(uint32_t t: Matrix<Weight>::local_tiles)
     {
@@ -1037,7 +1045,8 @@ void Matrix<Weight>::init_bv()
         tile.csr->nnz_rows = 0;
         tile.bv = new struct BV;
         tile.bv->allocate(Matrix<Weight>::tile_height);
-        auto *bv_seg = (char *) tile.bv->data;
+        auto &bv_seg = tile.bv;
+        auto *bv_data = (char *) bv_seg->data;
         
         for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
         {
@@ -1045,20 +1054,80 @@ void Matrix<Weight>::init_bv()
             if(nnz_per_row)
             {
                 tile.csr->nnz_rows++;
-                bv_seg[i] = 1;
+                bv_data[i] = 1;
             }
             else
             {
-                bv_seg[i] = 0;
+                bv_data[i] = 0;
             }
         }
     }
     
     //MPI_Barrier(MPI_COMM_WORLD);
     
-    std::vector<struct BV> bv_union;
+    struct BV bvu_seg; // bv for union
+    bvu_seg.allocate(Matrix<Weight>::tile_height);
+    //bv_union = 
     std::vector<struct BV> bv_others(Matrix<Weight>::partitioning->rowgrp_nranks - 1);
-    uint32_t k = 0;
+    
+    for(uint32_t t: Matrix<Weight>::local_tiles)
+    {
+        auto pair = Matrix<Weight>::tile_of_local_tile(t);
+        auto &tile = Matrix<Weight>::tiles[pair.row][pair.col];
+        auto &bv_seg = tile.bv;
+        auto *bv_data = (char *) bv_seg->data;
+        auto *bvu_data = (char *) bvu_seg.data;
+        for(uint32_t i = 0; i < bv_seg->nbytes; i++)
+        {
+            if(bv_data[i] == 1)
+                bvu_data[i] = 1;
+        }
+        
+        bool communication = ((tile.nth + 1) % Matrix<Weight>::partitioning->colgrp_nranks == 0);    
+        if(communication)
+        {
+            uint32_t leader = Matrix<Weight>::tiles[pair.row][pair.row].rank;
+            if(rank == leader)
+            {
+                MPI_Status status;
+                for(uint32_t j = 0; j < Matrix<Weight>::partitioning->rowgrp_nranks - 1; j++)
+                {
+                    uint32_t other_rank = Matrix<Weight>::other_rowgrp_ranks[j];
+                    auto& bvj_seg = bv_others[j];
+                    bvj_seg.allocate(Matrix<Weight>::tile_height);
+                    MPI_Recv(bvj_seg.data, bvj_seg.nbytes, MPI_BYTE, other_rank, pair.row, MPI_COMM_WORLD, &status);
+                    //auto &yj_seg = Graph<Weight>::Y->segments[yj];
+                }
+                for(uint32_t j = 0; j < Matrix<Weight>::partitioning->rowgrp_nranks - 1; j++)
+                {
+                    uint32_t other_rank = Matrix<Weight>::other_rowgrp_ranks[j];
+                    auto& bvj_seg = bv_others[j];
+                    auto *bvj_data = (char *) bvj_seg.data;
+                    for(uint32_t i = 0; i < bvj_seg.nbytes; i++)
+                    {
+                        if(bvj_data[i] == 1)
+                            bvu_data[i] = 1;        
+                    }
+                }
+                auto *bvu_data = (char *) bvu_seg.data;    
+                for(uint32_t i = 0; i < bvu_seg.nbytes; i++)
+                {
+                    pair.row = i;
+                    pair.col = 0;
+                    auto pair1 = Matrix<Weight>::base(pair, tile.rg, tile.cg);
+                    printf("R(%d),S[%d]=%d\n",  rank, pair1.row, bvu_data[i]);
+                }   
+            }
+            else
+            {
+                MPI_Send(bvu_seg.data, bvu_seg.nbytes, MPI_BYTE, leader, pair.row, MPI_COMM_WORLD);
+            }
+            memset(bvu_seg.data, 0, bvu_seg.nbytes);
+        }
+    }
+*/
+    
+   /* 
     for (uint32_t i = 0; i < Matrix<Weight>::nrowgrps; i++)
     {
         uint32_t leader = Matrix<Weight>::tiles[i][i].rank;
@@ -1097,7 +1166,7 @@ void Matrix<Weight>::init_bv()
     }
     if(!rank)
         printf("DONE INIT BIT VECTOR\n");
-    
+    */
     
     
     
@@ -1292,13 +1361,17 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
             uint32_t leader = Graph<Weight>::Y->segments[tile.rg].rank;
             if(rank == leader)
             {
+                vi = Graph<Weight>::V->diag_segment;
+                auto &v_seg = Graph<Weight>::V->segments[vi];
+                auto *v_data = (fp_t *) v_seg.data;
+                
                 if(Graph<Weight>::A->partitioning->tiling == Tiling::_1D_ROW)
                 {   
                     for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
                     {
-                        vi = Graph<Weight>::V->diag_segment;
-                        auto &v_seg = Graph<Weight>::V->segments[vi];
-                        auto *v_data = (fp_t *) v_seg.data;
+                        //vi = Graph<Weight>::V->diag_segment;
+                        //auto &v_seg = Graph<Weight>::V->segments[vi];
+                        //auto *v_data = (fp_t *) v_seg.data;
                         v_data[i] = (*f)(0, y_data[i], 0, 0);
                         //v_data[i] = y_data[i];
                         //v_data[i] = alpha + ((1 - alpha) * y_data[i]);
@@ -1318,20 +1391,23 @@ void Graph<Weight>::combine(fp_t (*f)(fp_t, fp_t, fp_t, fp_t))
                     
                     for(uint32_t j = 0; j < Graph<Weight>::A->partitioning->rowgrp_nranks - 1; j++)
                     {
+                        yj = Graph<Weight>::A->rowgrp_ranks_accu_seg[j];
+                        auto &yj_seg = Graph<Weight>::Y->segments[yj];
+                        auto *yj_data = (fp_t *) yj_seg.data;
                         for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
                         {
-                            yj = Graph<Weight>::A->rowgrp_ranks_accu_seg[j];
-                            auto &yj_seg = Graph<Weight>::Y->segments[yj];
-                            auto *yj_data = (fp_t *) yj_seg.data;
+                            //yj = Graph<Weight>::A->rowgrp_ranks_accu_seg[j];
+                            //auto &yj_seg = Graph<Weight>::Y->segments[yj];
+                            //auto *yj_data = (fp_t *) yj_seg.data;
                             y_data[i] += yj_data[i];
                         }                           
                        
                     }
                     for(uint32_t i = 0; i < tile.csr->nrows_plus_one - 1; i++)
                     {
-                        vi = Graph<Weight>::V->diag_segment;
-                        auto &v_seg = Graph<Weight>::V->segments[vi];
-                        auto *v_data = (fp_t *) v_seg.data;
+                        //vi = Graph<Weight>::V->diag_segment;
+                        //auto &v_seg = Graph<Weight>::V->segments[vi];
+                        //auto *v_data = (fp_t *) v_seg.data;
                         v_data[i] = (*f)(0, y_data[i], 0, 0); 
                     }
                     
