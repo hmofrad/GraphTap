@@ -1,5 +1,5 @@
 /*
- * ds.hpp
+ * ds.hpp: Basic data structures implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -8,8 +8,12 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <cstring>
+#include <vector>
 
 
+/*
+ * Triple data structure for storing edges
+ */
 template <typename Weight>
 struct Triple
 {
@@ -43,6 +47,7 @@ Weight Triple<Weight>::get_weight()
 
 struct Empty {};
 
+/* Triple that supports empty weights */
 template <>
 struct Triple <Empty>
 {
@@ -55,6 +60,11 @@ struct Triple <Empty>
     bool get_weight() {return(1);};
 };
 
+/*
+ * Functor for passing to std::sort
+ * It sorts the Triples using their row index
+ * and then their column index
+ */
 template <typename Weight>
 struct Functor
 {
@@ -64,6 +74,10 @@ struct Functor
     }
 };
 
+/*
+ * Basic storage with mmap
+ * We use mmap as it returns a contiguous piece of memory
+ */
 template <typename Type = void>
 struct basic_storage
 {
@@ -77,9 +91,9 @@ struct basic_storage
 template <typename Type>
 void basic_storage<Type>::allocate(uint64_t n)
 {
-    basic_storage<Type>::nbytes = n;
-    
-    if((this->data = (Type *) mmap(nullptr, basic_storage<Type>::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
+    basic_storage<Type>::n = n;
+    basic_storage<Type>::nbytes = n * sizeof(Type);
+    if((this->data = mmap(nullptr, basic_storage<Type>::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
     {    
         fprintf(stderr, "Error mapping memory\n");
         std::exit(1);
@@ -97,8 +111,22 @@ void basic_storage<Type>::free()
     }
 }
 
+/*
+ * Index vector to code the sparsity of vectors. The indices will later
+ * be used to traverse the received segments from other ranks. This requires
+ * significant more storage compared to having a bit vector but we can iterate
+ * over the received segment faster. 
+ * Another way of implementing this indexing process is to use bit vector,
+ * where bit vector is used to identify the non-zero elements and then use this
+ * information to index the received regment. Bit vector has better storage,
+ * but index vector has better performance.
+ */
 template <typename Type>
-struct BV : basic_storage<Type> {};
+struct IV : basic_storage<Type> {};
+
+
+
+
 
 
 
