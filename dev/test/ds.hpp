@@ -78,38 +78,181 @@ struct Functor
  * Basic storage with mmap
  * We use mmap as it returns a contiguous piece of memory
  */
-template <typename Type = void>
+template <typename Weight = void, typename Integer_Type = uint32_t>
 struct basic_storage
 {
-    Type *data;
+    basic_storage(Integer_Type n_);
+    ~basic_storage();
+    Integer_Type n;
+    uint64_t nbytes;
+    void *data;
+    //void allocate(Integer_Type n_);
+    //void free();
+};
+
+template <typename Weight, typename Integer_Type>
+basic_storage<Weight, Integer_Type>::basic_storage(Integer_Type n_)
+{
+    n = n_;
+    nbytes = n_ * sizeof(Weight);
+    if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
+                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
+    {    
+        fprintf(stderr, "Error mapping memory\n");
+        Env::exit(1);
+    }
+    memset(data, 0, nbytes);
+}
+
+template <typename Weight, typename Integer_Type>
+basic_storage<Weight, Integer_Type>::~basic_storage()
+{
+    if(munmap(data, nbytes) == -1)
+    {
+        fprintf(stderr, "Error unmapping memory\n");
+        Env::exit(1);
+    }
+}
+
+template <>
+struct basic_storage <Empty>
+{
+    basic_storage(uint64_t n_);
+    ~basic_storage();
     uint64_t n;
     uint64_t nbytes;
-    void allocate(uint64_t n);
+    void *data;
+    /*
+    void allocate(uint64_t n_)
+    {
+        n = n_;
+        nbytes = n_;
+        assert(nbytes == (n * sizeof(Empty)));
+        if((data = mmap(nullptr, nbytes, PROT_READ | 
+                                         PROT_WRITE, MAP_ANONYMOUS |
+                                         MAP_PRIVATE, -1, 0)) == (void*) -1)
+        {    
+            fprintf(stderr, "Error mapping memory\n");
+            Env::exit(1);
+        }
+        memset(data, 0, nbytes);
+    };
+    void free()
+    {
+        if(munmap(data, nbytes) == -1)
+        {
+            fprintf(stderr, "Error unmapping memory\n");
+            Env::exit(1);
+        }
+    };
+    */
+};
+
+//template <>
+basic_storage<Empty>::basic_storage(uint64_t n_)
+{
+    n = n_;
+    nbytes = n_;
+    assert(nbytes == (n * sizeof(Empty)));
+    if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
+                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
+    {    
+        fprintf(stderr, "Error mapping memory\n");
+        Env::exit(1);
+    }
+    memset(data, 0, nbytes);
+}
+
+//template <>
+basic_storage<Empty>::~basic_storage()
+{
+    if(munmap(data, nbytes) == -1)
+    {
+        fprintf(stderr, "Error unmapping memory\n");
+        Env::exit(1);
+    }
+}
+
+
+template<typename Weight, typename Integer_Type>
+struct CSR
+{
+    CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_);
+    ~CSR();
+    Integer_Type nnz;
+    Integer_Type nrows_plus_one;
+    
+    struct basic_storage<Weight, Integer_Type> *A;
+    
+    Integer_Type A_n;
+    uint64_t A_nbytes;
+    Weight* A_data;
+    
+    Integer_Type* IA_n;
+    uint64_t IA_nbytes;
+    Integer_Type* IA_data;
+    
+    Integer_Type* JA_n;
+    uint64_t JA_nbytes;
+    Integer_Type* JA_data;
+    
+    void allocate(Integer_Type nnz_, Integer_Type nrows_plus_one_);
     void free();
 };
 
-template <typename Type>
-void basic_storage<Type>::allocate(uint64_t n)
+template<typename Weight, typename Integer_Type>
+CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
 {
-    basic_storage<Type>::n = n;
-    basic_storage<Type>::nbytes = n * sizeof(Type);
-    if((this->data = mmap(nullptr, basic_storage<Type>::nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    {    
-        fprintf(stderr, "Error mapping memory\n");
-        std::exit(1);
-    }
-    memset(basic_storage<Type>::data, 0, basic_storage<Type>::nbytes);
+    nnz = nnz_;
+    nrows_plus_one = nrows_plus_one_;
+    
+    //A = new struct basic_storage<Weight,Integer_Type>;
+    
+    //A_n = nnz;
+    //A_nbytes 
+        
 }
 
-template <typename Type>
-void basic_storage<Type>::free()
+/*
+template<typename Weight, typename Integer_Type>
+void CSR<Weight, Integer_Type>::allocate(uint32_t nnz_, uint32_t nrows_plus_one_)
+{        
+    nnz = nnz_;
+    nrows_plus_one = nrows_plus_one_;
+    A = mmap(nullptr, (nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    //(void *) -1)
+    //{
+      //  fprintf(stderr, "Error mapping memory\n");
+        //exit(1);
+    //}
+    memset(CSR<Weight>::A, 0, CSR<Weight>::nnz * sizeof(uint32_t));
+    CSR<Weight>::IA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nrows_plus_one) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    memset(CSR<Weight>::IA, 0, CSR<Weight>::nrows_plus_one * sizeof(uint32_t));
+    CSR<Weight>::JA = (uint32_t*) mmap(nullptr, (CSR<Weight>::nnz) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    memset(CSR<Weight>::JA, 0, CSR<Weight>::nnz * sizeof(uint32_t));
+}    
+    
+
+template<typename Weight>
+void CSR<Weight>::free()
 {
-    if(munmap(basic_storage<Type>::data, basic_storage<Type>::nbytes) == -1)
-    {
-        fprintf(stderr, "Error unmapping memory\n");
-        std::exit(1);
-    }
+    munmap(CSR<Weight>::A, (this->nnz) * sizeof(uint32_t));
+    //{
+    //if(munmap(address, size) == -1) {
+    //    fprintf(stderr, "Error unmapping memory\n");
+      //  exit(1);
+    //}
+
+    munmap(CSR<Weight>::IA, (this->nrows_plus_one) * sizeof(uint32_t));
+    munmap(CSR<Weight>::JA, (this->nnz) * sizeof(uint32_t));    
 }
+*/
+
+
+
+
+
+
 
 /*
  * Index vector to code the sparsity of vectors. The indices will later
@@ -123,6 +266,9 @@ void basic_storage<Type>::free()
  */
 template <typename Type>
 struct IV : basic_storage<Type> {};
+
+
+
 
 
 
