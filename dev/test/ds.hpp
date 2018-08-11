@@ -14,40 +14,45 @@
 /*
  * Triple data structure for storing edges
  */
-template <typename Weight>
+template <typename Weight, typename Integer_Type = uint32_t>
 struct Triple
 {
-    uint32_t row;
-    uint32_t col;
+    Integer_Type row;
+    Integer_Type col;
     Weight weight;
-    Triple(uint32_t row = 0, uint32_t col = 0, Weight weight = 0);
+    Triple(Integer_Type row = 0, Integer_Type col = 0, Weight weight = 0);
     ~Triple();
     void set_weight(Weight &w);
     Weight get_weight();
 };
 
-template <typename Weight>
-Triple<Weight>::Triple(uint32_t row, uint32_t col, Weight weight)
+template <typename Weight, typename Integer_Type>
+Triple<Weight, Integer_Type>::Triple(Integer_Type row, Integer_Type col, Weight weight)
       : row(row), col(col), weight(weight) {};
 
-template <typename Weight>
-Triple<Weight>::~Triple() {};
+template <typename Weight, typename Integer_Type>
+Triple<Weight, Integer_Type>::~Triple() {};
       
-template <typename Weight>
-void Triple<Weight>::set_weight(Weight &w)
+template <typename Weight, typename Integer_Type>
+void Triple<Weight, Integer_Type>::set_weight(Weight &w)
 {
-    Triple<Weight>::weight = w;
+    weight = w;
 }
 
-template <typename Weight>
-Weight Triple<Weight>::get_weight()
+template <typename Weight, typename Integer_Type>
+Weight Triple<Weight, Integer_Type>::get_weight()
 {
-    return(Triple<Weight>::weight);
+    return(weight);
 }
 
+#include <type_traits>
 struct Empty {};
+//typedef typename Integer_Type IT;
+
+//(std::is_same<Weight, Empty>::value)
 
 /* Triple that supports empty weights */
+/*
 template <>
 struct Triple <Empty>
 {
@@ -59,20 +64,34 @@ struct Triple <Empty>
     void set_weight(Empty& w) {};
     bool get_weight() {return(1);};
 };
+*/
+template <typename Integer_Type>
+struct Triple <Empty, Integer_Type>
+{
+    Integer_Type row;
+    union {
+        Integer_Type col;
+        Empty weight;
+    };
+    void set_weight(Empty& w) {};
+    bool get_weight() {return(true);};
+};
 
 /*
  * Functor for passing to std::sort
  * It sorts the Triples using their row index
  * and then their column index
  */
-template <typename Weight>
+template <typename Weight, typename Integer_Type>
 struct Functor
 {
-    bool operator()(const struct Triple<Weight>& a, const struct Triple<Weight>& b)
+    bool operator()(const struct Triple<Weight, Integer_Type> &a, const struct Triple<Weight, Integer_Type> &b)
     {
         return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
     }
 };
+
+
 
 /*
  * Basic storage with mmap
@@ -95,6 +114,7 @@ basic_storage<Weight, Integer_Type>::basic_storage(Integer_Type n_)
 {
     n = n_;
     nbytes = n_ * sizeof(Weight);
+    assert(nbytes == (n * sizeof(Weight)));
     if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
                                                | MAP_PRIVATE, -1, 0)) == (void*) -1)
     {    
@@ -151,6 +171,7 @@ struct basic_storage <Empty>
 //template <>
 basic_storage<Empty>::basic_storage(uint64_t n_)
 {
+    assert(n_ > 0);
     n = n_;
     nbytes = n_;
     assert(nbytes == (n * sizeof(Empty)));
@@ -183,6 +204,8 @@ struct CSR
     Integer_Type nrows_plus_one;
     
     struct basic_storage<Weight, Integer_Type> *A;
+    struct basic_storage<Integer_Type, Integer_Type> *IA;
+    struct basic_storage<Integer_Type, Integer_Type> *JA;
     
     Integer_Type A_n;
     uint64_t A_nbytes;
@@ -205,8 +228,11 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
 {
     nnz = nnz_;
     nrows_plus_one = nrows_plus_one_;
+    A = new struct basic_storage<Weight, Integer_Type>(nnz_);
     
-    A = new struct basic_storage<Weight,Integer_Type>;
+    IA = new struct basic_storage<Integer_Type, Integer_Type>(nrows_plus_one_);
+    
+    JA = new struct basic_storage<Integer_Type, Integer_Type>(nnz_);
     
     //A_n = nnz;
     //A_nbytes 
@@ -214,9 +240,11 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
 }
 
 template<typename Weight, typename Integer_Type>
-CSR<Weight, Integer_Type>::~CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
+CSR<Weight, Integer_Type>::~CSR()
 {
-    
+    delete A;
+    delete IA;
+    delete JA;
 }
 
 /*
