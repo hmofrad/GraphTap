@@ -9,7 +9,7 @@
 //#include "ds.hpp"
 
 using em = Empty;
-using wp = char;   // Weight (default is Empty)
+using wp = uint32_t;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -42,8 +42,8 @@ int main(int argc, char **argv)
     bool transpose = false;
     bool clear_state = false;
 
-    //Graph<em, ip, fp> G;
-    Graph<> G;
+    Graph<wp, ip, fp> G;
+    //Graph<> G;
     G.load_text(file_path, num_vertices, num_vertices);
     Env::tock("Test");
     
