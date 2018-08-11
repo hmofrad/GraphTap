@@ -206,11 +206,17 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
     nnz = nnz_;
     nrows_plus_one = nrows_plus_one_;
     
-    //A = new struct basic_storage<Weight,Integer_Type>;
+    A = new struct basic_storage<Weight,Integer_Type>;
     
     //A_n = nnz;
     //A_nbytes 
         
+}
+
+template<typename Weight, typename Integer_Type>
+CSR<Weight, Integer_Type>::~CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
+{
+    
 }
 
 /*
