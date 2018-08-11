@@ -7,7 +7,6 @@
 #include "ds.hpp"
 #include "matrix.hpp"
 
-
 template<typename Weight = Empty, typename Integer_Type = uint32_t, typename Fractional_Type = float>
 class Graph
 {
@@ -16,11 +15,11 @@ class Graph
         ~Graph();
         
         void load_binary(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       Tiling tiling, bool directed = true, bool transpose = false);
+                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_);
         void load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       Tiling tiling, bool directed = true, bool transpose = false);
+                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_);
         void init(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
-                       Tiling tiling, bool directed, bool transpose);
+                       bool directed, bool transpose, Tiling_type tiling_type);
         void degree();
         void pagerank(uint32_t niters, bool clear_state = false);
         void initialize(Graph<Weight> &G);
@@ -28,8 +27,8 @@ class Graph
 
     private:
         std::string filepath;
-        Integer_Type nvertices;
-        Integer_Type mvertices;
+        Integer_Type nrows;
+        Integer_Type ncols;
         uint64_t nedges;
         bool directed;
         bool transpose;
@@ -50,14 +49,15 @@ class Graph
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Graph<Weight, Integer_Type, Fractional_Type>::Graph() {};// : A(nullptr) {};
+Graph<Weight, Integer_Type, Fractional_Type>::Graph() : A(nullptr) {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
 {
+    delete A;
     /*
     delete Graph<Weight>::A->partitioning;
-    delete Graph<Weight>::A;
+    
     
     delete Graph<Weight>::X;
     delete Graph<Weight>::Y;
@@ -67,33 +67,35 @@ Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Graph<Weight, Integer_Type, Fractional_Type>::init(std::string filepath, Integer_Type nrows, 
-     Integer_Type ncols, Tiling tiling, bool directed, bool transpose)
+void Graph<Weight, Integer_Type, Fractional_Type>::init(std::string filepath_, 
+           Integer_Type nrows_, Integer_Type ncols_, bool directed_, 
+           bool transpose_, Tiling_type tiling_type)
 {
-    Graph<Weight, Integer_Type, Fractional_Type>::filepath  = filepath;
-    Graph<Weight, Integer_Type, Fractional_Type>::nvertices = nrows;
-    Graph<Weight, Integer_Type, Fractional_Type>::mvertices = ncols;
-    Graph<Weight, Integer_Type, Fractional_Type>::nedges    = 0;
-    Graph<Weight, Integer_Type, Fractional_Type>::directed  = directed;
-    Graph<Weight, Integer_Type, Fractional_Type>::transpose = transpose;
-    Graph<Weight, Integer_Type, Fractional_Type>::A 
-        = new Matrix<Weight, Integer_Type, Fractional_Type>(
-            Graph<Weight, Integer_Type, Fractional_Type>::nvertices,
-            Graph<Weight, Integer_Type, Fractional_Type>::mvertices,
-            Env::nranks * Env::nranks, tiling);
+    
+    filepath  = filepath_;
+    nrows = nrows_;
+    ncols = ncols_;
+    nedges    = 0;
+    directed  = directed_;
+    transpose = transpose_;
+    // Initialize matrix
+    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, tiling_type);
 }
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols, Tiling tiling, bool directed, bool transpose)
+void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
 {
     printf("[x]load_text\n");
-    // Initialize graph data
-    Graph<Weight, Integer_Type, Fractional_Type>::init(filepath, nrows, ncols, tiling, directed, transpose);
-    //Graph<Weight>::A->partitioning = new Partitioning<Weight>(nranks, rank, nranks * nranks, Graph<Weight>::A->nrowgrps, Graph<Weight>::A->ncolgrps, tiling);
+    printf("%lu %lu\n", sizeof(Weight), sizeof(Graph<Weight, Integer_Type, Fractional_Type>::nrows));
+    // Initialize graph
+    init(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    //Graph<Weight>::A->init_mat();
     
-    printf("%lu %lu %lu\n", sizeof(Weight), sizeof(Graph<Weight, Integer_Type, Fractional_Type>::nvertices), sizeof(Graph<Weight, Integer_Type, Fractional_Type>::A->ncols)  );
-    //Graph<Weight>::A = new Matrix<Weight>(Graph<Weight>::nvertices, Graph<Weight>::mvertices, nranks * nranks, tiling);
+    
+    
+    
     
     
     /*
@@ -189,6 +191,3 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
     */
 }
-
-
-
