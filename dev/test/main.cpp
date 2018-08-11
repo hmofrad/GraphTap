@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     bool clear_state = false;
 
     Graph<> G;
-    G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
+    G.load_text(file_path, num_vertices, num_vertices);
     Env::tock("Test");
     
     
