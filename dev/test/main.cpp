@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     bool clear_state = false;
 
-    Graph<em, ip, fp> G;
+    Graph<wp, ip, fp> G;
     //Graph<> G;
     G.load(file_path, num_vertices, num_vertices);
     Env::tock("Test");
