@@ -1,5 +1,5 @@
 /*
- * Tiling.hpp: tiling implementation
+ * tiling.hpp: tiling implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
