@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 { 
     Env::init();
     Env::tick();
-    printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
+    //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
     
     
@@ -37,14 +37,14 @@ int main(int argc, char **argv)
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-    std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
+    //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
     bool transpose = false;
     bool clear_state = false;
 
-    Graph<wp, ip, fp> G;
+    Graph<em, ip, fp> G;
     //Graph<> G;
-    G.load_text(file_path, num_vertices, num_vertices);
+    G.load(file_path, num_vertices, num_vertices);
     Env::tock("Test");
     
     
