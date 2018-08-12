@@ -291,15 +291,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
-    // Create the the csr format by allocating the csr data structure
-    // and then Sorting triples and populating the csr
+    /* Check if weights are empty or not */
+    bool has_weight = (std::is_same<Weight, Empty>::value) ? false : true;
+    printf("type=%d\n", has_weight);
+    
+    /* Create the the csr format by allocating the csr data structure
+       and then Sorting triples and populating the csr */
     struct Triple<Weight, Integer_Type> pair;
     Functor<Weight, Integer_Type> f;
     for(uint32_t t: local_tiles)
     {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        std::cout << "rank=" << Env::rank << " " <<  tile.triples->size() << " " <<  tile_height << std::endl;
         
         if(tile.triples->size())
         {
@@ -308,24 +311,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
-
         
         uint32_t i = 0; // CSR Index
         uint32_t j = 1; // Row index
         if(tile.populated)
         {
-            Weight *A = (Weight *) tile.csr->A->data;
+            /* A hack over partial specialization because 
+               we didn't want to replicate the code */
+            Weight *A = NULL;
+            if(has_weight)
+            {
+                A = (Weight *) tile.csr->A->data;
+            }
             Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
             Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
             IA[0] = 0;
-            //A[0] =10;
-            //IA[1] = 11;
-            //printf("%p %d\n", IA, *IA);
-            //printf("IA: %p %d\n", IA + 1, IA[1]);
-            //printf("JA: %p %d\n", JA + 1, JA[1]);
-            //printf("A: %p %f\n", A + 1, A[1]);
-            //printf("v = %d\n", std::is_same<Weight, Empty>::value);
-            
             for (auto& triple : *(tile.triples))
             {
                 pair = rebase(triple);
@@ -334,11 +334,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                     j++;
                     IA[j] = IA[j - 1];
                 }            
-                A[i] = triple.weight; // In case weights are implemented
+                 // In case weights are there
+                if(has_weight)
+                {
+                    A[i] = triple.weight;
+                }
                 IA[j]++;
                 JA[i] = pair.col;    
                 i++;
-                //printf("%d %d %d\n", triple.row, triple.col, triple.get_weight());
+                //printf("%d %d %d\n", triple.row, triple.col, triple.weight);
             }
             
             while(j < tile_height)
@@ -348,20 +352,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
             }   
         }
     }
-    //using t32 = uint32_t;
     
-    bool EMPTY = (std::is_same<Weight, Empty>::value) ? true : false;
-    bool INT;
-    if(EMPTY)
-    {
-        INT = std::is_same<Integer_Type, uint32_t>::value ? true : false;
-    }
-    //pair = tiles.triples[0];
     printf("SIZE=====%lu\n", sizeof(pair));
     
-    del_csr();
     del_triples();
 }
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
