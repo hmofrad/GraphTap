@@ -5,8 +5,12 @@
  */
 
 #include <cmath>
-#include "tiling.hpp" 
 #include <algorithm>
+
+#include "tiling.hpp" 
+
+
+
 
 //#include <type_traits>
 
@@ -77,6 +81,8 @@ class Matrix
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type)
+      //: nrows(nrows_), ncols(ncols_), ntiles(ntiles_), nrowgrps(sqrt(ntiles_)), ncolgrps(ntiles_ / nrowgrps),
+      //  tile_height((nrows_ / nrowgrps) + 1), tile_width((ncols_ / ncolgrps) + 1)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -88,10 +94,7 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, Integ
     
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type);
-    init_matrix();
-    
-
-    
+    init_matrix();   
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -317,7 +320,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         if(tile.populated)
         {
             /* A hack over partial specialization because 
-               we didn't want to replicate the code */
+               we didn't want to duplicate the code for 
+               Empty weights though! */
             Weight *A = NULL;
             if(has_weight)
             {
