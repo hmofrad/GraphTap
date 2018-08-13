@@ -23,6 +23,9 @@ class Tiling
     template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
     friend class Graph;
     
+    template<typename Weight___, typename Integer_Type___, typename Fractional_Type___>
+    friend class Vertex_Program;
+    
     public:    
         Tiling(uint32_t nranks_, uint32_t ntiles_, uint32_t nrowgrps_, uint32_t ncolgrps_, Tiling_type tiling_type_);
         ~Tiling();
