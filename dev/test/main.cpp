@@ -15,6 +15,42 @@ using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
 
+
+
+struct Generic_functions
+{
+    static fp ones(fp x, fp y, fp v, fp s)
+    {
+        return(1);
+    }
+    
+    static fp div(fp x, fp y, fp v, fp s)
+    {
+        if(s)
+        {
+            return(v / s);
+        }
+        else
+        {
+            return(0);
+        }
+    }
+    
+    static fp assign(fp x, fp y, fp v, fp s)
+    {
+        return(y);
+    }
+    
+    static fp rank(fp x, fp y, fp v, fp s)
+    {
+        fp alpha = 0.1;
+        return(alpha + (1 - alpha) * y);
+    }
+};
+
+
+
+
 int main(int argc, char **argv)
 { 
     Env::init();
@@ -41,8 +77,7 @@ int main(int argc, char **argv)
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
-    bool transpose = false;
-    bool clear_state = false;
+    bool transpose = true;
 
     Graph<wp, ip, fp> G;
     //Graph<> G;
@@ -51,9 +86,30 @@ int main(int argc, char **argv)
       //  Env::tock("Test");
     
     Vertex_Program<wp, ip, fp> V(G);
-    if(!Env::rank)
-        printf("MAIN DONE\n");
-    //V.test();
+    //if(!Env::rank)
+        //printf("MAIN DONE\n");
+    fp x = 0, y = 0, v = 0, s = 0;
+    V.init(x, y, v, s);
+    
+    Generic_functions f;
+    V.scatter(f.ones);    
+    V.gather();
+    V.combine(f.assign);
+    G.free();
+    
+    Graph<wp, ip, fp> GR;
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, Tiling_type::_2D_);
+    
+    fp alpha = 0.1;
+    x = 0, y = 0, v = alpha, s = 0;
+    Vertex_Program<wp, ip, fp> VR(GR);
+    //VR.init(x, y, v, V);
+    
+    
+    
+    GR.free();
+    
+    //Graph<Weight>::combine(f.assign);
     
     
     Env::finalize();
