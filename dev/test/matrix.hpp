@@ -284,10 +284,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             printf("\n");
             if(i > skip)
             {
-                for (uint32_t j = 0; j < ncolgrps; j++)  
-                {
-                    printf(".\n.\n.\n");
-                }
+                printf(".\n.\n.\n");
                 break;
             }
         }
@@ -315,6 +312,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         {
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
             tile.allocated = true;
+            //if(!Env::rank)
+                //printf("NNZ=%d\n", tile.csr->nrows_plus_one);
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
@@ -326,7 +325,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
             /* A hack over partial specialization because 
                we didn't want to duplicate the code for 
                Empty weights though! */
-            Weight *A = NULL;
+            Weight *A = nullptr;
             if(has_weight)
             {
                 A = (Weight *) tile.csr->A->data;
@@ -362,6 +361,34 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
     }
     
     //printf("SIZE=====%lu\n", sizeof(pair));
+    /*
+    // Print tiling assignment
+    if(Env::is_master)
+    {    
+        uint32_t skip = 15;
+        for (uint32_t i = 0; i < nrowgrps; i++)
+        {
+            for (uint32_t j = 0; j < ncolgrps; j++)  
+            {
+                auto& tile = tiles[i][j];
+                printf("%d ", tile.allocated);
+                if(j > skip)
+                {
+                    printf("...");
+                    break;
+                }
+            }
+            printf("\n");
+            if(i > skip)
+            {
+                printf(".\n.\n.\n");
+                break;
+            }
+        }
+        printf("\n");
+    }
+    */
+
     
     del_triples();
 }
