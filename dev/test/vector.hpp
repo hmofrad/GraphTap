@@ -1,5 +1,8 @@
 /*
- * vector.hpp: Vector implementation
+ * vector.hpp: Vector and segment implementations
+ * A vector is consists of multiple segments.
+ * The number of segments is equal to the number
+ * of column gorups.
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -10,36 +13,61 @@ struct Segment
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Vector;
     
-    Segment();
-    Segment(Integer_Type tile_height, Integer_Type tile_width, uint32_t rg, uint32_t cg, uint32_t rank_);
-    ~Segment();
+    //template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
+    //friend class Vertex_Program;
     
-    struct basic_storage<Weight, Integer_Type> *D;
+    Segment();
+    Segment(Integer_Type nrows_, Integer_Type ncols_, 
+            uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, bool allocated_);
+    ~Segment();
+    void allocate();
+    void del_seg();
+    
+    struct basic_storage<Fractional_Type, Integer_Type> *D;
 
-    uint32_t nrows, ncols;
+    Integer_Type nrows, ncols;
     uint32_t rg, cg;
-    uint32_t rank;
+    uint32_t leader_rank;
+    bool allocated;
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::Segment() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type tile_height,
-                Integer_Type tile_width, uint32_t rg, uint32_t cg, uint32_t rank_)
+Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type nrows_, Integer_Type ncols_,
+                              uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, bool allocated_)
 {
-    D = new struct basic_storage<Fractional_Type, Integer_Type>(tile_height);
-
-    nrows  = tile_height;
-    ncols  = tile_width;
-    rg     = rg;
-    cg     = cg;
-    rank   = rank_;
-        
+    nrows  = nrows_;
+    ncols  = ncols_;
+    rg     = rg_;
+    cg     = cg_;
+    leader_rank   = leader_rank_;       
+    allocated = allocated_;
+    D = nullptr;
+    
+    //if(allocated)
+    //{
+      //  D = allocate();
+    //}
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
+{
+    //delete D;
+};
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Segment<Weight, Integer_Type, Fractional_Type>::allocate()
+{
+    if(!Env::rank)
+        printf("NROWS%d\n", nrows);
+    D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Segment<Weight, Integer_Type, Fractional_Type>::del_seg()
 {
     delete D;
 }
@@ -51,17 +79,21 @@ class Vector
     friend class Graph;
     
     public:
-        Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, uint32_t owned_segment_,
-               std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments);
+        Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
+               Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
+               std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments_);
+       Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
+               Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
+               std::vector<uint32_t> &leader_ranks);
         ~Vector();
-    
+    std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
     private:
         Integer_Type nrows, ncols;
         Integer_Type nrowgrps, ncolgrps;
-        Integer_Type tile_height, tile_width; // == segment_height
+        Integer_Type tile_height, tile_width;
         uint32_t owned_segment;
     
-        std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
+        
         std::vector<uint32_t> local_segments;
         
         void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<uint32_t>& local_segments);
@@ -70,117 +102,104 @@ class Vector
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integer_Type ncols_,
-                uint32_t ntiles_, uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks,
-                std::vector<uint32_t> &local_segments)
-    //: nrows(nrows_), ncols(ncols_), nrowgrps(sqrt(ntiles_)), ncolgrps(ntiles_/nrowgrps),
-    //  tile_height((nrows_ / nrowgrps) + 1), tile_width((ncols_ / ncolgrps) + 1), owned_segment(owned_segment_)
+               uint32_t nrowgrps_, uint32_t ncolgrps_, Integer_Type tile_height_, Integer_Type tile_width_,
+               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments_)
 {
     nrows = nrows_;
     ncols = ncols_;
-    nrowgrps = sqrt(ntiles_);
-    ncolgrps = ntiles_ / nrowgrps;
-    tile_height = (nrows_ / nrowgrps) + 1;
-    tile_width = (ncols_ / ncolgrps) + 1;
+    nrowgrps = nrowgrps_;
+    ncolgrps = ncolgrps_;
+    tile_height = tile_height_;
+    tile_width = tile_width_;
     owned_segment = owned_segment_;
     
     // Reserve the 1D vector of segments. 
-    //segments.resize(ncolgrps);
-    Segment<Weight, Integer_Type, Fractional_Type> segment;
-    //for (uint32_t i = 0; i < ncolgrps; i++)
-    //{
-        //segment = new Segment<Weight, Integer_Type, Fractional_Type>(tile_height, tile_width, i, i, Env::rank);
-    //}
-     
-    /*
-    
-    for (uint32_t i = 0; i < Vector<Weight, Integer_Type, Fractional_Type>::ncolgrps; i++)
+    segments.resize(ncolgrps);
+    for (uint32_t i = 0; i < ncolgrps; i++)
     {
-        segments[i].n      = tile_height;
-        segments[i].nbytes = tile_height * sizeof(Integer_Type);
         segments[i].nrows  = tile_height;
         segments[i].ncols  = tile_width;
         segments[i].rg     = i;
         segments[i].cg     = i;
-        segments[i].rank   = diag_ranks[i]; // leader_ranks
+        segments[i].leader_rank = leader_ranks[i];
+        segments[i].allocated = false;
         
-        if(diag_ranks[i] == rank)
+        if(leader_ranks[i] == Env::rank)
         {
-            segments[i] = new Segment<Weight, Integer_Type, Fractional_Type>();
-            //segments[i].allocate();  
+            segments[i].allocate();
+            //segments[i].D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
+            segments[i].allocated = true;
         }
     }
     
-    Vector<Weight>::local_segments = local_segments;
+    local_segments = local_segments_;
     
-    for(uint32_t s: Vector<Weight>::local_segments)
+    for(uint32_t s: local_segments)
     {
-        if(Vector<Weight>::segments[s].rank != rank)
+        
+        if(segments[s].leader_rank != Env::rank)
         {
-            Vector<Weight>::segments[s].allocate();
+            segments[s].allocate();
+            //segments[s].D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
+            segments[s].allocated = true;
         }
     }
-    */
+    if(!Env::rank)
+    {
+        for (uint32_t i = 0; i < ncolgrps; i++)
+        {
+        
+                printf("INFO: %d %d %d\n", i, segments[i].allocated, segments[i].nrows);
+        }
+    }
+};
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>    
+Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integer_Type ncols_,
+               uint32_t nrowgrps_, uint32_t ncolgrps_, Integer_Type tile_height_, Integer_Type tile_width_,
+               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks)
+{
+    nrows = nrows_;
+    ncols = ncols_;
+    nrowgrps = nrowgrps_;
+    ncolgrps = ncolgrps_;
+    tile_height = tile_height_;
+    tile_width = tile_width_;
+    owned_segment = owned_segment_;
     
+    // Reserve the 1D vector of segments. 
+    segments.resize(ncolgrps);
+    for (uint32_t i = 0; i < ncolgrps; i++)
+    {
+        segments[i].nrows  = tile_height;
+        segments[i].ncols  = tile_width;
+        segments[i].rg     = i;
+        segments[i].cg     = i;
+        segments[i].leader_rank   = leader_ranks[i];
+        segments[i].allocated = false;
+        
+        if(leader_ranks[i] == Env::rank)
+        {
+            segments[i].allocate();
+            //segments[i].D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
+            segments[i].allocated = true;
+        }
+    }
 };
     
-
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vector<Weight, Integer_Type, Fractional_Type>::~Vector() {};
-/*
-template<typename Weight>
-void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks, std::vector<uint32_t>& local_segments)
+Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
 {
-    // Reserve the 1D vector of segments. 
-    Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
-
-    for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
+    for (uint32_t i = 0; i < ncolgrps; i++)
     {
-        Vector<Weight>::segments[i].n = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].nbytes = Vector<Weight>::tile_height * sizeof(fp_t);
-        Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
-        Vector<Weight>::segments[i].rg = i;
-        Vector<Weight>::segments[i].cg = i;
-        Vector<Weight>::segments[i].rank = diag_ranks[i];
-        
-        if(diag_ranks[i] == rank)
+        if(segments[i].allocated)
         {
-            Vector<Weight>::segments[i].allocate();  
+            //if(!Env::rank)
+              //  printf(">>%d %d %p\n", i, segments[i].nrows, segments[i].D->data);
+            ///struct basic_storage<Fractional_Type, Integer_Type> *DD = segments[i].D;
+            //delete DD;
+            //delete segments[i].D;
+            segments[i].del_seg();
         }
     }
-    
-    Vector<Weight>::local_segments = local_segments;
-    
-    for(uint32_t s: Vector<Weight>::local_segments)
-    {
-        if(Vector<Weight>::segments[s].rank != rank)
-        {
-            Vector<Weight>::segments[s].allocate();
-        }
-    }
-}
-
-
-template<typename Weight>
-void Vector<Weight>::init_vec(std::vector<uint32_t>& diag_ranks)
-{
-    // Reserve the 1D vector of segments. 
-    Vector<Weight>::segments.resize(Vector<Weight>::ncolgrps);
-
-    for (uint32_t i = 0; i < Vector<Weight>::ncolgrps; i++)
-    {
-        Vector<Weight>::segments[i].n = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].nbytes = Vector<Weight>::tile_height * sizeof(fp_t);
-        Vector<Weight>::segments[i].nrows = Vector<Weight>::tile_height;
-        Vector<Weight>::segments[i].ncols = Vector<Weight>::tile_width;
-        Vector<Weight>::segments[i].rg = i;
-        Vector<Weight>::segments[i].cg = i;
-        Vector<Weight>::segments[i].rank = diag_ranks[i];
-        if(diag_ranks[i] == rank)
-        {
-            Vector<Weight>::segments[i].allocate();
-            Vector<Weight>::local_segments.push_back(i);
-        }
-    }
-}
-*/
+};
