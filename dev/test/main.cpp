@@ -6,6 +6,7 @@
  
 #include "env.hpp"
 #include "graph.hpp"
+#include "vertex_program.hpp"
 //#include "ds.hpp"
 
 using em = Empty;
@@ -17,7 +18,8 @@ using fp = double;   // Fractional precision (default is float)
 int main(int argc, char **argv)
 { 
     Env::init();
-    Env::tick();
+    ///if(!Env::rank)
+       // Env::tick();
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
     
@@ -32,7 +34,7 @@ int main(int argc, char **argv)
         Env::exit(1);
     }
     
-    double start, finish;
+
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
@@ -45,9 +47,13 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;
     //Graph<> G;
     G.load(file_path, num_vertices, num_vertices);
-    Env::tock("Test");
+    //if(!Env::rank);
+      //  Env::tock("Test");
     
-    
+    Vertex_Program<wp, ip, fp> V(G);
+    if(!Env::rank)
+        printf("MAIN DONE\n");
+    //V.test();
     
     
     Env::finalize();
