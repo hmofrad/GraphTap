@@ -53,16 +53,11 @@ Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type nrows_, Int
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
-{
-    //delete D;
-};
+Segment<Weight, Integer_Type, Fractional_Type>::~Segment() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::allocate()
 {
-    if(!Env::rank)
-        printf("NROWS%d\n", nrows);
     D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
 }
 
@@ -86,15 +81,18 @@ class Vector
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
                std::vector<uint32_t> &leader_ranks);
         ~Vector();
-    std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
+        
+        std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
+        std::vector<uint32_t> local_segments;
+        uint32_t owned_segment;
     private:
         Integer_Type nrows, ncols;
         Integer_Type nrowgrps, ncolgrps;
         Integer_Type tile_height, tile_width;
-        uint32_t owned_segment;
+        
     
         
-        std::vector<uint32_t> local_segments;
+        
         
         void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<uint32_t>& local_segments);
         void init_vec(std::vector<uint32_t> &diag_ranks);
@@ -144,6 +142,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
             segments[s].allocated = true;
         }
     }
+    /*
     if(!Env::rank)
     {
         for (uint32_t i = 0; i < ncolgrps; i++)
@@ -152,6 +151,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
                 printf("INFO: %d %d %d\n", i, segments[i].allocated, segments[i].nrows);
         }
     }
+    */
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>    
@@ -181,7 +181,6 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         if(leader_ranks[i] == Env::rank)
         {
             segments[i].allocate();
-            //segments[i].D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
             segments[i].allocated = true;
         }
     }
