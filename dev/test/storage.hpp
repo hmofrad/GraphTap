@@ -38,8 +38,6 @@ basic_storage<Weight, Integer_Type>::basic_storage(Integer_Type n_)
 template <typename Weight, typename Integer_Type>
 basic_storage<Weight, Integer_Type>::~basic_storage()
 {
-    if(!Env::rank)
-    printf("DELETE %p %d\n", data, n);
     if(munmap(data, nbytes) == -1)
     {
         fprintf(stderr, "Error unmapping memory\n");
