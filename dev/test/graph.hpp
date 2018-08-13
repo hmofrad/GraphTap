@@ -10,13 +10,15 @@
 
 #include "triple.hpp"
 #include "csr.hpp"
-#include "vector.hpp"
 #include "matrix.hpp"
 
 
-template<typename Weight = Empty, typename Integer_Type = uint32_t, typename Fractional_Type = float>
+template<typename Weight = char, typename Integer_Type = uint32_t, typename Fractional_Type = float>
 class Graph
 {
+    template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
+    friend class Vertex_Program;
+    
     public:    
         Graph();
         ~Graph();
@@ -28,21 +30,15 @@ class Graph
                        bool directed, bool transpose, Tiling_type tiling_type);
         void degree();
         void pagerank(uint32_t niters, bool clear_state = false);
-        void initialize(Graph<Weight> &G);
         void free(bool clear_state = true);
 
     private:
         std::string filepath;
-        Integer_Type nrows;
-        Integer_Type ncols;
+        Integer_Type nrows, ncols;
         uint64_t nedges;
         bool directed;
         bool transpose;
-        Matrix<Weight, Integer_Type, Fractional_Type>* A;
-        Vector<Weight, Integer_Type, Fractional_Type>* X;
-        Vector<Weight, Integer_Type, Fractional_Type>* Y;
-        Vector<Weight, Integer_Type, Fractional_Type>* V;
-        Vector<Weight, Integer_Type, Fractional_Type>* S;
+        Matrix<Weight, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
                bool directed, bool transpose, Tiling_type tiling_type);
@@ -66,9 +62,6 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
 {
     delete A;
-    delete X;
-    //delete Y;
-    //delete S;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -138,32 +131,15 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
 {
     // Initialize graph
+    //printf("INIT_G\n");
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    
     // Read graph
     read_text();
+    
+    // Create CSR format
     A->init_csr();
     
-    uint32_t owned_segment = std::distance(A->leader_ranks.begin(), 
-            std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-    
-    
-    
-
-    
-    X = new Vector<Weight, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment, A->leader_ranks, A->local_col_segments);
-    
-    
-    
-    
-    //Y = new Vector<Weight, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment);
-    //V = new Vector<Weight, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment);
-    //S = new Vector<Weight, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment);
-    /*
-    Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
-    Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
-    Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
-    */
     A->del_csr();
 }
 
@@ -177,31 +153,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     // Read graph
     read_binary();
     A->init_csr();
-    
-   uint32_t owned_segment = std::distance(A->leader_ranks.begin(), 
-            std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-    
-    
-    
-
-X = new Vector<Weight, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment, A->leader_ranks, A->local_col_segments);
-    
-    printf(">>>%d\n", X->tile_width);
-    
-    //Graph<Weight, Integer_Type, Fractional_Type>::X = new Vector<Weight, Integer_Type, Fractional_Type>(nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::V = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::S = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    
-    //Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
-    //Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
-    //Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    //Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
     A->del_csr();
 }
-
-
-
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
@@ -233,7 +186,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
     struct Triple<Weight, Integer_Type> triple;
     struct Triple<Weight, Integer_Type> pair;
     std::istringstream iss;
-
     while (std::getline(fin, line) && !line.empty())
     {
         iss.clear();
@@ -265,7 +217,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         }
         offset = fin.tellg();
     }
-    
     fin.close();
     assert(offset == filesize);   
 }
@@ -335,6 +286,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
 template<typename Integer_Type, typename Fractional_Type>
 class Graph<Empty, Integer_Type, Fractional_Type>
 {
+    template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
+    friend class Vertex_Program;
+    
     public:    
         Graph();
         ~Graph();
@@ -352,16 +306,11 @@ class Graph<Empty, Integer_Type, Fractional_Type>
 
     private:
         std::string filepath;
-        Integer_Type nrows;
-        Integer_Type ncols;
+        Integer_Type nrows, ncols;
         uint64_t nedges;
         bool directed;
         bool transpose;
-        Matrix<Empty, Integer_Type, Fractional_Type>* A;
-        Vector<Empty, Integer_Type, Fractional_Type>* X;
-        //Vector<Weight>* Y;
-        //Vector<Weight>* V;
-        //Vector<Weight>* S;
+        Matrix<Empty, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
                bool directed, bool transpose, Tiling_type tiling_type);
@@ -387,16 +336,6 @@ template<typename Integer_Type, typename Fractional_Type>
 Graph<Empty, Integer_Type, Fractional_Type>::~Graph()
 {
     delete A;
-    delete X;
-    /*
-    delete Graph<Weight>::A->partitioning;
-    
-    
-    delete Graph<Weight>::X;
-    delete Graph<Weight>::Y;
-    delete Graph<Weight>::V;
-    delete Graph<Weight>::S;
-    */
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -469,30 +408,6 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
     // Read graph
     read_text();
     A->init_csr();
-    
-   uint32_t owned_segment = std::distance(A->leader_ranks.begin(), 
-            std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-    
-    X = new Vector<Empty, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment, A->leader_ranks, A->local_col_segments);
-
-    
-    printf(">>>%d\n", X->tile_width);
-    /*
-    Graph<Weight>::A->init_csr();
-    Graph<Weight>::A->init_bv();
-    
-    uint32_t diag_segment = distance(Graph<Weight>::A->diag_ranks.begin(), find(Graph<Weight>::A->diag_ranks.begin(), Graph<Weight>::A->diag_ranks.end(), rank));
-    
-    Graph<Weight>::X = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    Graph<Weight>::V = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    Graph<Weight>::S = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    
-    Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
-    Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
-    Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
-    */
     A->del_csr();
 }
 
@@ -568,23 +483,6 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepa
     // Read graph
     read_binary();
     A->init_csr();
-    
-   uint32_t owned_segment = std::distance(A->leader_ranks.begin(), 
-            std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-    
-    
-    X = new Vector<Empty, Integer_Type, Fractional_Type>(nrows,  ncols, Env::nranks * Env::nranks, owned_segment, A->leader_ranks, A->local_col_segments); 
-    printf(">>>%d\n", X->tile_width);
-    
-    //Graph<Weight>::X = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::Y = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::V = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    //Graph<Weight>::S = new Vector<Weight>(Graph<Weight>::nvertices,  Graph<Weight>::mvertices, nranks * nranks, diag_segment);
-    
-    //Graph<Weight>::X->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->local_col_segments);
-    //Graph<Weight>::Y->init_vec(Graph<Weight>::A->diag_ranks, Graph<Weight>::A->rowgrp_ranks_accu_seg);
-    //Graph<Weight>::V->init_vec(Graph<Weight>::A->diag_ranks);
-    //Graph<Weight>::S->init_vec(Graph<Weight>::A->diag_ranks);
     A->del_csr();
 }
 
@@ -635,4 +533,3 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
     fin.close();
     assert(offset == filesize);
 }
-
