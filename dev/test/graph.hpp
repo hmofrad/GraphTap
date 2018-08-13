@@ -28,9 +28,10 @@ class Graph
                        bool directed, bool transpose, Tiling_type tiling_type);
         void load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols,
                        bool directed, bool transpose, Tiling_type tiling_type);
-        void degree();
-        void pagerank(uint32_t niters, bool clear_state = false);
-        void free(bool clear_state = true);
+        void free();                            
+        //void degree();
+        //void pagerank(uint32_t niters, bool clear_state = false);
+        //void free(bool clear_state = true);
 
     private:
         std::string filepath;
@@ -45,14 +46,14 @@ class Graph
         void read_text();
         void read_binary();
         
-        std::vector<MPI_Request> out_requests;
-        std::vector<MPI_Request> in_requests;
+        //std::vector<MPI_Request> out_requests;
+        //std::vector<MPI_Request> in_requests;
         
-        void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
-        void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void gather();
-        void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void apply();
+        //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
+        //void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        //void gather();
+        //void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        //void apply();
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -62,6 +63,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
 {
     delete A;
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Graph<Weight, Integer_Type, Fractional_Type>::free()
+{
+    A->del_csr();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -85,7 +92,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
 {
-        int buffer_len = 100;
+    int buffer_len = 100;
     char buffer[buffer_len];
     memset(buffer, '\n', buffer_len);
     
@@ -140,7 +147,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     // Create CSR format
     A->init_csr();
     
-    A->del_csr();
+    //A->del_csr();
 }
 
 
@@ -153,7 +160,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     // Read graph
     read_binary();
     A->init_csr();
-    A->del_csr();
+    //A->del_csr();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -299,10 +306,10 @@ class Graph<Empty, Integer_Type, Fractional_Type>
                        bool directed, bool transpose, Tiling_type tiling_type);
         void load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols,
                        bool directed, bool transpose, Tiling_type tiling_type);
-        void degree();
-        void pagerank(uint32_t niters, bool clear_state = false);
-        void initialize(Graph<Empty> &G);
-        void free(bool clear_state = true);
+        //void degree();
+        //void pagerank(uint32_t niters, bool clear_state = false);
+        //void initialize(Graph<Empty> &G);
+        void free();
 
     private:
         std::string filepath;
@@ -318,14 +325,14 @@ class Graph<Empty, Integer_Type, Fractional_Type>
         void read_binary();
         void parse_triple(std::istringstream &iss, struct Triple<Empty, Integer_Type> &triple, bool transpose);
         
-        std::vector<MPI_Request> out_requests;
-        std::vector<MPI_Request> in_requests;
+        //std::vector<MPI_Request> out_requests;
+        //std::vector<MPI_Request> in_requests;
         
-        void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
-        void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void gather();
-        void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void apply();
+        //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
+        //void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        //void gather();
+        //void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        //void apply();
 };
 
 
@@ -336,6 +343,12 @@ template<typename Integer_Type, typename Fractional_Type>
 Graph<Empty, Integer_Type, Fractional_Type>::~Graph()
 {
     delete A;
+}
+
+template<typename Integer_Type, typename Fractional_Type>
+void Graph<Empty, Integer_Type, Fractional_Type>::free()
+{
+    A->del_csr();
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -408,7 +421,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
     // Read graph
     read_text();
     A->init_csr();
-    A->del_csr();
+    //A->del_csr();
 }
 
 template<typename Integer_Type, typename Fractional_Type>
