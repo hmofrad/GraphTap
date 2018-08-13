@@ -28,7 +28,7 @@ struct Tile2D
     uint32_t ith, jth, nth; // ith row, jth column and nth local tile
     uint32_t kth; // kth global tile
     uint32_t rank;
-    bool populated;
+    bool allocated;
 }; 
  
  
@@ -38,14 +38,17 @@ class Matrix
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Graph;
     
+    template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
+    friend class Vertex_Program;
+    
     public:    
         Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type);
         ~Matrix();
 
     private:
         Integer_Type nrows, ncols;
-        Integer_Type tile_height, tile_width;    
         uint32_t ntiles, nrowgrps, ncolgrps;
+        Integer_Type tile_height, tile_width;    
         
         Tiling *tiling;
 
@@ -176,8 +179,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.jth = tile.cg   / tiling->rowgrp_nranks;
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
-            tile.kth   = (tile.rg * tiling->ncolgrps) + tile.cg;
-            tile.populated = false;
+            tile.allocated = false;
         }
     }
     
@@ -210,6 +212,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             auto &tile = tiles[i][j];
             tile.rg = i;
             tile.cg = j;
+            tile.kth   = (tile.rg * tiling->ncolgrps) + tile.cg;
             if(tile.rank == Env::rank)
             {
                 pair.row = i;
@@ -256,13 +259,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Initialize triples 
     for(uint32_t t: local_tiles)
     {
+        
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
     }
     
     // Print tiling assignment
-    if(!Env::is_master)
+    if(Env::is_master)
     {    
         uint32_t skip = 15;
         for (uint32_t i = 0; i < nrowgrps; i++)
@@ -296,7 +300,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
     /* Check if weights are empty or not */
     bool has_weight = (std::is_same<Weight, Empty>::value) ? false : true;
-    printf("type=%d\n", has_weight);
+    //printf("type=%d\n", has_weight);
     
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
@@ -310,14 +314,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         if(tile.triples->size())
         {
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
-            tile.populated = true;
+            tile.allocated = true;
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
         
         uint32_t i = 0; // CSR Index
         uint32_t j = 1; // Row index
-        if(tile.populated)
+        if(tile.allocated)
         {
             /* A hack over partial specialization because 
                we didn't want to duplicate the code for 
@@ -357,7 +361,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         }
     }
     
-    printf("SIZE=====%lu\n", sizeof(pair));
+    //printf("SIZE=====%lu\n", sizeof(pair));
     
     del_triples();
 }
@@ -371,7 +375,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
     {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        if(tile.populated)
+        if(tile.allocated)
         {
             delete tile.csr;
         }
