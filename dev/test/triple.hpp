@@ -42,6 +42,7 @@ Weight Triple<Weight, Integer_Type>::get_weight()
 }
 
 struct Empty {};
+
 template <typename Integer_Type>
 struct Triple <Empty, Integer_Type>
 {
