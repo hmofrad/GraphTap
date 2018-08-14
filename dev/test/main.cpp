@@ -10,7 +10,7 @@
 //#include "ds.hpp"
 
 using em = Empty;
-using wp = uint32_t;   // Weight (default is Empty)
+using wp = Empty;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -85,9 +85,13 @@ int main(int argc, char **argv)
     //if(!Env::rank);
       //  Env::tock("Test");
     
+    //G.free();
+    
+    
     Vertex_Program<wp, ip, fp> V(G);
-    //if(!Env::rank)
-        //printf("MAIN DONE\n");
+    
+    
+    
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
     
@@ -97,21 +101,39 @@ int main(int argc, char **argv)
     V.combine(f.assign);
     G.free();
     
+    
+    
+    Env::barrier();
+    
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, Tiling_type::_2D_);
     
     fp alpha = 0.1;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
-    //VR.init(x, y, v, V);
+    VR.init(x, y, v, &V);
+    V.free();
+    uint32_t iter = 0;
+    uint32_t niters = num_iterations;
     
     
-    
+    while(iter < niters)
+    {
+        iter++;
+        VR.scatter(f.div);
+        VR.gather();
+        VR.combine(f.rank);
+        if(!Env::rank)
+            printf("Pagerank,iter=%d\n", iter);
+    }
+    VR.free();
     GR.free();
+    
+    
     
     //Graph<Weight>::combine(f.assign);
     
-    
+    //Env::barrier();
     Env::finalize();
     return(0);
     
