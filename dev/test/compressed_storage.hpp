@@ -6,6 +6,12 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
+enum Compression_type
+{
+  _CSR_,
+  _CSC_
+};
+ 
 #include "basic_storage.hpp"
  
 template<typename Weight, typename Integer_Type>
