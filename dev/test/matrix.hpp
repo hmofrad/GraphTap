@@ -23,6 +23,7 @@ struct Tile2D
     friend class Matrix;
     std::vector<struct Triple<Weight, Integer_Type>> *triples;
     struct CSR<Weight, Integer_Type> *csr;
+    struct CSC<Weight, Integer_Type> *csc;
     //struct BV<char> *bv;
     uint32_t rg, cg; // Row group, Column group
     uint32_t ith, jth, nth; // ith row, jth column and nth local tile
@@ -70,8 +71,10 @@ class Matrix
         void init_matrix();
         void del_triples();
         void init_csr();
+        void init_csc();
         void init_bv();
         void del_csr();
+        void del_csc();
         
         struct Triple<Weight, Integer_Type> tile_of_local_tile(const uint32_t local_tile);
         struct Triple<Weight, Integer_Type> tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
@@ -193,7 +196,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     {
         for (uint32_t j = i; j < ncolgrps; j++)  
         {
-            if(not (std::find(leader_ranks.begin(), leader_ranks.end(), tiles[i][j].rank)
+            if(not (std::find(leader_ranks.begin(), leader_ranks.end(), tiles[j][i].rank)
                  != leader_ranks.end()))
             {
                 std::swap(tiles[j], tiles[i]);
@@ -201,7 +204,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             }
         }
         leader_ranks[i] = tiles[i][i].rank;
+        //if(!Env::rank)
+          //  printf("%d ", leader_ranks[i]);
     }
+    //if(!Env::rank)
+      //  printf("\n");
     
     //Calculate local tiles and local column segments
     struct Triple<Weight, Integer_Type> pair;
@@ -268,7 +275,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Print tiling assignment
     if(Env::is_master)
     {    
-        uint32_t skip = 15;
+        uint32_t skip = 16;
         for (uint32_t i = 0; i < nrowgrps; i++)
         {
             for (uint32_t j = 0; j < ncolgrps; j++)  
@@ -302,7 +309,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
     struct Triple<Weight, Integer_Type> pair;
-    Functor<Weight, Integer_Type> f;
+    RowSort<Weight, Integer_Type> f;
     for(uint32_t t: local_tiles)
     {
         pair = tile_of_local_tile(t);
@@ -312,8 +319,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         {
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
             tile.allocated = true;
-            //if(!Env::rank)
-                //printf("NNZ=%d\n", tile.csr->nrows_plus_one);
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
@@ -358,38 +363,130 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 IA[j] = IA[j - 1];
             }   
         }
-    }
-    
-    //printf("SIZE=====%lu\n", sizeof(pair));
-    /*
-    // Print tiling assignment
-    if(Env::is_master)
-    {    
-        uint32_t skip = 15;
-        for (uint32_t i = 0; i < nrowgrps; i++)
-        {
-            for (uint32_t j = 0; j < ncolgrps; j++)  
-            {
-                auto& tile = tiles[i][j];
-                printf("%d ", tile.allocated);
-                if(j > skip)
-                {
-                    printf("...");
-                    break;
-                }
-            }
-            printf("\n");
-            if(i > skip)
-            {
-                printf(".\n.\n.\n");
-                break;
-            }
-        }
-        printf("\n");
-    }
-    */
+    }    
+    del_triples();
+}
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
+{
+    bool has_weight = (std::is_same<Weight, Empty>::value) ? false : true;
     
+    struct Triple<Weight, Integer_Type> pair;
+    ColSort<Weight, Integer_Type> f;
+    for(uint32_t t: local_tiles)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        if(tile.triples->size())
+        {
+            tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
+            tile.allocated = true;
+        }        
+        
+        std::sort(tile.triples->begin(), tile.triples->end(), f);
+        
+        uint32_t i = 0; // CSR Index
+        uint32_t j = 1; // Row index
+        if(tile.allocated)
+        {
+            Weight *VAL = nullptr;
+            if(has_weight)
+            {
+                VAL = (Weight *) tile.csc->VAL->data;
+            }
+            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data; // JA
+            Integer_Type *COL_PTR = (Integer_Type *) tile.csc->COL_PTR->data; // IA
+            COL_PTR[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                pair = rebase(triple);
+                while((j - 1) != pair.col)
+                {
+                    j++;
+                    COL_PTR[j] = COL_PTR[j - 1];
+                }            
+                 // In case weights are there
+                if(has_weight)
+                {
+                    VAL[i] = triple.weight;
+                }
+                COL_PTR[j]++;
+                ROW_INDEX[i] = pair.row;    
+                i++;
+
+                //printf("%d %d %d %d %d\n", t, triple.row, triple.col, pair.row, pair.col);
+                //i++;
+            }
+            
+            while(j < tile_width)
+            {
+                j++;
+                COL_PTR[j] = COL_PTR[j - 1];
+            }  
+            
+            /*
+        uint32_t k = 0;
+        for(i = 0; i < tile.csc->ncols_plus_one - 1; i++)
+        {
+            uint32_t nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
+                for(j = 0; j < nnz_per_col; j++)
+                {
+                    printf("%d %d\n", i, ROW_INDEX[k]);
+                    k++;
+                }
+        }
+            printf("%d\n", tile.csc->ncols_plus_one );
+*/            
+        }
+
+        
+        
+        
+        //delete VAL;
+    //delete ROW_INDEX;
+    //delete COL_PTR;
+    //delete A; val 
+    //delete IA; row_ptr
+    //delete JA; col
+        /*
+        
+            Weight *A = nullptr;
+            if(has_weight)
+            {
+                A = (Weight *) tile.csr->A->data;
+            }
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
+            IA[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                pair = rebase(triple);
+                while((j - 1) != pair.row)
+                {
+                    j++;
+                    IA[j] = IA[j - 1];
+                }            
+                 // In case weights are there
+                if(has_weight)
+                {
+                    A[i] = triple.weight;
+                }
+                IA[j]++;
+                JA[i] = pair.col;    
+                i++;
+                //printf("%d %d %d\n", triple.row, triple.col, triple.weight);
+            }
+            
+            while(j < tile_height)
+            {
+                j++;
+                IA[j] = IA[j - 1];
+            }   
+        }
+        */
+    }    
     del_triples();
 }
 
@@ -404,14 +501,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
         auto& tile = tiles[pair.row][pair.col];
         if(tile.allocated)
         {
-            //printf("DELETEeEEEE\n");
             delete tile.csr;
         }
-        
-        //tile.bv->free();
-        //delete tile.bv;
     }
 }
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::del_csc()
+{
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        if(tile.allocated)
+        {
+            delete tile.csc;
+        }
+    }
+}
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
