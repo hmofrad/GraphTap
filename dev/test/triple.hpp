@@ -61,11 +61,20 @@ struct Triple <Empty, Integer_Type>
  * and then their column index
  */
 template <typename Weight, typename Integer_Type>
-struct Functor
+struct RowSort
 {
     bool operator()(const struct Triple<Weight, Integer_Type> &a, const struct Triple<Weight, Integer_Type> &b)
     {
         return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+    }
+};
+
+template <typename Weight, typename Integer_Type>
+struct ColSort
+{
+    bool operator()(const struct Triple<Weight, Integer_Type> &a, const struct Triple<Weight, Integer_Type> &b)
+    {
+        return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
     }
 };
 
