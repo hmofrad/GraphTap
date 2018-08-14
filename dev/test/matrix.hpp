@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <algorithm>
-
+#include <vector>
 #include "tiling.hpp" 
 
 
