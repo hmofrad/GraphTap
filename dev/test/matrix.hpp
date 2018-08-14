@@ -43,7 +43,8 @@ class Matrix
     friend class Vertex_Program;
     
     public:    
-        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type);
+        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, 
+               Tiling_type tiling_type, Compression_type compression_type);
         ~Matrix();
 
     private:
@@ -52,6 +53,7 @@ class Matrix
         Integer_Type tile_height, tile_width;    
         
         Tiling *tiling;
+        Compression_type compression;
 
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles;
         
@@ -70,6 +72,7 @@ class Matrix
         
         void init_matrix();
         void del_triples();
+        void init_compression();
         void init_csr();
         void init_csc();
         void init_bv();
@@ -86,7 +89,8 @@ class Matrix
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type)
+Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
+    Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type, Compression_type compression_type)
       //: nrows(nrows_), ncols(ncols_), ntiles(ntiles_), nrowgrps(sqrt(ntiles_)), ncolgrps(ntiles_ / nrowgrps),
       //  tile_height((nrows_ / nrowgrps) + 1), tile_width((ncols_ / ncolgrps) + 1)
 {
@@ -100,6 +104,7 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, Integ
     
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type);
+    compression = compression_type;
     init_matrix();   
 }
 
@@ -298,6 +303,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("\n");
     }
 }
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
+{
+    if(compression == Compression_type::_CSR_)
+    {
+        init_csr();
+    }
+    else if(compression == Compression_type::_CSC_)
+    {
+        init_csc();
+    }
+    else
+    {
+        fprintf(stderr, "Invalid compression type\n");
+        Env::exit(1);
+    }        
+    
+}
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
