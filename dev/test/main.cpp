@@ -7,6 +7,7 @@
 #include "env.hpp"
 #include "graph.hpp"
 #include "vertex_program.hpp"
+
 //#include "ds.hpp"
 
 using em = Empty;
@@ -95,16 +96,23 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tick();
+    //printf("VP %d\n", Env::rank);
     Vertex_Program<wp, ip, fp> V(G);
     fp x = 0, y = 0, v = 0, s = 0;
+    //printf("INIT %d\n", Env::rank);
     V.init(x, y, v, s);
     Generic_functions f;
+    
     V.scatter(f.ones);    
+    
     V.gather();
+    
     V.combine(f.assign);
+    //V.free();
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
+     
     
     
     //Env::barrier();
@@ -144,57 +152,5 @@ int main(int argc, char **argv)
     //Env::barrier();
     Env::finalize();
     return(0);
-    
-   // 
-    
-    //start = MPI_Wtime();
-    //G.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    
-    //G.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_);
-    
-    /*
-    finish = MPI_Wtime();
-    if(!rank)
-        printf("Ingress: %f seconds\n", finish - start); 
-    
-    start = MPI_Wtime();
-    G.degree();
-    finish = MPI_Wtime();
-    if(!rank)
-        printf("Degree: %f seconds\n", finish - start); 
-    G.free();
-    */
-    
-    /*
-    G.free(clear_state);
-    
-    transpose = true;
-    Graph<ew_t> GR;
-    start = MPI_Wtime();
-    //GR.load_binary(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    GR.load_text(file_path, num_vertices, num_vertices, Tiling::_2D_, directed, transpose);
-    finish = MPI_Wtime();
-    if(!rank)
-        printf("Ingress T: %f seconds\n", finish - start); 
-
-
-    
-    GR.initialize(G);
-    
-
-    start = MPI_Wtime();  
-    GR.pagerank(num_iterations);
-    finish = MPI_Wtime();
-    if(!rank)
-        printf("Pagerank: %f seconds\n", finish - start); 
-    
-    GR.free();
-    */
-    //MPI_Finalize();
-
-    
-
-    
-
 }
 
