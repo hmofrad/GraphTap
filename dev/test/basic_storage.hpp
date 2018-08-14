@@ -9,10 +9,10 @@
 #include <cstring>
 
 template <typename Weight = void, typename Integer_Type = uint32_t>
-struct basic_storage
+struct Basic_Storage
 {
-    basic_storage(Integer_Type n_);
-    ~basic_storage();
+    Basic_Storage(Integer_Type n_);
+    ~Basic_Storage();
     Integer_Type n;
     uint64_t nbytes;
     void *data;
@@ -21,7 +21,7 @@ struct basic_storage
 };
 
 template <typename Weight, typename Integer_Type>
-basic_storage<Weight, Integer_Type>::basic_storage(Integer_Type n_)
+Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
 {
     n = n_;
     nbytes = n_ * sizeof(Weight);
@@ -36,7 +36,7 @@ basic_storage<Weight, Integer_Type>::basic_storage(Integer_Type n_)
 }
 
 template <typename Weight, typename Integer_Type>
-basic_storage<Weight, Integer_Type>::~basic_storage()
+Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
 {
     if(munmap(data, nbytes) == -1)
     {
@@ -46,17 +46,17 @@ basic_storage<Weight, Integer_Type>::~basic_storage()
 }
 
 template <typename Integer_Type>
-struct basic_storage <Empty, Integer_Type>
+struct Basic_Storage <Empty, Integer_Type>
 {
-    basic_storage(Integer_Type n_);
-    ~basic_storage();
+    Basic_Storage(Integer_Type n_);
+    ~Basic_Storage();
     Integer_Type n;
     Integer_Type nbytes;
     void *data;
 };
 
 template <typename Integer_Type>
-basic_storage<Empty, Integer_Type>::basic_storage(Integer_Type n_)
+Basic_Storage<Empty, Integer_Type>::Basic_Storage(Integer_Type n_)
 {
     assert(n_ > 0);
     n = n_;
@@ -72,7 +72,7 @@ basic_storage<Empty, Integer_Type>::basic_storage(Integer_Type n_)
 }
 
 template <typename Integer_Type>
-basic_storage<Empty, Integer_Type>::~basic_storage()
+Basic_Storage<Empty, Integer_Type>::~Basic_Storage()
 {
     if(munmap(data, nbytes) == -1)
     {
