@@ -23,7 +23,7 @@ struct Segment
     void allocate();
     void del_seg();
     
-    struct basic_storage<Fractional_Type, Integer_Type> *D;
+    struct Basic_Storage<Fractional_Type, Integer_Type> *D;
 
     Integer_Type nrows, ncols;
     uint32_t rg, cg;
@@ -53,7 +53,7 @@ Segment<Weight, Integer_Type, Fractional_Type>::~Segment() {};
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::allocate()
 {
-    D = new struct basic_storage<Fractional_Type, Integer_Type>(nrows);
+    D = new struct Basic_Storage<Fractional_Type, Integer_Type>(nrows);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
