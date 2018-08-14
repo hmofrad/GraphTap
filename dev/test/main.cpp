@@ -8,8 +8,6 @@
 #include "graph.hpp"
 #include "vertex_program.hpp"
 
-//#include "ds.hpp"
-
 using em = Empty;
 using wp = Empty;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
@@ -78,14 +76,16 @@ int main(int argc, char **argv)
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
-    bool transpose = true;
+    bool transpose = false;
+    Tiling_type TT = _2D_;
+    Compression_type CT = _CSC_;
 
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> G;
     //Graph<> G;
     
-    G.load(file_path, num_vertices, num_vertices);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT);
     if(!Env::rank)
         Env::tock("Ingress");
     
@@ -114,11 +114,11 @@ int main(int argc, char **argv)
         Env::tock("Degree");
      
 
-    
+    transpose = true;
     //Env::barrier();
     
     Graph<wp, ip, fp> GR;
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, Tiling_type::_2D_);
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT);
     
     fp alpha = 0.1;
     x = 0, y = 0, v = alpha, s = 0;
