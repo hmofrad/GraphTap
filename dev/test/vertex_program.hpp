@@ -590,6 +590,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::scatter(Fractional_Ty
             uint32_t other_rank = A->follower_colgrp_ranks[j];
             MPI_Isend(x_data, x_nbytes, MPI_BYTE, other_rank, x_seg.cg, Env::MPI_WORLD, &request);
             out_requests.push_back(request);
+            //if(!Env::rank)
+              //  printf("%d --> %d\n", Env::rank, other_rank);
         }
     }
     else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
@@ -601,6 +603,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::scatter(Fractional_Ty
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    
+    
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -621,6 +625,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
                 Integer_Type xj_nbytes = xj_seg.D->nbytes;
                 MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, xj_seg.leader_rank, xj_seg.cg, Env::MPI_WORLD, &request);
                 in_requests.push_back(request);
+                //if(!Env::rank)
+                  //  printf("%d <-- %d\n", Env::rank, xj_seg.leader_rank);
             }
         }
     }
@@ -633,8 +639,11 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    
     Env::barrier();   
 }
 
