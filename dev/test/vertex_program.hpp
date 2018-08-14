@@ -248,7 +248,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
         Env::exit(1);
     }
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
     Env::barrier();   
 }
 
