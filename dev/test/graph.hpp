@@ -420,11 +420,17 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
 {
     // Initialize graph
+    //printf("init_graph\n");
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
     // Read graph
+    //printf("read_text\n");
     read_text();
+    //printf("init_csr\n");
     A->init_csr();
+    
     //A->del_csr();
+    //A->init_csc();
+    //A->del_csc();
 }
 
 template<typename Integer_Type, typename Fractional_Type>
