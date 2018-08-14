@@ -79,31 +79,35 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = true;
 
+    if(!Env::rank)
+        Env::tick();
     Graph<wp, ip, fp> G;
     //Graph<> G;
+    
     G.load(file_path, num_vertices, num_vertices);
+    if(!Env::rank)
+        Env::tock("Ingress");
+    
     //if(!Env::rank);
       //  Env::tock("Test");
     
     //G.free();
     
-    
+    if(!Env::rank)
+        Env::tick();
     Vertex_Program<wp, ip, fp> V(G);
-    
-    
-    
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
-    
     Generic_functions f;
     V.scatter(f.ones);    
     V.gather();
     V.combine(f.assign);
     G.free();
+    if(!Env::rank)
+        Env::tock("Degree");
     
     
-    
-    Env::barrier();
+    //Env::barrier();
     
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, Tiling_type::_2D_);
@@ -116,7 +120,8 @@ int main(int argc, char **argv)
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     
-    
+    if(!Env::rank)
+        Env::tick();
     while(iter < niters)
     {
         iter++;
@@ -128,6 +133,9 @@ int main(int argc, char **argv)
     }
     VR.free();
     GR.free();
+    
+    if(!Env::rank)
+        Env::tock("PageRank");
     
     
     
