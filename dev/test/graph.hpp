@@ -348,7 +348,10 @@ Graph<Empty, Integer_Type, Fractional_Type>::~Graph()
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::free()
 {
+    //printf("delete %d\n", Env::rank);
+    
     A->del_csr();
+    //delete A;
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -496,7 +499,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepa
     // Read graph
     read_binary();
     A->init_csr();
-    A->del_csr();
+    //A->del_csr();
 }
 
 template<typename Integer_Type, typename Fractional_Type>
