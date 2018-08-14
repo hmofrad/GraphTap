@@ -404,6 +404,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
         auto& tile = tiles[pair.row][pair.col];
         if(tile.allocated)
         {
+            //printf("DELETEeEEEE\n");
             delete tile.csr;
         }
         
