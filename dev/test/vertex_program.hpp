@@ -279,6 +279,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         // Local computation, no need to put it on X
         if(tile.allocated)
         {
+            /*
             uint32_t k = 0;
             Weight *A = (Weight *) tile.csr->A->data;
             Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
@@ -290,10 +291,32 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                 nnz_per_row = IA[i + 1] - IA[i];
                 for(uint32_t j = 0; j < nnz_per_row; j++)
                 {
-                    y_data[i] += A[k] * x_data[JA[k]];
+                    y_data[i] += A[JA[k]] * x_data[JA[k]];
                     k++;
                 }
             }
+            */
+            
+            
+            uint32_t k = 0;
+            Integer_Type *COL_PTR   = (Integer_Type *) tile.csc->COL_PTR->data;
+            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data;
+            Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
+            Integer_Type nnz_per_col;
+            for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
+            {
+                nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
+                for(uint32_t j = 0; j < nnz_per_col; j++)
+                {
+                    y_data[ROW_INDEX[k]] += A[ROW_INDEX[k]] * x_data[ROW_INDEX[k]];
+                    k++;
+                }
+            }
+            
+            
+            
+            
+            
         }
         
         bool communication = (tile.nth) / A->tiling->rank_nrowgrps; 
@@ -672,6 +695,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         // Local computation, no need to put it on X
         if(tile.allocated)
         {
+            /*
             uint32_t k = 0;
             Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
             Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
@@ -685,7 +709,26 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                     y_data[i] += x_data[JA[k]];
                     k++;
                 }
-            }            
+            }
+            */
+
+            uint32_t k = 0;
+            Integer_Type *COL_PTR   = (Integer_Type *) tile.csc->COL_PTR->data;
+            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data;
+            Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
+            Integer_Type nnz_per_col;
+            for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
+            {
+                nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
+                for(uint32_t j = 0; j < nnz_per_col; j++)
+                {
+                    y_data[ROW_INDEX[k]] += x_data[ROW_INDEX[k]];
+                    k++;
+                }
+            }
+            
+
+            
         }
         bool communication = (tile.nth) / A->tiling->rank_nrowgrps; 
         if(communication)
