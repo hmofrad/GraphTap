@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Degree");
      
-    
+
     
     //Env::barrier();
     
