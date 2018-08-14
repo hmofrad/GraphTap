@@ -440,52 +440,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
             printf("%d\n", tile.csc->ncols_plus_one );
 */            
         }
-
-        
-        
-        
-        //delete VAL;
-    //delete ROW_INDEX;
-    //delete COL_PTR;
-    //delete A; val 
-    //delete IA; row_ptr
-    //delete JA; col
-        /*
-        
-            Weight *A = nullptr;
-            if(has_weight)
-            {
-                A = (Weight *) tile.csr->A->data;
-            }
-            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
-            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
-            IA[0] = 0;
-            for (auto& triple : *(tile.triples))
-            {
-                pair = rebase(triple);
-                while((j - 1) != pair.row)
-                {
-                    j++;
-                    IA[j] = IA[j - 1];
-                }            
-                 // In case weights are there
-                if(has_weight)
-                {
-                    A[i] = triple.weight;
-                }
-                IA[j]++;
-                JA[i] = pair.col;    
-                i++;
-                //printf("%d %d %d\n", triple.row, triple.col, triple.weight);
-            }
-            
-            while(j < tile_height)
-            {
-                j++;
-                IA[j] = IA[j - 1];
-            }   
-        }
-        */
     }    
     del_triples();
 }
