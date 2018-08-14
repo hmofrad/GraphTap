@@ -1,10 +1,12 @@
 /*
- * csr.hpp: csr implementaion
+ * compressed_storage.hpp: Compressed storage implementaion
+ * Compressed Sparse Row (CSR)
+ * Compressed Sparse Column (CSC)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#include "storage.hpp"
+#include "basic_storage.hpp"
  
 template<typename Weight, typename Integer_Type>
 struct CSR
@@ -14,9 +16,9 @@ struct CSR
     Integer_Type nnz;
     Integer_Type nrows_plus_one;
     
-    struct basic_storage<Weight, Integer_Type> *A;
-    struct basic_storage<Integer_Type, Integer_Type> *IA;
-    struct basic_storage<Integer_Type, Integer_Type> *JA;
+    struct Basic_Storage<Weight, Integer_Type> *A;
+    struct Basic_Storage<Integer_Type, Integer_Type> *IA;
+    struct Basic_Storage<Integer_Type, Integer_Type> *JA;
 };
 
 template<typename Weight, typename Integer_Type>
@@ -24,11 +26,11 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
 {
     nnz = nnz_;
     nrows_plus_one = nrows_plus_one_;
-    A = new struct basic_storage<Weight, Integer_Type>(nnz);
+    A = new struct Basic_Storage<Weight, Integer_Type>(nnz);
     
-    IA = new struct basic_storage<Integer_Type, Integer_Type>(nrows_plus_one);
+    IA = new struct Basic_Storage<Integer_Type, Integer_Type>(nrows_plus_one);
     
-    JA = new struct basic_storage<Integer_Type, Integer_Type>(nnz);
+    JA = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz);
 }
 
 template<typename Weight, typename Integer_Type>
@@ -48,9 +50,9 @@ struct CSC
     Integer_Type nnz;
     Integer_Type ncols_plus_one;
     
-    struct basic_storage<Weight, Integer_Type> *VAL;
-    struct basic_storage<Integer_Type, Integer_Type> *ROW_INDEX;
-    struct basic_storage<Integer_Type, Integer_Type> *COL_PTR;
+    struct Basic_Storage<Weight, Integer_Type> *VAL;
+    struct Basic_Storage<Integer_Type, Integer_Type> *ROW_INDEX;
+    struct Basic_Storage<Integer_Type, Integer_Type> *COL_PTR;
 };
 
 template<typename Weight, typename Integer_Type>
@@ -58,11 +60,11 @@ CSC<Weight, Integer_Type>::CSC(Integer_Type nnz_, Integer_Type ncols_plus_one_)
 {
     nnz = nnz_;
     ncols_plus_one = ncols_plus_one_;
-    VAL = new struct basic_storage<Weight, Integer_Type>(nnz);
+    VAL = new struct Basic_Storage<Weight, Integer_Type>(nnz);
     
-    ROW_INDEX = new struct basic_storage<Integer_Type, Integer_Type>(nnz);
+    ROW_INDEX = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz);
     
-    COL_PTR = new struct basic_storage<Integer_Type, Integer_Type>(ncols_plus_one);
+    COL_PTR = new struct Basic_Storage<Integer_Type, Integer_Type>(ncols_plus_one);
 }
 
 template<typename Weight, typename Integer_Type>
