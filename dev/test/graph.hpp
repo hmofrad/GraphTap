@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "triple.hpp"
-#include "csr.hpp"
+#include "compressed_storage.hpp"
 #include "matrix.hpp"
 
 
@@ -43,6 +43,7 @@ class Graph
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
                bool directed, bool transpose, Tiling_type tiling_type);
+        void compress();
         void read_text();
         void read_binary();
         
@@ -144,8 +145,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     // Read graph
     read_text();
     
-    // Create CSR format
-    A->init_csr();
+    // Compress the graph
+    compress();
+    //A->init_csr();
     
     //A->del_csr();
 }
@@ -159,8 +161,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
     // Read graph
     read_binary();
-    A->init_csr();
-    //A->del_csr();
+    
+    compress();
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -276,6 +279,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
     assert(offset == filesize);
 }
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Graph<Weight, Integer_Type, Fractional_Type>::compress()
+{
+    //A->init_csr(); 
+    A->init_csc(); 
+}
+
 
 /* Class template specialization for Weight
  * We think of two ways for processing graphs with empty weights:
@@ -321,6 +331,7 @@ class Graph<Empty, Integer_Type, Fractional_Type>
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
                bool directed, bool transpose, Tiling_type tiling_type);
+        void compress();
         void read_text();
         void read_binary();
         void parse_triple(std::istringstream &iss, struct Triple<Empty, Integer_Type> &triple, bool transpose);
@@ -426,12 +437,26 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
     //printf("read_text\n");
     read_text();
     //printf("init_csr\n");
-    A->init_csr();
-    
+    //A->init_csr();
+    compress();
     //A->del_csr();
     //A->init_csc();
     //A->del_csc();
 }
+
+
+template<typename Integer_Type, typename Fractional_Type>
+void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+{
+    // Initialize graph
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    // Read graph
+    read_binary();
+    compress();
+    //A->del_csr();
+}
+
 
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
@@ -497,18 +522,6 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
 }
 
 template<typename Integer_Type, typename Fractional_Type>
-void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
-{
-    // Initialize graph
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
-    // Read graph
-    read_binary();
-    A->init_csr();
-    //A->del_csr();
-}
-
-template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
 {
     // Open graph file.
@@ -554,4 +567,11 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
     }
     fin.close();
     assert(offset == filesize);
+}
+
+template<typename Integer_Type, typename Fractional_Type>
+void Graph<Empty, Integer_Type, Fractional_Type>::compress()
+{
+    //A->init_csr(); 
+    A->init_csc(); 
 }
