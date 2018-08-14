@@ -23,15 +23,13 @@ class Graph
         Graph();
         ~Graph();
         void load(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_);
+                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_,
+                                             Compression_type compression_type = _CSC_);
         void load_binary(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed, bool transpose, Tiling_type tiling_type);
+            bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
         void load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed, bool transpose, Tiling_type tiling_type);
-        void free();                            
-        //void degree();
-        //void pagerank(uint32_t niters, bool clear_state = false);
-        //void free(bool clear_state = true);
+            bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
+        void free();
 
     private:
         std::string filepath;
@@ -42,19 +40,10 @@ class Graph
         Matrix<Weight, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
-               bool directed, bool transpose, Tiling_type tiling_type);
+               bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
         void compress();
         void read_text();
         void read_binary();
-        
-        //std::vector<MPI_Request> out_requests;
-        //std::vector<MPI_Request> in_requests;
-        
-        //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
-        //void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        //void gather();
-        //void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        //void apply();
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -75,7 +64,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepath_, 
            Integer_Type nrows_, Integer_Type ncols_, bool directed_, 
-           bool transpose_, Tiling_type tiling_type)
+           bool transpose_, Tiling_type tiling_type, Compression_type compression_type)
 {
     
     filepath  = filepath_;
@@ -86,12 +75,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     transpose = transpose_;
     // Initialize matrix
     A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, 
-                                Env::nranks * Env::nranks, tiling_type);
+                                Env::nranks * Env::nranks, tiling_type, compression_type);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
     int buffer_len = 100;
     char buffer[buffer_len];
@@ -120,11 +110,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* data1 = "Hitachi";
     if(!strcmp(token, text))
     {
-        load_text(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+        load_text(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     }
     else if(!strcmp(token, data) or !strcmp(token, data1))
     {
-        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     }
     else
     {
@@ -136,17 +126,19 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
     // Initialize graph
     //printf("INIT_G\n");
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     
     // Read graph
     read_text();
     
     // Compress the graph
-    compress();
+    A->init_compression(); 
+    //compress();
     //A->init_csr();
     
     //A->del_csr();
@@ -155,14 +147,15 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
     // Initialize graph
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     // Read graph
     read_binary();
-    
-    compress();
+    A->init_compression();
+    //compress();
     
 }
 
@@ -311,14 +304,12 @@ class Graph<Empty, Integer_Type, Fractional_Type>
         ~Graph();
         
         void load(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_);
+                       bool directed = true, bool transpose = false, Tiling_type tiling_type = _2D_,
+                                             Compression_type compression_type = _CSC_);
         void load_binary(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed, bool transpose, Tiling_type tiling_type);
+            bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
         void load_text(std::string filepath, Integer_Type nrows, Integer_Type ncols,
-                       bool directed, bool transpose, Tiling_type tiling_type);
-        //void degree();
-        //void pagerank(uint32_t niters, bool clear_state = false);
-        //void initialize(Graph<Empty> &G);
+            bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
         void free();
 
     private:
@@ -330,20 +321,11 @@ class Graph<Empty, Integer_Type, Fractional_Type>
         Matrix<Empty, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath, Integer_Type nrows, Integer_Type ncols, 
-               bool directed, bool transpose, Tiling_type tiling_type);
+               bool directed, bool transpose, Tiling_type tiling_type, Compression_type compression_type);
         void compress();
         void read_text();
         void read_binary();
         void parse_triple(std::istringstream &iss, struct Triple<Empty, Integer_Type> &triple, bool transpose);
-        
-        //std::vector<MPI_Request> out_requests;
-        //std::vector<MPI_Request> in_requests;
-        
-        //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s, bool clear_state = true);
-        //void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        //void gather();
-        //void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        //void apply();
 };
 
 
@@ -368,7 +350,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::free()
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::init_graph(std::string filepath_, 
            Integer_Type nrows_, Integer_Type ncols_, bool directed_, 
-           bool transpose_, Tiling_type tiling_type)
+           bool transpose_, Tiling_type tiling_type, Compression_type compression_type)
 {
     
     filepath  = filepath_;
@@ -378,12 +360,14 @@ void Graph<Empty, Integer_Type, Fractional_Type>::init_graph(std::string filepat
     directed  = directed_;
     transpose = transpose_;
     // Initialize matrix
-    A = new Matrix<Empty, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, tiling_type);
+    A = new Matrix<Empty, Integer_Type, Fractional_Type>(nrows, ncols, 
+            Env::nranks * Env::nranks, tiling_type, compression_type);
 }
 
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::load(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
         int buffer_len = 100;
     char buffer[buffer_len];
@@ -412,11 +396,11 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* data1 = "Hitachi";
     if(!strcmp(token, text))
     {
-        load_text(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+        load_text(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     }
     else if(!strcmp(token, data) or !strcmp(token, data1))
     {
-        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     }
     else
     {
@@ -428,17 +412,19 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load(std::string filepath_,
 
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
     // Initialize graph
     //printf("init_graph\n");
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     // Read graph
     //printf("read_text\n");
     read_text();
+    A->init_compression();
     //printf("init_csr\n");
     //A->init_csr();
-    compress();
+    //compress();
     //A->del_csr();
     //A->init_csc();
     //A->del_csc();
@@ -447,13 +433,15 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
 
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,  Tiling_type tiling_type)
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
+        Tiling_type tiling_type, Compression_type compression_type)
 {
     // Initialize graph
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     // Read graph
     read_binary();
-    compress();
+    A->init_compression();
+    //compress();
     //A->del_csr();
 }
 
