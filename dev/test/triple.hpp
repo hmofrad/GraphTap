@@ -4,12 +4,6 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-//#include <iostream>
-//#include <stdint.h>
-
-//#include <cstring>
-
-
 template <typename Weight, typename Integer_Type = uint32_t>
 struct Triple
 {
