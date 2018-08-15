@@ -9,7 +9,7 @@
 #include "vertex_program.hpp"
 
 using em = Empty;
-using wp = Empty;   // Weight (default is Empty)
+using wp = uint32_t;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -96,10 +96,11 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tick();
-    //printf("VP %d\n", Env::rank);
+
+
     Vertex_Program<wp, ip, fp> V(G);
     fp x = 0, y = 0, v = 0, s = 0;
-    //printf("INIT %d\n", Env::rank);
+    
     V.init(x, y, v, s);
     Generic_functions f;
     
@@ -108,12 +109,13 @@ int main(int argc, char **argv)
     V.gather();
     
     V.combine(f.assign);
-    //V.free();
+
+    V.free();
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
      
-
+    /*
     transpose = true;
     //Env::barrier();
     
@@ -144,7 +146,7 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tock("PageRank");
-    
+    */
     
     
     //Graph<Weight>::combine(f.assign);
