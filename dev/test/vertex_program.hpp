@@ -546,20 +546,20 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
     {
         s_data[i] = v_data_[i];
     }
-    /*
-    rank_nrowgrps = A->tiling.rank_nrowgrps;
-    Z.resize(A->tiling.rank_nrowgrps);
-    for (uint32_t i = 0; i < A->tiling.rank_nrowgrps; i++)
+    
+    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
     {
-        Z[i] = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
-        for(uint32_t yi : Z[i]->local_segments)
+        Vector<Empty, Integer_Type, Fractional_Type> *ZZ = new Vector<Empty, Integer_Type, Fractional_Type>
+        (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width, owned_diag_segment,
+                                                                A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                    
+        for(uint32_t zi : ZZ->local_segments)
         {
-            auto &z_seg = Z->segments[yi];
-            populate(z, z_seg);
+            auto &z_seg = ZZ->segments[zi];
+            populate(y, z_seg);
         } 
+        Z.push_back(ZZ);
     }
-    */
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -610,26 +610,6 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
         } 
         Z.push_back(ZZ);
     }
-    
-    /*
-    Z.resize(A->tiling->rank_nrowgrps);
-    
-    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
-    {
-        Vector<Empty, Integer_Type, Fractional_Type> ZZ = Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
-        
-                    
-        for(uint32_t zi : ZZ.local_segments)
-        {
-            auto &z_seg = ZZ.segments[zi];
-            populate(y, z_seg);
-        } 
-        Z.push_back(ZZ);
-    }
-    */
-    
-    
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -731,7 +711,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     uint32_t xi, yi, yj, si, vi;
-    uint32_t ydi = 0;
+    uint32_t zi = 0, zzi;
     for(uint32_t t: A->local_tiles)
     {
         auto pair = A->tile_of_local_tile(t);
@@ -748,14 +728,20 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         auto *y_data = (Fractional_Type *) y_seg.D->data;
         Integer_Type y_nitems = y_seg.D->n;
         Integer_Type y_nbytes = y_seg.D->nbytes;
-        /*
-        auto &Y = YD[ydi];
-        yi = Y->owned_segment;
-        auto &y_seg = Y->segments[yi];
-        auto *y_data = (Fractional_Type *) y_seg.D->data;
-        Integer_Type y_nitems = y_seg.D->n;
-        Integer_Type y_nbytes = y_seg.D->nbytes;
-        */
+        
+        
+        //Vector<Empty, Integer_Type, Fractional_Type> *ZZ = Z[zi];
+        if(!Env::rank)
+        {
+            printf(">>>%d %d %d\n", t, zi, A->tiling->rank_nrowgrps);
+            //printf("SEG=%d\n", Z[zi]->owned_segment);
+        }
+        //zzi = ZZ->owned_segment;
+        //auto &zz_seg = ZZ->segments[zzi];
+        //auto *zz_data = (Fractional_Type *) zz_seg.D->data;
+        //Integer_Type zz_nitems = zz_seg.D->n;
+        //Integer_Type zz_nbytes = zz_seg.D->nbytes;
+        
         
         
         
@@ -859,6 +845,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             //uint32_t vi = V->owned_segment;
             //auto &v_seg = V->segments[vi];
             //print(v_seg);
+            zi++;
         }
     }
 }
