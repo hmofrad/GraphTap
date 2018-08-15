@@ -62,13 +62,13 @@ class Matrix
         std::vector<uint32_t> local_col_segments;
         
         std::vector<uint32_t> leader_ranks;
-        std::vector<uint32_t> other_row_ranks_accu_seg;
-        std::vector<uint32_t> other_col_ranks_accu_seg;
 
         std::vector<uint32_t> follower_rowgrp_ranks;
         std::vector<uint32_t> rowgrp_ranks_accu_seg;
         std::vector<uint32_t> follower_colgrp_ranks; 
         std::vector<uint32_t> colgrp_ranks_accu_seg;
+        
+        std::vector<std::vector<uint32_t>> rowgrp_ranks_accu_seg_dup;
         
         void init_matrix();
         void del_triples();
@@ -267,6 +267,35 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             }
         }
     }
+    rowgrp_ranks_accu_seg_dup.resize(tiling->rank_nrowgrps);
+    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        rowgrp_ranks_accu_seg_dup[i].resize(tiling->rowgrp_nranks - 1);
+    
+    if(!Env::rank)
+    {
+        /*
+        for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        {
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++)    
+            {
+                rowgrp_ranks_accu_seg_dup[i][j] = rowgrp_ranks_accu_seg[j];
+                printf("%d ", rowgrp_ranks_accu_seg_dup[i][j]);
+            }
+            printf("\n");
+        }
+        */
+        /*
+        for(uint32_t s: follower_rowgrp_ranks)
+            printf("%d ", s);
+        printf("\n");
+        
+        for(uint32_t s: rowgrp_ranks_accu_seg)
+            printf("%d %d ", s, tiling->rank_nrowgrps);
+        printf("\n");
+        */
+        
+    }
+    
     
     // Initialize triples 
     for(uint32_t t: local_tiles)
@@ -287,6 +316,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             {
                 auto& tile = tiles[i][j];
                 printf("%02d ", tile.rank);
+                
                 if(j > skip)
                 {
                     printf("...");
