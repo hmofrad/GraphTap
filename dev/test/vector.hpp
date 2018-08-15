@@ -69,6 +69,7 @@ class Vector
     friend class Graph;
     
     public:
+        Vector();
         Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
                std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments_);
@@ -89,6 +90,9 @@ class Vector
         void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<uint32_t>& local_segments);
         void init_vec(std::vector<uint32_t> &diag_ranks);
 };
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integer_Type ncols_,
