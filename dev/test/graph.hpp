@@ -419,7 +419,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
     //printf("init_graph\n");
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type);
     // Read graph
-    //printf("read_text\n");
+
     read_text();
     A->init_compression();
     //printf("init_csr\n");
