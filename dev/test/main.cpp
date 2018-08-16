@@ -9,7 +9,7 @@
 #include "vertex_program.hpp"
 
 using em = Empty;
-using wp = uint32_t;   // Weight (default is Empty)
+using wp = Empty;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSR_;
 
     if(!Env::rank)
         Env::tick();
@@ -100,22 +100,23 @@ int main(int argc, char **argv)
 
     Vertex_Program<wp, ip, fp> V(G);
     fp x = 0, y = 0, v = 0, s = 0;
-    
+    //printf("init\n");
     V.init(x, y, v, s);
+    
     Generic_functions f;
-    
+    //printf("scatter\n");
     V.scatter(f.ones);    
-    
+    //printf("gather\n");
     V.gather();
-    
+    //printf("combine\n");
     V.combine(f.assign);
-
-    V.free();
+    //printf("free\n");
+    //V.free();
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
      
-    /*
+    
     transpose = true;
     //Env::barrier();
     
@@ -126,6 +127,7 @@ int main(int argc, char **argv)
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
     VR.init(x, y, v, &V);
+     
     V.free();
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
@@ -135,8 +137,11 @@ int main(int argc, char **argv)
     while(iter < niters)
     {
         iter++;
+        //printf("comb\n");
+
         VR.scatter(f.div);
         VR.gather();
+        //printf("comb\n");
         VR.combine(f.rank);
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
@@ -146,7 +151,7 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tock("PageRank");
-    */
+    
     
     
     //Graph<Weight>::combine(f.assign);
