@@ -481,21 +481,53 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 COL_PTR[j] = COL_PTR[j - 1];
             }  
             
-            /*
+        /*    
         uint32_t k = 0;
         for(i = 0; i < tile.csc->ncols_plus_one - 1; i++)
         {
             uint32_t nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
                 for(j = 0; j < nnz_per_col; j++)
                 {
-                    printf("%d %d\n", i, ROW_INDEX[k]);
+                    printf("%d %d %d\n", i, ROW_INDEX[k], VAL[k]);
                     k++;
                 }
         }
             printf("%d\n", tile.csc->ncols_plus_one );
-*/            
+        */    
         }
+        
     }    
+    /*
+    if(Env::rank == 2)
+    {    
+        uint32_t skip = 16;
+        for (uint32_t i = 0; i < nrowgrps; i++)
+        {
+            for (uint32_t j = 0; j < ncolgrps; j++)  
+            {
+                auto& tile = tiles[i][j];
+                if(tile.allocated)
+                    printf("%02lu ", tile.triples->size());
+                else
+                    printf("%02d ", 0);
+                
+                if(j > skip)
+                {
+                    printf("...");
+                    break;
+                }
+            }
+            printf("\n");
+            if(i > skip)
+            {
+                printf(".\n.\n.\n");
+                break;
+            }
+        }
+        printf("\n");
+    }
+    */
+    
     del_triples();
 }
 
