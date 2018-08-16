@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSR_;
+    Compression_type CT = _CSC_;
 
     if(!Env::rank)
         Env::tick();
