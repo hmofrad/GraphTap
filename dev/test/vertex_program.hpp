@@ -331,8 +331,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         {
             if(A->compression == Compression_type::_CSR_)
             {
-                uint32_t k = 0;
-                uint32_t l = 0;
+                //uint32_t k = 0;
+                //uint32_t l = 0;
                 Weight *A = (Weight *) tile.csr->A->data;
                 Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
                 Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
@@ -340,41 +340,41 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                 Integer_Type nnz_per_row;
                 for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                 {
-                    nnz_per_row = IA[i + 1] - IA[i];
-                    for(uint32_t j = 0; j < nnz_per_row; j++)
+                    //nnz_per_row = IA[i + 1] - IA[i];
+                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                    //for(uint32_t j = 0; j < nnz_per_row; j++)
                     {
-                        l = JA[k];
-                        y_data[i] += A[k] * x_data[l];
-                        k++;
+                        //l = JA[k];
+                        //y_data[i] += A[k] * x_data[l];
+                        //k++;
+                        y_data[i] += A[j] * x_data[JA[j]];
+                        //k++;
+                        
+                        
                     }
                 }
             }
             else if(A->compression == Compression_type::_CSC_)    
             {
-                uint32_t k = 0;
-                uint32_t l = 0;
+                //uint32_t k = 0;
+                //uint32_t l = 0;
                 Weight *VAL = (Weight *) tile.csc->VAL->data;
                 Integer_Type *COL_PTR   = (Integer_Type *) tile.csc->COL_PTR->data;
                 Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data;
                 Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
                 Integer_Type nnz_per_col;
                 //printf("2.COMMPRESSING::: %d %d\n",Env::rank, t);    
-                for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
+                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                //for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
                 {
-                    nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
-                    for(uint32_t j = 0; j < nnz_per_col; j++)
+                    //nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
+                    //for(uint32_t j = 0; j < nnz_per_col; j++)
+                    for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
                     {
-                        //if(Env::rank == 2)
-                            assert(k < tile.csc->nnz);
-                            assert(ROW_INDEX[k] < ncols_plus_one_minus_one);
-                            
-                            
-                        
-                        //printf("r=%d i=%d j=%d k=%d l=%d t=%d th = %d nnzp=%d ydn=%d\n", Env::rank, i, j, k, ROW_INDEX[k], tile.csc->nnz, A->tile_height, tile.csc->VAL->n, y_seg.D->n);
-                        l = ROW_INDEX[k];
-                        //VAL[l] += VAL[l];
-                        y_data[l] += VAL[k] * x_data[l];
-                        k++;
+                        //l = ROW_INDEX[k];
+                        //y_data[l] += VAL[k] * x_data[l];
+                        //k++;
+                        y_data[ROW_INDEX[i]] += VAL[i] * x_data[j];   
                     }
                 }
                 //printf("2.COMMPRESSING DONENE::: %d %d\n",Env::rank, t);    
@@ -893,39 +893,49 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             if(A->compression == Compression_type::_CSR_)
             {
             
-                uint32_t k = 0;
-                uint32_t l = 0;
+                //uint32_t k = 0;
+                //uint32_t l = 0;
                 Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
                 Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
                 Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
                 Integer_Type nnz_per_row;
                 for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                 {
-                    nnz_per_row = IA[i + 1] - IA[i];
-                    for(uint32_t j = 0; j < nnz_per_row; j++)
+                    //nnz_per_row = IA[i + 1] - IA[i];
+                    //for(uint32_t j = 0; j < nnz_per_row; j++)
+                    //{
+                    //    l = JA[k];
+                    //    y_data[i] += x_data[l];
+                    //   k++;
+                    //}
+                    for(uint32_t j = IA[i]; j < IA[i +1]; j++)
                     {
-                        l = JA[k];
-                        y_data[i] += x_data[l];
-                        k++;
+                        y_data[i] += x_data[JA[j]];
                     }
                 }
             }
             else if(A->compression == Compression_type::_CSC_)
             {
-                uint32_t k = 0;
-                uint32_t l = 0;
+                //uint32_t k = 0;
+                //uint32_t l = 0;
                 Integer_Type *COL_PTR   = (Integer_Type *) tile.csc->COL_PTR->data;
                 Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data;
                 Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
                 Integer_Type nnz_per_col;
-                for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
+                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                 {
-                    nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
-                    for(uint32_t j = 0; j < nnz_per_col; j++)
+                    //for(uint32_t i = 0; i < ncols_plus_one_minus_one; i++)
+                    //{
+                    //nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
+                    //for(uint32_t j = 0; j < nnz_per_col; j++)
+                    //{
+                    //    l = ROW_INDEX[k];
+                    //    y_data[l] += x_data[l];
+                    //    k++;
+                    //}
+                    for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
                     {
-                        l = ROW_INDEX[k];
-                        y_data[l] += x_data[l];
-                        k++;
+                        y_data[ROW_INDEX[i]] += x_data[j];
                     }
                 }
             }
