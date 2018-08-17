@@ -220,7 +220,21 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset = fin.tellg();
+    
+        if(!Env::rank)
+        {
+            if ((offset & ((1L << 26) - 1L)) == 0)
+            {
+                printf("|");
+            }
+        }
     }
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+    }
+
     fin.close();
     assert(offset == filesize);   
 }
@@ -268,7 +282,19 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset += sizeof(Triple<Weight, Integer_Type>);
+        
+        if(!Env::rank)
+        {
+            if ((offset & ((1L << 26) - 1L)) == 0)
+                printf("|");
+        }
     }
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+    }
+    
     fin.close();
     assert(offset == filesize);
 }
@@ -505,7 +531,21 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset = fin.tellg();
+        
+        if(!Env::rank)
+        {
+            if ((offset & ((1L << 26) - 1L)) == 0)
+            {
+                printf("|");
+            }
+        }
     }
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+    }
+        
     fin.close();
     assert(offset == filesize);   
 }
@@ -553,7 +593,21 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset += sizeof(Triple<Empty, Integer_Type>);
+        
+        if(!Env::rank)
+        {
+            if ((offset & ((1L << 26) - 1L)) == 0)
+            {
+                printf("|");
+            }
+        }
     }
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+    }
+    
     fin.close();
     assert(offset == filesize);
 }
