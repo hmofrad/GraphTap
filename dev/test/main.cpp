@@ -9,7 +9,7 @@
 #include "vertex_program.hpp"
 
 using em = Empty;
-using wp = uint32_t;   // Weight (default is Empty)
+using wp = Empty;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSR_;
+    Compression_type CT = _CSC_;
 
     if(!Env::rank)
         Env::tick();
@@ -175,6 +175,7 @@ int main(int argc, char **argv)
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
     }
+    
     if(!Env::rank)
     {
         time2 = Env::clock();
