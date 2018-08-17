@@ -58,7 +58,7 @@ Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::free()
 {
-    A->del_csr();
+    A->del_compression();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -73,6 +73,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     nedges    = 0;
     directed  = directed_;
     transpose = transpose_;
+    
     // Initialize matrix
     A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, 
                                 Env::nranks * Env::nranks, tiling_type, compression_type);
@@ -343,7 +344,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::free()
 {
     //printf("delete %d\n", Env::rank);
     
-    A->del_csr();
+    A->del_compression();
     //delete A;
 }
 
