@@ -288,8 +288,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
         }
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
         //Env::barrier();
     }
     else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
@@ -406,7 +406,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
             {
                 //MPI_Send(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD);
                 MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD, &request);
-                //out_requests.push_back(request);
+                out_requests.push_back(request);
             }
             y++;
         }
@@ -451,8 +451,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         }
         memset(y_data, 0, y_nbytes);
         
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();
         //Env::barrier();
     }   
     
@@ -787,7 +787,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::scatter(Fractional_Ty
         {
             uint32_t other_rank = A->follower_colgrp_ranks[j];
             MPI_Isend(x_data, x_nbytes, MPI_BYTE, other_rank, x_seg.cg, Env::MPI_WORLD, &request);
-            out_requests.push_back(request);
+            //out_requests.push_back(request);
             //if(!Env::rank)
               //  printf("%d --> %d\n", Env::rank, other_rank);
         }
@@ -827,11 +827,15 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
                   //  printf("%d <-- %d\n", Env::rank, xj_seg.leader_rank);
             }
         }
+        double t1 = Env::clock();
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
-        Env::barrier();
+        double t2 = Env::clock();
+        if(!Env::rank)
+            printf("Gather MPI_Waitall for in_req: %f\n", t2 - t1);
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
+        //Env::barrier();
         
     }
     else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
@@ -1053,10 +1057,12 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
     if((A->tiling->tiling_type == Tiling_type::_2D_)
         or (A->tiling->tiling_type == Tiling_type::_1D_COL))
     {
+        double t1 = Env::clock();
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        
-        //printf(">>>%d\n", yk);
+        double t2 = Env::clock();
+        if(!Env::rank)
+            printf("Combine MPI_Waitall for in_req: %f\n", t2 - t1);
         Yp = Y[yk];
         //Yp = Y
         //auto *Yp = Y;
@@ -1094,7 +1100,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
-        Env::barrier();
+        //Env::barrier();
     }
 }
 
