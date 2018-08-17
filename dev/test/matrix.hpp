@@ -11,7 +11,6 @@
 
 
 
-
 //#include <type_traits>
 
 
@@ -22,6 +21,7 @@ struct Tile2D
     template <typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Matrix;
     std::vector<struct Triple<Weight, Integer_Type>> *triples;
+    //std::vector<struct Triple<Weight, Integer_Type>> *triples1;
     struct CSR<Weight, Integer_Type> *csr;
     struct CSC<Weight, Integer_Type> *csc;
     //struct BV<char> *bv;
@@ -78,6 +78,7 @@ class Matrix
         void init_bv();
         void del_csr();
         void del_csc();
+        void del_compression();
         
         struct Triple<Weight, Integer_Type> tile_of_local_tile(const uint32_t local_tile);
         struct Triple<Weight, Integer_Type> tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
@@ -304,6 +305,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
+        //tile.triples1 = tile.triples;
     }
     
     // Print tiling assignment
@@ -349,8 +351,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
     {
         fprintf(stderr, "Invalid compression type\n");
         Env::exit(1);
-    }        
-    
+    }            
 }
 
 
@@ -531,6 +532,23 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
     del_triples();
 }
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
+{
+    if(compression == Compression_type::_CSR_)
+    {
+        del_csr();
+    }
+    else if(compression == Compression_type::_CSC_)
+    {
+        del_csc();
+    }
+    else
+    {
+        fprintf(stderr, "Invalid compression type\n");
+        Env::exit(1);
+    }        
+}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
@@ -566,13 +584,29 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csc()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
 {
+    //char c = getchar();
     // Delete triples
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles)
     {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        delete tile.triples;        
+        //std::vector<struct Triple<Empty, Integer_Type> *> it = tile.triples.begin();
+
+        //std::vector<struct Triple<Empty, Integer_Type> *tt = tile.triples;
+        //auto& str = tt[0];
+
+        //printf("%d %p\n", Env::rank,tile.triples);
+        //void *p = tile.triples;
+        
+        tile.triples->clear();
+        delete tile.triples;    
+        //for (auto& triple : *(tile.triples1))
+        //for(auto &triple : (Triple<Empty, Integer_Type> *) p)
+        //{ 
+          //  printf("%d %d %d\n", Env::rank, triple.row, triple.col );
+        //}
     }
+    //c = getchar();
     
 }
