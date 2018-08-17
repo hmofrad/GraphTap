@@ -9,7 +9,7 @@
 #include "vertex_program.hpp"
 
 using em = Empty;
-using wp = Empty;   // Weight (default is Empty)
+using wp = uint32_t;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSR_;
 
     if(!Env::rank)
         Env::tick();
@@ -108,49 +108,82 @@ int main(int argc, char **argv)
     V.scatter(f.ones);    
     //printf("gather\n");
     V.gather();
-    //printf("combine\n");
+    //printf("combine %d\n", Env::rank);
     V.combine(f.assign);
-    //printf("free\n");
+    //printf("free %d\n",  Env::rank);
     //V.free();
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
      
-    
     transpose = true;
     //Env::barrier();
     
+    if(!Env::rank)
+        Env::tick();
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT);
+    if(!Env::rank)
+        Env::tock("Ingress transpose");
     
     fp alpha = 0.1;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
+    
+    if(!Env::rank)
+        Env::tick();
     VR.init(x, y, v, &V);
+    if(!Env::rank)
+        Env::tock("Init"); 
      
     V.free();
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     
+    double time1 = 0;
+    double time2 = 0;
     if(!Env::rank)
-        Env::tick();
+        time1 = Env::clock();
     while(iter < niters)
     {
         iter++;
-        //printf("comb\n");
 
+        if(!Env::rank)
+            Env::tick();
+        
         VR.scatter(f.div);
+        
+        if(!Env::rank)
+            Env::tock("Scatter"); 
+        
+        if(!Env::rank)
+            Env::tick();
+        
         VR.gather();
-        //printf("comb\n");
+        
+        if(!Env::rank)
+            Env::tock("Gather"); 
+        
+        if(!Env::rank)
+            Env::tick();
+        
         VR.combine(f.rank);
+        
+        if(!Env::rank)
+            Env::tock("Combine"); 
+        
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
     }
+    if(!Env::rank)
+    {
+        time2 = Env::clock();
+        printf("Pagerank time=%f\n", time2 - time1);
+    }
+    
     VR.free();
     GR.free();
     
-    if(!Env::rank)
-        Env::tock("PageRank");
     
     
     
