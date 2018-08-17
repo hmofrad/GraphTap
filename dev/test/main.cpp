@@ -11,7 +11,7 @@
 using em = Empty;
 using wp = Empty;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = double;   // Fractional precision (default is float)
+using fp = float;   // Fractional precision (default is float)
 
 
 
