@@ -115,7 +115,10 @@ int main(int argc, char **argv)
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
-     
+    Env::barrier(); 
+    
+    
+    
     transpose = true;
     //Env::barrier();
     
