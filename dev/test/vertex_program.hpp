@@ -833,8 +833,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
         double t2 = Env::clock();
         if(!Env::rank)
             printf("Gather MPI_Waitall for in_req: %f\n", t2 - t1);
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();
         //Env::barrier();
         
     }
