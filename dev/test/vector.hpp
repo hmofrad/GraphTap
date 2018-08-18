@@ -121,6 +121,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         if(leader_ranks[i] == Env::rank)
         {
             segments[i].allocate();
+            madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
             segments[i].allocated = true;
         }
     }
@@ -133,6 +134,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         if(segments[s].leader_rank != Env::rank)
         {
             segments[s].allocate();
+            madvise(segments[s].D->data, segments[s].D->nbytes, MADV_SEQUENTIAL);
             segments[s].allocated = true;
         }
     }
@@ -165,6 +167,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         if(leader_ranks[i] == Env::rank)
         {
             segments[i].allocate();
+            madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
             segments[i].allocated = true;
         }
     }
