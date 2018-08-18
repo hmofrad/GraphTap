@@ -1057,7 +1057,6 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
     if((A->tiling->tiling_type == Tiling_type::_2D_)
         or (A->tiling->tiling_type == Tiling_type::_1D_COL))
     {
-        
         Yp = Y[yk];
         yi = Yp->owned_segment;
         auto &y_seg = Yp->segments[yi];
@@ -1071,6 +1070,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         std::vector<MPI_Status> statuses(incounts);
         std::vector<int> indices(incounts);
         uint32_t received = 0;
+        
+        double t1 = Env::clock();
         while(received < incount)
         {
             MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
@@ -1121,7 +1122,14 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             }
         }
         
+        double t2 = Env::clock();
+        if(!Env::rank)
+            printf("Combine MPI_Waitsome for in_req: %f\n", t2 - t1);
+
+        
         in_requests.clear();
+        
+        
         /*
         double t1 = Env::clock();
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
