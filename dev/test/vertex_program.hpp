@@ -833,8 +833,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
         double t2 = Env::clock();
         if(!Env::rank)
             printf("Gather MPI_Waitall for in_req: %f\n", t2 - t1);
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
         //Env::barrier();
         
     }
@@ -1040,7 +1040,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             {
                 //MPI_Send(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD);
                 MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD, &request);
-                out_requests.push_back(request);
+                //out_requests.push_back(request);
                 
                 //MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
                 //in_requests.clear();
@@ -1104,6 +1104,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                     printf(">\n");
                 }
                 */
+                
                 for(uint32_t j = 0; j < outcount; j++)
                 {
                     yj = A->rowgrp_ranks_accu_seg[indices[j]];
@@ -1118,8 +1119,6 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                 }
                 received += outcount;
             }
-            
-
         }
         
         in_requests.clear();
@@ -1167,8 +1166,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         }
         memset(y_data, 0, y_nbytes);
         
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
         //Env::barrier();
     }
 }
