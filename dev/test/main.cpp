@@ -184,7 +184,7 @@ int main(int argc, char **argv)
         time2 = Env::clock();
         printf("Pagerank time=%f\n", time2 - time1);
     }
-    
+    Env::barrier();
     VR.free();
     GR.free();
     
