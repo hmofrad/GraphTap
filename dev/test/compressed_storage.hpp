@@ -33,10 +33,13 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
     nnz = nnz_;
     nrows_plus_one = nrows_plus_one_;
     A = new struct Basic_Storage<Weight, Integer_Type>(nnz);
+    //madvise(A->data, A->nbytes, MADV_SEQUENTIAL);
     
     IA = new struct Basic_Storage<Integer_Type, Integer_Type>(nrows_plus_one);
+    //madvise(IA->data, IA->nbytes, MADV_SEQUENTIAL);
     
     JA = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz);
+    //madvise(JA->data, JA->nbytes, MADV_SEQUENTIAL);
 }
 
 template<typename Weight, typename Integer_Type>
@@ -67,10 +70,13 @@ CSC<Weight, Integer_Type>::CSC(Integer_Type nnz_, Integer_Type ncols_plus_one_)
     nnz = nnz_;
     ncols_plus_one = ncols_plus_one_;
     VAL = new struct Basic_Storage<Weight, Integer_Type>(nnz);
+    //madvise(VAL->data, VAL->nbytes, MADV_SEQUENTIAL);
     
     ROW_INDEX = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz);
+    //madvise(ROW_INDEX->data, ROW_INDEX->nbytes, MADV_SEQUENTIAL);
     
     COL_PTR = new struct Basic_Storage<Integer_Type, Integer_Type>(ncols_plus_one);
+    //madvise(COL_PTR->data, COL_PTR->nbytes, MADV_SEQUENTIAL);
 }
 
 template<typename Weight, typename Integer_Type>
