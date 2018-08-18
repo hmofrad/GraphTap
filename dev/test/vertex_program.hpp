@@ -1057,6 +1057,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
     if((A->tiling->tiling_type == Tiling_type::_2D_)
         or (A->tiling->tiling_type == Tiling_type::_1D_COL))
     {
+        /*
         Yp = Y[yk];
         yi = Yp->owned_segment;
         auto &y_seg = Yp->segments[yi];
@@ -1078,34 +1079,6 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             assert(outcount != MPI_UNDEFINED);
             if(outcount > 0)
             {
-                /*
-                if(Env::rank == 5)
-                {
-                    printf("%d sends completed\n", outcount);
-                    for(uint32_t i : indices)
-                        printf("%d ", i);
-                    printf("\n");
-                    for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
-                        printf("%d ", j);
-                    printf("\n");
-                    for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
-                        printf("%d ", A->rowgrp_ranks_accu_seg[j]);
-                    printf("\n");
-                    
-                }
-                */
-                /*
-                if(Env::rank == 0)
-                {
-                    printf("<\n");
-                    for(uint32_t j = 0; j < outcount; j++)
-                    {
-                        printf("%d %d %d\n", j, indices[j], A->rowgrp_ranks_accu_seg[indices[j]]);
-                    }
-                    printf(">\n");
-                }
-                */
-                
                 for(uint32_t j = 0; j < outcount; j++)
                 {
                     yj = A->rowgrp_ranks_accu_seg[indices[j]];
@@ -1128,9 +1101,9 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
 
         
         in_requests.clear();
+        */
         
         
-        /*
         double t1 = Env::clock();
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
@@ -1140,8 +1113,6 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         
         
         Yp = Y[yk];
-        //Yp = Y
-        //auto *Yp = Y;
         yi = Yp->owned_segment;
         auto &y_seg = Yp->segments[yi];
         auto *y_data = (Fractional_Type *) y_seg.D->data;
@@ -1161,7 +1132,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                 y_data[i] += yj_data[i];
             }
         }
-        */
+        
         vi = V->owned_segment;
         auto &v_seg = V->segments[vi];
         auto *v_data = (Fractional_Type *) v_seg.D->data;
