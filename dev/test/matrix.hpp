@@ -68,7 +68,15 @@ class Matrix
         std::vector<uint32_t> follower_colgrp_ranks; 
         std::vector<uint32_t> colgrp_ranks_accu_seg;
         
-        std::vector<std::vector<uint32_t>> rowgrp_ranks_accu_seg_dup;
+        std::vector<int32_t> all_rowgrp_ranks;
+        std::vector<int32_t> all_rowgrp_ranks_accu_seg;
+        std::vector<int32_t> all_colgrp_ranks; 
+        std::vector<int32_t> all_colgrp_ranks_accu_seg;
+        
+        
+        
+        
+        //std::vector<std::vector<uint32_t>> rowgrp_ranks_accu_seg_dup;
         
         void init_matrix();
         void del_triples();
@@ -106,7 +114,7 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type);
     compression = compression_type;
-    init_matrix();   
+    init_matrix();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -245,6 +253,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         pair = tile_of_local_tile(t);
         if(pair.row == pair.col)
         {
+            all_rowgrp_ranks.push_back(tiles[pair.row][pair.col].rank);
+            all_rowgrp_ranks_accu_seg.push_back(tiles[pair.row][pair.col].cg);
             for(uint32_t j = 0; j < ncolgrps; j++)
             {
                 if((tiles[pair.row][j].rank != Env::rank) 
@@ -253,9 +263,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 {
                     follower_rowgrp_ranks.push_back(tiles[pair.row][j].rank);
                     rowgrp_ranks_accu_seg.push_back(tiles[pair.row][j].cg);
+                    
+                    all_rowgrp_ranks.push_back(tiles[pair.row][j].rank);
+                    all_rowgrp_ranks_accu_seg.push_back(tiles[pair.row][j].cg);
+                    
                 }
             }
             
+            all_colgrp_ranks.push_back(tiles[pair.row][pair.col].rank);
+            all_colgrp_ranks_accu_seg.push_back(tiles[pair.row][pair.col].rg);
             for(uint32_t i = 0; i < nrowgrps; i++)
             {
                 if((tiles[i][pair.col].rank != Env::rank) 
@@ -264,16 +280,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 {
                     follower_colgrp_ranks.push_back(tiles[i][pair.col].rank);
                     colgrp_ranks_accu_seg.push_back(tiles[i][pair.col].rg);
+                    
+                    all_colgrp_ranks.push_back(tiles[i][pair.col].rank);
+                    all_colgrp_ranks_accu_seg.push_back(tiles[i][pair.col].rg);
+                    
                 }
             }
         }
     }
-    rowgrp_ranks_accu_seg_dup.resize(tiling->rank_nrowgrps);
-    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
-        rowgrp_ranks_accu_seg_dup[i].resize(tiling->rowgrp_nranks - 1);
     
-    if(!Env::rank)
-    {
+    //rowgrp_ranks_accu_seg_dup.resize(tiling->rank_nrowgrps);
+    //for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+    //    rowgrp_ranks_accu_seg_dup[i].resize(tiling->rowgrp_nranks - 1);
+    
+    //if(!Env::rank)
+   // {
         /*
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         {
@@ -295,7 +316,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("\n");
         */
         
-    }
+   // }
     
     
     // Initialize triples 
@@ -334,6 +355,120 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         }
         printf("\n");
     }
+    
+    //if(Env::rank == 6)
+    //{
+        
+        
+        //for (uint32_t i = 0; i < tiling->nrowgrps; i++)
+        //{
+          //  for (uint32_t j = 0; j < tiling->ncolgrps; j++)  
+            //{
+                //auto& tile = tiles[i][j];
+              //  printf("rg=%d \n", i);
+                
+            //}
+        //}
+        
+        
+        //printf("Creating communicators\n");
+        /*
+        for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+        {
+            uint32_t other_rank = all_rowgrp_ranks[j];
+            uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
+            printf("[%d %d] ", other_rank, other_seg);
+        }
+        printf("\n");
+        */
+        
+        
+
+        /*
+        for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+        {
+            uint32_t other_rank = all_rowgrp_ranks[j];
+            //uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
+            printf("%d ", other_rank);
+        }
+        printf("\n");
+        */
+        
+        /*
+        for(uint32_t j = 0; j < tiling->colgrp_nranks; j++)
+        {
+            uint32_t other_rank = all_colgrp_ranks[j];
+            uint32_t other_seg = all_colgrp_ranks_accu_seg[j];
+            printf("[%d %d] ", other_rank, other_seg);
+        }
+        printf("\n");
+        */
+        
+        
+        std::sort(all_rowgrp_ranks.begin(), all_rowgrp_ranks.end());
+        Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
+        
+        std::sort(all_colgrp_ranks.begin(), all_colgrp_ranks.end());
+        Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
+        
+        
+        printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_rg, Env::nranks_rg);
+        Env::barrier();
+        printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_cg, Env::nranks_cg);
+        /*
+        MPI_Group rowgrps_group_;
+        MPI_Comm_group(MPI_COMM_WORLD, &rowgrps_group_);
+        MPI_Group rowgrps_group;
+        MPI_Group_incl(rowgrps_group_, tiling->rowgrp_nranks, all_rowgrp_ranks.data(), &rowgrps_group);
+        MPI_Comm rowgrps_comm;
+        MPI_Comm_create(MPI_COMM_WORLD, rowgrps_group, &rowgrps_comm);
+
+        //int new_rank = -1, new_size = -1;
+        
+        if (MPI_COMM_NULL != rowgrps_comm) 
+        {
+            MPI_Comm_rank(rowgrps_comm, &Env::rank_rg);
+            MPI_Comm_size(rowgrps_comm, &Env::nranks_rg);
+        }
+        
+        printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_rg, Env::nranks_rg);
+
+
+        MPI_Group_free(&rowgrps_group_);
+        MPI_Group_free(&rowgrps_group);
+        MPI_Comm_free(&rowgrps_comm);        
+        Env::barrier();
+        
+        
+        std::sort(all_colgrp_ranks.begin(), all_colgrp_ranks.end());
+        MPI_Group colgrps_group_;
+        MPI_Comm_group(MPI_COMM_WORLD, &colgrps_group_);
+        MPI_Group colgrps_group;
+        MPI_Group_incl(colgrps_group_, tiling->colgrp_nranks, all_colgrp_ranks.data(), &colgrps_group);
+
+        MPI_Comm colgrps_comm;
+        MPI_Comm_create(MPI_COMM_WORLD, colgrps_group, &colgrps_comm);
+
+        //int new_rank = -1, new_size = -1;
+        
+        if (MPI_COMM_NULL != colgrps_comm) 
+        {
+            MPI_Comm_rank(colgrps_comm, &Env::rank_cg);
+            MPI_Comm_size(colgrps_comm, &Env::nranks_cg);
+        }
+        
+        printf("WORLD RANK/SIZE: %d/%d \t COLUMN RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_cg, Env::nranks_cg);
+
+
+        MPI_Group_free(&colgrps_group_);
+        MPI_Group_free(&colgrps_group);
+        MPI_Comm_free(&colgrps_comm);
+        */
+        
+        
+        
+    //}
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
