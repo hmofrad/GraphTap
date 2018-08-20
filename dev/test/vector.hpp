@@ -18,7 +18,8 @@ struct Segment
     
     Segment();
     Segment(Integer_Type nrows_, Integer_Type ncols_, 
-            uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, bool allocated_);
+            uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, 
+            uint32_t leader_rank_rg_, uint32_t leader_rank_cg_, bool allocated_);
     ~Segment();
     void allocate();
     void del_seg();
@@ -28,6 +29,8 @@ struct Segment
     Integer_Type nrows, ncols;
     uint32_t rg, cg;
     uint32_t leader_rank;
+    uint32_t leader_rank_rg;
+    uint32_t leader_rank_cg;
     bool allocated;
 };
 
@@ -36,13 +39,16 @@ Segment<Weight, Integer_Type, Fractional_Type>::Segment() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type nrows_, Integer_Type ncols_,
-                              uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, bool allocated_)
+                              uint32_t rg_, uint32_t cg_, uint32_t leader_rank_,
+                              uint32_t leader_rank_rg_, uint32_t leader_rank_cg_, bool allocated_)
 {
     nrows  = nrows_;
     ncols  = ncols_;
     rg     = rg_;
     cg     = cg_;
     leader_rank   = leader_rank_;       
+    leader_rank_rg   = leader_rank_rg_;
+    leader_rank_cg   = leader_rank_cg_;
     allocated = allocated_;
     D = nullptr;
 }
@@ -72,10 +78,12 @@ class Vector
         Vector();
         Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
-               std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments_);
+               std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &leader_ranks_rg,
+               std::vector<uint32_t> &leader_ranks_cg, std::vector<uint32_t> &local_segments_);
        Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
-               std::vector<uint32_t> &leader_ranks);
+               std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &leader_ranks_rg,
+               std::vector<uint32_t> &leader_ranks_cg);
         ~Vector();
         void del_vec();
         
@@ -97,7 +105,9 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integer_Type ncols_,
                uint32_t nrowgrps_, uint32_t ncolgrps_, Integer_Type tile_height_, Integer_Type tile_width_,
-               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &local_segments_)
+               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks, 
+               std::vector<uint32_t> &leader_ranks_rg, std::vector<uint32_t> &leader_ranks_cg,
+               std::vector<uint32_t> &local_segments_)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -116,6 +126,8 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         segments[i].rg     = i;
         segments[i].cg     = i;
         segments[i].leader_rank = leader_ranks[i];
+        segments[i].leader_rank_rg = leader_ranks_rg[i];
+        segments[i].leader_rank_cg = leader_ranks_cg[i];
         segments[i].allocated = false;
         
         if(leader_ranks[i] == Env::rank)
@@ -143,7 +155,8 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
 template<typename Weight, typename Integer_Type, typename Fractional_Type>    
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integer_Type ncols_,
                uint32_t nrowgrps_, uint32_t ncolgrps_, Integer_Type tile_height_, Integer_Type tile_width_,
-               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks)
+               uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks,
+               std::vector<uint32_t> &leader_ranks_rg, std::vector<uint32_t> &leader_ranks_cg)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -162,6 +175,8 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
         segments[i].rg     = i;
         segments[i].cg     = i;
         segments[i].leader_rank   = leader_ranks[i];
+        segments[i].leader_rank_rg = leader_ranks_rg[i];
+        segments[i].leader_rank_cg = leader_ranks_cg[i];
         segments[i].allocated = false;
         
         if(leader_ranks[i] == Env::rank)
