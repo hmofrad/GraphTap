@@ -1036,7 +1036,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                     
                     for(uint32_t j = IA[i]; j < IA[i +1]; j++)
                     {
-                        y_data[i] += x_data[JA[j]];
+                        if(x_data[JA[j]])
+                            y_data[i] += x_data[JA[j]];
                     }
                 }
                 //printf("END %d\n", Env::rank);
@@ -1062,7 +1063,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                     //}
                     for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
                     {
-                        y_data[ROW_INDEX[i]] += x_data[j];
+                        if(x_data[j])
+                            y_data[ROW_INDEX[i]] += x_data[j];
                     }
                 }
             }
@@ -1207,7 +1209,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                     Integer_Type yj_nbytes = yj_seg.D->nbytes;                        
                     for(uint32_t i = 0; i < yj_nitems; i++)
                     {
-                        y_data[i] += yj_data[i];
+                        if(yj_data[i])
+                            y_data[i] += yj_data[i];
                     }
                 }
                 received += outcount;
@@ -1259,6 +1262,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         
         for(uint32_t i = 0; i < v_nitems; i++)
         {
+            
             v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
         memset(y_data, 0, y_nbytes);
