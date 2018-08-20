@@ -208,6 +208,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles(
     }
 }
 
+/*
 std::vector<int32_t> sort_indexes(const std::vector<int32_t> &v) {
 
   // initialize original index locations
@@ -220,14 +221,16 @@ std::vector<int32_t> sort_indexes(const std::vector<int32_t> &v) {
 
   return idx;
 }
-
+*/
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 std::vector<int32_t> Matrix<Weight, Integer_Type, Fractional_Type>::sort_indices(const std::vector<int32_t> &v) 
 {
-  std::vector<int32_t> idx(v.size());
-  std::iota(idx.begin(), idx.end(), 0);
-  std::sort(idx.begin(), idx.end(),
-       [&v](int32_t i1, int32_t i2) {return v[i1] < v[i2];});
+    std::vector<int32_t> idx(v.size());
+    for( int i = 0; i < v.size(); i++ )
+        idx[i] = i;
+    //std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(),
+        [&v](int32_t i1, int32_t i2) {return v[i1] < v[i2];});
   return idx;
 }
 
