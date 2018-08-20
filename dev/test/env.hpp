@@ -34,7 +34,7 @@ class Env
     static int nranks_cg;
     static void grps_init(std::vector<int32_t> &grps_ranks, int32_t grps_nranks, 
                int &grps_rank_, int &grps_nranks_,
-               MPI_Group grps_group_, MPI_Group grps_group, MPI_Comm grps_comm);
+               MPI_Group &grps_group_, MPI_Group &grps_group, MPI_Comm &grps_comm);
     static void rowgrps_init(std::vector<int32_t> &rowgrps_ranks, int32_t rowgrps_nranks);
     static void colgrps_init(std::vector<int32_t> &colgrps_ranks, int32_t colgrps_nranks);               
 
@@ -86,7 +86,7 @@ void Env::init()
 }
 
 void Env::grps_init(std::vector<int32_t> &grps_ranks, int grps_nranks, int &grps_rank_, int &grps_nranks_,
-                    MPI_Group grps_group_, MPI_Group grps_group, MPI_Comm grps_comm)
+                    MPI_Group &grps_group_, MPI_Group &grps_group, MPI_Comm &grps_comm)
 {
     
     MPI_Comm_group(MPI_COMM_WORLD, &grps_group_);
