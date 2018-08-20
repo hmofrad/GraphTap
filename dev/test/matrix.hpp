@@ -21,14 +21,15 @@ struct Tile2D
     template <typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Matrix;
     std::vector<struct Triple<Weight, Integer_Type>> *triples;
-    //std::vector<struct Triple<Weight, Integer_Type>> *triples1;
     struct CSR<Weight, Integer_Type> *csr;
     struct CSC<Weight, Integer_Type> *csc;
-    //struct BV<char> *bv;
     uint32_t rg, cg; // Row group, Column group
     uint32_t ith, jth, nth; // ith row, jth column and nth local tile
     uint32_t kth; // kth global tile
     uint32_t rank;
+    uint32_t rank_rg;
+    uint32_t rank_cg;
+    
     bool allocated;
 }; 
  
@@ -67,6 +68,9 @@ class Matrix
         std::vector<uint32_t> rowgrp_ranks_accu_seg;
         std::vector<uint32_t> follower_colgrp_ranks; 
         std::vector<uint32_t> colgrp_ranks_accu_seg;
+        
+        std::vector<uint32_t> leader_ranks_rg;
+        std::vector<uint32_t> leader_ranks_cg;
         
         std::vector<int32_t> all_rowgrp_ranks;
         std::vector<int32_t> all_rowgrp_ranks_accu_seg;
@@ -194,9 +198,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                                    (i % tiling->colgrp_nranks);
                 tile.ith = tile.rg   / tiling->colgrp_nranks;
                 tile.jth = tile.cg   / tiling->rowgrp_nranks;
+                
+                tile.rank_rg = (j % tiling->rowgrp_nranks);
+                tile.rank_cg = (i % tiling->colgrp_nranks);
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
             tile.allocated = false;
+            //tile.rank_rg = -1;
+            //tile.rank_cg = -1;
         }
     }
     
@@ -206,6 +215,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     * the leader ranks per row group.
     */
     leader_ranks.resize(nrowgrps, -1);
+    leader_ranks_rg.resize(nrowgrps);
+    leader_ranks_cg.resize(ncolgrps);
     for (uint32_t i = 0; i < nrowgrps; i++)
     {
         for (uint32_t j = i; j < ncolgrps; j++)  
@@ -218,8 +229,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             }
         }
         leader_ranks[i] = tiles[i][i].rank;
+        leader_ranks_rg[i] = tiles[i][i].rank_rg;
+        leader_ranks_cg[i] = tiles[i][i].rank_cg;
         //if(!Env::rank)
-          //  printf("%d ", leader_ranks[i]);
+        //    printf("r=%d r_rg=%d r_cg=%d\n", leader_ranks[i], leader_ranks_rg[i], leader_ranks_cg[i]);
     }
     //if(!Env::rank)
       //  printf("\n");
@@ -411,10 +424,42 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         std::sort(all_colgrp_ranks.begin(), all_colgrp_ranks.end());
         Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
         
+        /*
+        for(uint32_t t: local_tiles)
+        {        
+            pair = tile_of_local_tile(t);
+            auto& tile = tiles[pair.row][pair.col];
+            tile.rank_rg = Env::rank_rg;
+            tile.rank_cg = Env::rank_cg;
+        }
+        */
         
-        printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_rg, Env::nranks_rg);
-        Env::barrier();
-        printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_cg, Env::nranks_cg);
+        /*
+        if(!Env::rank)
+        {    
+            for (uint32_t i = 0; i < nrowgrps; i++)
+            {
+                for (uint32_t j = 0; j < ncolgrps; j++)  
+                {
+                    auto& tile = tiles[i][j];
+                    //int t = ((j % tiling->rowgrp_nranks) * tiling->colgrp_nranks) +
+                    //               (i % tiling->colgrp_nranks);
+                    //int t =  (i % tiling->colgrp_nranks);              
+                    //t =  (j % tiling->rowgrp_nranks); 
+                    printf("%02d ", tile.rank_cg);
+                }
+                printf("\n");
+            }
+            printf("\n");
+        }
+        */
+        
+        
+        
+        //printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_rg, Env::nranks_rg);
+        //Env::barrier();
+        //printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", Env::rank, Env::nranks, Env::rank_cg, Env::nranks_cg);
+        
         /*
         MPI_Group rowgrps_group_;
         MPI_Comm_group(MPI_COMM_WORLD, &rowgrps_group_);
