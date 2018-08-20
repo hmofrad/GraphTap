@@ -29,10 +29,19 @@ struct Tile2D
     uint32_t rank;
     uint32_t rank_rg;
     uint32_t rank_cg;
-    
     bool allocated;
-}; 
- 
+};
+
+/*
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+struct Tile2D_RG : Tile2D<Weight, Integer_Type, Fractional_Type>
+{
+    void set_rank(uint32_t rank_) {this.rank = rank_;};
+};
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+struct Tile2D_CG : Tile2D<Weight, Integer_Type, Fractional_Type> {};
+*/ 
  
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class Matrix
@@ -57,17 +66,18 @@ class Matrix
         Compression_type compression;
 
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles;
+        std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles_rg;
+        std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles_cg;
         
         std::vector<uint32_t> local_tiles;
-        std::vector<uint32_t> local_segments;
-        std::vector<uint32_t> local_col_segments;
+        std::vector<int32_t> local_col_segments;
         
         std::vector<uint32_t> leader_ranks;
 
-        std::vector<uint32_t> follower_rowgrp_ranks;
-        std::vector<uint32_t> rowgrp_ranks_accu_seg;
-        std::vector<uint32_t> follower_colgrp_ranks; 
-        std::vector<uint32_t> colgrp_ranks_accu_seg;
+        std::vector<int32_t> follower_rowgrp_ranks;
+        std::vector<int32_t> follower_rowgrp_ranks_accu_seg;
+        std::vector<int32_t> follower_colgrp_ranks; 
+        std::vector<int32_t> follower_colgrp_ranks_accu_seg;
         
         std::vector<uint32_t> leader_ranks_rg;
         std::vector<uint32_t> leader_ranks_cg;
@@ -78,11 +88,19 @@ class Matrix
         std::vector<int32_t> all_colgrp_ranks_accu_seg;
         
         
+        std::vector<int32_t> all_rowgrp_ranks_rg;
+        std::vector<int32_t> all_rowgrp_ranks_accu_seg_rg;
+        
+        std::vector<int32_t> follower_rowgrp_ranks_rg;
+        std::vector<int32_t> follower_rowgrp_ranks_accu_seg_rg;
+        
+        
         
         
         //std::vector<std::vector<uint32_t>> rowgrp_ranks_accu_seg_dup;
         
         void init_matrix();
+        void init_tiles(std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> &tiles_);
         void del_triples();
         void init_compression();
         void init_csr();
@@ -99,6 +117,8 @@ class Matrix
         struct Triple<Weight, Integer_Type> rebase(const struct Triple<Weight, Integer_Type> &pair);
         void insert(const struct Triple<Weight, Integer_Type> &triple);
         
+        std::vector<int32_t> sort_indices(const std::vector<int32_t> &v);
+        void indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2);
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -165,6 +185,108 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<W
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles(
+        std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> &tiles_)
+{
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles_[i][j];
+            tile.rg = i;
+            tile.cg = j;
+            if(tiling->tiling_type == Tiling_type::_2D_)
+            {
+                tile.rank = j % tiling->rowgrp_nranks;
+                tile.ith = tile.rg   / tiling->colgrp_nranks;
+                tile.jth = tile.cg   / tiling->rowgrp_nranks;
+            }
+        
+            tile.nth = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
+            tile.allocated = false;
+        }
+    }
+}
+
+std::vector<int32_t> sort_indexes(const std::vector<int32_t> &v) {
+
+  // initialize original index locations
+  std::vector<int32_t> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  std::sort(idx.begin(), idx.end(),
+       [&v](int32_t i1, int32_t i2) {return v[i1] < v[i2];});
+
+  return idx;
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+std::vector<int32_t> Matrix<Weight, Integer_Type, Fractional_Type>::sort_indices(const std::vector<int32_t> &v) 
+{
+  std::vector<int32_t> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+  std::sort(idx.begin(), idx.end(),
+       [&v](int32_t i1, int32_t i2) {return v[i1] < v[i2];});
+  return idx;
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2) 
+{
+    // Sort v2 based on v1 order
+    
+    //if(Env::rank == 9)
+    //{
+      //  for(int32_t i: v1)
+        //    printf("%d ", i);
+        //printf("\n");
+    //}
+    
+    //std::vector<int32_t> idx(v1.size());
+    //std::iota(idx.begin(), idx.end(), 0);
+    //std::sort(idx.begin(), idx.end(),
+      // [&v1](int32_t i1, int32_t i2) {return v1[i1] < v1[i2];});
+    
+    
+    std::vector<int32_t> idx = sort_indexes(v1);
+    //if(Env::rank == 9)
+    //{
+      //  for(int32_t i: idx)
+        //    printf("%d ", i);
+        //printf("\n");
+    //}
+    
+
+    
+    
+    int32_t max = *std::max_element(v2.begin(), v2.end());
+    std::vector<int32_t> temp(max + 1);
+    int32_t i = 0;
+    //for(int32_t j = 0; j < v1.size(); j++)
+    for(int32_t j: v2)    
+    {
+        temp[j] = idx[i];
+        i++;
+    }
+    std::sort(v2.begin(), v2.end(),[&temp](int32_t i1, int32_t i2) {return temp[i1] < temp[i2];});        
+    
+
+        
+    
+    
+    if(Env::rank == 9)
+    {
+        for(int32_t i: temp)
+           printf("%d ", i);
+        printf("\n");
+        printf("==============\n");
+    }
+        
+}
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
 {
     // Reserve the 2D vector of tiles. 
@@ -199,8 +321,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.ith = tile.rg   / tiling->colgrp_nranks;
                 tile.jth = tile.cg   / tiling->rowgrp_nranks;
                 
-                tile.rank_rg = (j % tiling->rowgrp_nranks);
-                tile.rank_cg = (i % tiling->colgrp_nranks);
+                tile.rank_rg = j % tiling->rowgrp_nranks;
+                tile.rank_cg = i % tiling->colgrp_nranks;
+                
+                //tiles_rg.set_rank(j % tiling->rowgrp_nranks);
+                //tiles_rg.rank = j % tiling->rowgrp_nranks;
+                //tiles_rg.rank = i % tiling->colgrp_nranks;
+                
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
             tile.allocated = false;
@@ -208,6 +335,48 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             //tile.rank_cg = -1;
         }
     }
+    
+    /*
+    tiles_rg.resize(nrowgrps);
+    for (uint32_t i = 0; i < nrowgrps; i++)
+        tiles_rg[i].resize(ncolgrps);
+    // Initialize tiles 
+    init_tiles(tiles_rg);
+    */
+    
+ /*
+    if(Env::is_master)
+    {    
+        uint32_t skip = 16;
+        for (uint32_t i = 0; i < nrowgrps; i++)
+        {
+            for (uint32_t j = 0; j < ncolgrps; j++)  
+            {
+                auto& tile = tiles_rg[i][j];
+                printf("%02d ", tile.nth);
+                
+                if(j > skip)
+                {
+                    printf("...");
+                    break;
+                }
+            }
+            printf("\n");
+            if(i > skip)
+            {
+                printf(".\n.\n.\n");
+                break;
+            }
+        }
+        printf("\n");
+    } 
+    */
+    
+    
+    
+    
+    
+    
     
     /*
     * Reorganize the tiles so that each rank is placed in
@@ -275,10 +444,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                     == follower_rowgrp_ranks.end()))
                 {
                     follower_rowgrp_ranks.push_back(tiles[pair.row][j].rank);
-                    rowgrp_ranks_accu_seg.push_back(tiles[pair.row][j].cg);
+                    follower_rowgrp_ranks_accu_seg.push_back(tiles[pair.row][j].cg);
                     
                     all_rowgrp_ranks.push_back(tiles[pair.row][j].rank);
                     all_rowgrp_ranks_accu_seg.push_back(tiles[pair.row][j].cg);
+                    
+                    follower_rowgrp_ranks_rg.push_back(tiles[pair.row][j].rank_rg);
+                    follower_rowgrp_ranks_accu_seg_rg.push_back(tiles[pair.row][j].cg);
                     
                 }
             }
@@ -292,13 +464,28 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                     == follower_colgrp_ranks.end()))
                 {
                     follower_colgrp_ranks.push_back(tiles[i][pair.col].rank);
-                    colgrp_ranks_accu_seg.push_back(tiles[i][pair.col].rg);
+                    follower_colgrp_ranks_accu_seg.push_back(tiles[i][pair.col].rg);
                     
                     all_colgrp_ranks.push_back(tiles[i][pair.col].rank);
                     all_colgrp_ranks_accu_seg.push_back(tiles[i][pair.col].rg);
                     
                 }
             }
+            
+            /*
+            for(uint32_t j = 0; j < ncolgrps; j++)
+            {
+                if((tiles[pair.row][j].rank != Env::rank) 
+                    and (std::find(follower_rowgrp_ranks_rg.begin(), follower_rowgrp_ranks_rg.end(), tiles[pair.row][j].rank_rg) 
+                    == follower_rowgrp_ranks_rg.end()))
+                {
+                    follower_rowgrp_ranks_rg.push_back(tiles[pair.row][j].rank_rg);
+                    rowgrp_ranks_accu_seg_rg.push_back(tiles[pair.row][j].cg);
+                }
+            }
+            
+            */
+            
         }
     }
     
@@ -313,7 +500,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         {
             for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++)    
             {
-                rowgrp_ranks_accu_seg_dup[i][j] = rowgrp_ranks_accu_seg[j];
+                rowgrp_ranks_accu_seg_dup[i][j] = follower_rowgrp_ranks_accu_seg[j];
                 printf("%d ", rowgrp_ranks_accu_seg_dup[i][j]);
             }
             printf("\n");
@@ -324,7 +511,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             printf("%d ", s);
         printf("\n");
         
-        for(uint32_t s: rowgrp_ranks_accu_seg)
+        for(uint32_t s: follower_rowgrp_ranks_accu_seg)
             printf("%d %d ", s, tiling->rank_nrowgrps);
         printf("\n");
         */
@@ -369,60 +556,109 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("\n");
     }
     
-    //if(Env::rank == 6)
-    //{
         
-        
-        //for (uint32_t i = 0; i < tiling->nrowgrps; i++)
-        //{
-          //  for (uint32_t j = 0; j < tiling->ncolgrps; j++)  
-            //{
-                //auto& tile = tiles[i][j];
-              //  printf("rg=%d \n", i);
-                
-            //}
-        //}
-        
-        
-        //printf("Creating communicators\n");
-        /*
-        for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+    
+    /*
+    if(Env::rank == r)
+    {
+        for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++)
         {
-            uint32_t other_rank = all_rowgrp_ranks[j];
-            uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
-            printf("[%d %d] ", other_rank, other_seg);
-        }
-        printf("\n");
-        */
-        
-        
-
-        /*
-        for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
-        {
-            uint32_t other_rank = all_rowgrp_ranks[j];
-            //uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
+            uint32_t other_rank = follower_rowgrp_ranks[j];
             printf("%d ", other_rank);
+            uint32_t other_seg = follower_rowgrp_ranks_accu_seg[j];
+            printf("%d |", other_seg);
         }
         printf("\n");
-        */
-        
-        /*
-        for(uint32_t j = 0; j < tiling->colgrp_nranks; j++)
+    }
+    
+    indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
+    
+    if(Env::rank == r)
+    {
+        for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++)
         {
-            uint32_t other_rank = all_colgrp_ranks[j];
-            uint32_t other_seg = all_colgrp_ranks_accu_seg[j];
-            printf("[%d %d] ", other_rank, other_seg);
+            uint32_t other_rank = follower_rowgrp_ranks[j];
+            printf("%d ", other_rank);
+            uint32_t other_seg = follower_rowgrp_ranks_accu_seg[j];
+            printf("%d |", other_seg);
         }
         printf("\n");
-        */
+    }        
+    */    
+Env::barrier();
+    int r = 9;
+    
+    
+    
+    if(Env::rank == r)
+    {
+        for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+        {
+            uint32_t other_rank = all_rowgrp_ranks[j];
+            printf("%d ", other_rank);
+            uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
+            printf("%d |", other_seg);
+        }
+        printf("\n");
+    }
+    
+    /*
+    indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
+    Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
+    
+    indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
+    Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
+    */
+    
+        //std::vector<int32_t> idx(tiling->rowgrp_nranks);
+        //std::iota(idx.begin(), idx.end(), 0);
+        //sort indexes based on comparing values in v
+        //std::sort(idx.begin(), idx.end(),[&all_rowgrp_ranks](int32_t i1, int32_t i2) {return all_rowgrp_ranks[i1] < all_rowgrp_ranks[i2];});
         
         
-        std::sort(all_rowgrp_ranks.begin(), all_rowgrp_ranks.end());
-        Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
+        std::vector<int32_t> idx_rg = sort_indexes(all_rowgrp_ranks);
+        //std::sort(all_rowgrp_ranks.begin(), all_rowgrp_ranks.end(),[&idx](int32_t i1, int32_t i2) {return idx[i1] < idx[i2];});
+        
         
         std::sort(all_colgrp_ranks.begin(), all_colgrp_ranks.end());
         Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
+        
+        
+        int32_t max_rg = *std::max_element(all_rowgrp_ranks_accu_seg.begin(), all_rowgrp_ranks_accu_seg.end());
+        int32_t min_rg = *std::min_element(all_rowgrp_ranks_accu_seg.begin(), all_rowgrp_ranks_accu_seg.end());
+        //min = -1;
+        std::vector<int32_t> vec_rg(max_rg + 1);
+        int32_t l = 0;
+        for(int32_t i: idx_rg)
+        {
+            vec_rg[all_rowgrp_ranks_accu_seg[i]] = l;
+            l++;
+        }
+        
+        std::sort(all_rowgrp_ranks_accu_seg.begin(), all_rowgrp_ranks_accu_seg.end(),[&vec_rg](int32_t i1, int32_t i2) {return vec_rg[i1] < vec_rg[i2];});        
+        
+        std::sort(all_rowgrp_ranks.begin(), all_rowgrp_ranks.end());
+        Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks - 1);
+        
+        if(Env::rank == r)
+        {
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+            {
+                printf("%d ", idx_rg[j]);
+            }
+            printf("\n");
+            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
+            {
+            uint32_t other_rank = all_rowgrp_ranks[j];
+            printf("%d ", other_rank);
+            uint32_t other_seg = all_rowgrp_ranks_accu_seg[j];
+            printf("%d |", other_seg);
+            }
+            printf("\n"); 
+        }
+        
+        
         
         /*
         for(uint32_t t: local_tiles)
