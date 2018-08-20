@@ -105,9 +105,10 @@ int main(int argc, char **argv)
     
     Generic_functions f;
     //printf("scatter\n");
-    V.scatter(f.ones);    
+    V.bcast(f.ones);
+    //V.scatter(f.ones);    
     //printf("gather\n");
-    V.gather();
+    //V.gather();
     //printf("combine %d\n", Env::rank);
     V.combine(f.assign);
     //printf("free %d\n",  Env::rank);
@@ -153,7 +154,16 @@ int main(int argc, char **argv)
 
         if(!Env::rank)
             Env::tick();
+
+        VR.bcast(f.ones);
         
+        if(!Env::rank)
+            Env::tock("Bcast"); 
+        
+        /*
+        if(!Env::rank)
+            Env::tick();
+
         VR.scatter(f.div);
         
         if(!Env::rank)
@@ -166,6 +176,7 @@ int main(int argc, char **argv)
         
         if(!Env::rank)
             Env::tock("Gather"); 
+        */
         
         if(!Env::rank)
             Env::tick();
