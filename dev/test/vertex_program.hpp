@@ -1074,7 +1074,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         if(communication)
         {
             uint32_t leader = Yp->segments[tile.rg].leader_rank;
-            uint32_t leader_cg = Yp->segments[tile.rg].leader_rank_cg;
+            uint32_t leader_cg = Yp->segments[tile.rg].leader_rank_rg;
             if(Env::rank == leader)
             {
                 if(A->tiling->tiling_type == Tiling_type::_1D_ROW)
@@ -1093,7 +1093,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                      or (A->tiling->tiling_type == Tiling_type::_1D_COL))
                 {
                     MPI_Status status;
-                    
+                    /*
                     for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
                     {
                         uint32_t other_rank = A->follower_rowgrp_ranks[j];
@@ -1105,22 +1105,20 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                         MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, other_rank, pair.row, Env::MPI_WORLD, &request);
                         in_requests.push_back(request);
                     }
-                    if(Env::rank == 4)
+                    */
+                        
+                    for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
                     {
-                        
-                        for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
-                        {
-                            uint32_t other_rank = A->follower_rowgrp_ranks_rg[j];
-                            //yj = A->follower_rowgrp_ranks_accu_seg_rg[j];
-                            
-                            
-                            //uint32_t other_rank = A->all_rowgrp_ranks[j];
-                            //printf("%d ", other_rank);
-                            //uint32_t other_seg = A->all_rowgrp_ranks_accu_seg[j];
-                            //printf("%d |", other_seg);
-                        }
-                        
+                        uint32_t other_rank = A->follower_rowgrp_ranks_rg[j];
+                        yj = A->follower_rowgrp_ranks_accu_seg_rg[j];
+                        auto &yj_seg = Yp->segments[yj];
+                        auto *yj_data = (Fractional_Type *) y_seg.D->data;
+                        Integer_Type yj_nitems = yj_seg.D->n;
+                        Integer_Type yj_nbytes = yj_seg.D->nbytes;
+                        MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, other_rank, pair.row, Env::rowgrps_comm, &request);
+                        in_requests.push_back(request);
                     }
+                        
                     
                     
                     /*
@@ -1157,8 +1155,9 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             }
             else
             {
-                //MPI_Send(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD);
-                MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD, &request);
+                
+                //MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair.row, Env::MPI_WORLD, &request);
+                MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader_cg, pair.row, Env::rowgrps_comm, &request);
                 //out_requests.push_back(request);
                 
                 //MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
@@ -1200,7 +1199,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             {
                 for(uint32_t j = 0; j < outcount; j++)
                 {
-                    yj = A->follower_rowgrp_ranks_accu_seg[indices[j]];
+                    //yj = A->follower_rowgrp_ranks_accu_seg[indices[j]];
+                    yj = A->follower_rowgrp_ranks_accu_seg_rg[indices[j]];
                     auto &yj_seg = Yp->segments[yj];
                     auto *yj_data = (Fractional_Type *) y_seg.D->data;
                     Integer_Type yj_nitems = yj_seg.D->n;
