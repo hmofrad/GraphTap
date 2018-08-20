@@ -112,12 +112,13 @@ int main(int argc, char **argv)
     //printf("combine %d\n", Env::rank);
     V.combine(f.assign);
     //printf("free %d\n",  Env::rank);
-    //V.free();
+    V.free();
     G.free();
     if(!Env::rank)
         Env::tock("Degree");
     Env::barrier(); 
-    
+    Env::finalize();
+    return(0);
     
     
     transpose = true;
