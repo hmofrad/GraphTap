@@ -88,7 +88,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     uint32_t owned_diag_segment = std::distance(A->leader_ranks.begin(), 
           std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
     X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->local_col_segments);
+                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
     for(uint32_t xi : X->local_segments)
     {
         auto &x_seg = X->segments[xi];
@@ -96,7 +97,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     }    
     
     V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t vi = V->owned_segment;
     auto &v_seg = V->segments[vi];
     populate(v, v_seg);
@@ -109,7 +111,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     Integer_Type v_nbytes_ = v_seg_.D->nbytes;
     
     S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-               A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);    
+               A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                A->leader_ranks_rg, A->leader_ranks_cg);    
     uint32_t si = S->owned_segment;
     auto &s_seg = S->segments[si];
     auto *s_data = (Fractional_Type *) s_seg.D->data;
@@ -136,7 +139,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
             if(pair.row == owned_diag_segment)
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -147,7 +151,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>
                     (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks);
+                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
                 uint32_t yi = YY->owned_segment;  
                 auto &y_seg = YY->segments[yi];
                 populate(y, y_seg);   
@@ -165,7 +169,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
               std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
               
     X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->local_col_segments);
+                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, 
+                     A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
     for(uint32_t xi : X->local_segments)
     {
         auto &x_seg = X->segments[xi];
@@ -173,13 +178,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     }                    
 
     V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t vi = V->owned_segment;
     auto &v_seg = V->segments[vi];
     populate(v, v_seg);
                    
     S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t si = S->owned_segment;
     auto &s_seg = S->segments[si];
     populate(s, s_seg);
@@ -195,7 +202,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             if(pair.row == owned_diag_segment)
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -206,7 +214,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>
                     (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks);
+                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
                 uint32_t yi = YY->owned_segment;  
                 auto &y_seg = YY->segments[yi];
                 populate(y, y_seg);   
@@ -509,6 +517,7 @@ class Vertex_Program<Empty, Integer_Type, Fractional_Type>
         void gather();
         void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void free();
+        void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
     
     protected:
         void print(Segment<Empty, Integer_Type, Fractional_Type> &segment);
@@ -582,7 +591,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
     uint32_t owned_diag_segment = std::distance(A->leader_ranks.begin(), 
           std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
     X = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->local_col_segments);
+                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
     for(uint32_t xi : X->local_segments)
     {
         auto &x_seg = X->segments[xi];
@@ -598,7 +608,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
     }   
     */
     V = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                   A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t vi = V->owned_segment;
     auto &v_seg = V->segments[vi];
     populate(v, v_seg);
@@ -611,7 +622,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
     Integer_Type v_nbytes_ = v_seg_.D->nbytes;
     
     S = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-               A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);    
+               A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+               A->leader_ranks_rg, A->leader_ranks_cg);    
     uint32_t si = S->owned_segment;
     auto &s_seg = S->segments[si];
     auto *s_data = (Fractional_Type *) s_seg.D->data;
@@ -641,7 +653,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
             {
                 //printf("Owner, %d %d\n", pair.row, owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -653,7 +666,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
                 //printf("diag, %d\n", owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>
                     (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks);
+                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
                 uint32_t yi = YY->owned_segment;  
                 auto &y_seg = YY->segments[yi];
                 populate(y, y_seg);   
@@ -671,7 +684,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
               std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
               
     X = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->local_col_segments);
+                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
     for(uint32_t xi : X->local_segments)
     {
         auto &x_seg = X->segments[xi];
@@ -687,13 +701,15 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
     } 
     */
     V = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t vi = V->owned_segment;
     auto &v_seg = V->segments[vi];
     populate(v, v_seg);
                    
     S = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks);
+                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                    A->leader_ranks_rg, A->leader_ranks_cg);
     uint32_t si = S->owned_segment;
     auto &s_seg = S->segments[si];
     populate(s, s_seg);
@@ -713,7 +729,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
                 //if(Env::rank == 10)
                 //printf("Owner, %d %d %d\n", pair.row, pair.col, owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -726,7 +743,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
                 //printf("other, %d %d %d\n", pair.row, pair.col, owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>
                     (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks);
+                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
                 uint32_t yi = YY->owned_segment;  
                 auto &y_seg = YY->segments[yi];
                 populate(y, y_seg);   
@@ -748,6 +765,77 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
         Z.push_back(ZZ);            
     }
     */
+    
+}
+
+template<typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Empty, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
+                   (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
+{
+    uint32_t xi = X->owned_segment;
+    auto &x_seg = X->segments[xi];
+    auto *x_data = (Fractional_Type *) x_seg.D->data;
+    Integer_Type x_nitems = x_seg.D->n;
+    Integer_Type x_nbytes = x_seg.D->nbytes;
+    
+    uint32_t vi = V->owned_segment;
+    auto &v_seg = V->segments[vi];
+    auto *v_data = (Fractional_Type *) v_seg.D->data;
+    Integer_Type v_nitems = v_seg.D->n;
+    Integer_Type v_nbytes = v_seg.D->nbytes;
+    
+    uint32_t si = S->owned_segment;
+    auto &s_seg = S->segments[si];
+    auto *s_data = (Fractional_Type *) s_seg.D->data;
+    Integer_Type s_nitems = s_seg.D->n;
+    Integer_Type s_nbytes = s_seg.D->nbytes;
+    
+    for(uint32_t i = 0; i < x_nitems; i++)
+    {
+        x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+    }
+    
+    
+    if((A->tiling->tiling_type == Tiling_type::_2D_)
+        or (A->tiling->tiling_type == Tiling_type::_1D_ROW))
+    {
+        uint32_t leader = x_seg.leader_rank;
+        uint32_t leader_cg = x_seg.leader_rank_cg;
+        uint32_t xi = X->owned_segment;
+    //if(Env::rank == 0){
+        for(uint32_t s: A->local_col_segments)
+        {
+            auto& xj_seg = X->segments[s];
+            auto *xj_data = (Fractional_Type *) xj_seg.D->data;
+            Integer_Type xj_nbytes = xj_seg.D->nbytes;
+            //printf("rank=%d rank_cg=%d leader_cg=%d seg=%d\n", Env::rank, Env::rank_cg, xj_seg.leader_rank_cg, s);
+            MPI_Bcast(xj_data, xj_nbytes, MPI_BYTE, xj_seg.leader_rank_cg, Env::colgrps_comm);
+            //Env::barrier();
+            //
+            //
+            //if(xi == s)
+            //    printf("send: %d ", s);
+            //else
+            //    printf("recv: %d ", s);
+        }
+        //printf(" %d %d %d %d\n", Env::rank, xi, Env::rank_cg, leader_cg);
+    //}
+        //for(uint32_t j = 0; j < A->tiling->colgrp_nranks - 1; j++)
+        //{
+            //uint32_t other_rank = A->follower_colgrp_ranks[j];
+            //MPI_Bcast(x_data, x_nbytes, MPI_BYTE, Env::rank, Env::colgrps_comm)
+        //}
+    }
+    else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
+    {
+        ;
+    }
+    else
+    {
+        fprintf(stderr, "Invalid tiling\n");
+        Env::exit(1);
+    }   
+    
     
 }
 
@@ -787,6 +875,8 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::scatter(Fractional_Ty
         {
             uint32_t other_rank = A->follower_colgrp_ranks[j];
             MPI_Isend(x_data, x_nbytes, MPI_BYTE, other_rank, x_seg.cg, Env::MPI_WORLD, &request);
+            //MPI_Isend(x_data, x_nbytes, MPI_BYTE, other_rank, x_seg.cg, Env::colgrps_comm, &request);
+            //MPI_Bcast(x_data, x_nbytes, MPI_BYTE, Env::rank, Env::colgrps_comm)
             //out_requests.push_back(request);
             //if(!Env::rank)
               //  printf("%d --> %d\n", Env::rank, other_rank);
@@ -800,9 +890,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::scatter(Fractional_Ty
     {
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
-    }
-    
-    
+    }   
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -822,6 +910,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::gather()
                 auto *xj_data = (Fractional_Type *) xj_seg.D->data;
                 Integer_Type xj_nbytes = xj_seg.D->nbytes;
                 MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, xj_seg.leader_rank, xj_seg.cg, Env::MPI_WORLD, &request);
+                //MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, xj_seg.leader_rank, xj_seg.cg, Env::colgrps_comm, &request);
                 in_requests.push_back(request);
                 //if(!Env::rank)
                   //  printf("%d <-- %d\n", Env::rank, xj_seg.leader_rank);
@@ -1143,6 +1232,10 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
         memset(y_data, 0, y_nbytes);
+        
+
+        //print(v_seg);
+        
         
         //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         //out_requests.clear();
