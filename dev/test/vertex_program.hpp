@@ -140,7 +140,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
                             A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -203,7 +203,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             {
                 YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
                             A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -397,7 +397,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                     {
                         
                         uint32_t other_rank = A->follower_rowgrp_ranks[j];
-                        yj = A->rowgrp_ranks_accu_seg[j];
+                        yj = A->follower_rowgrp_ranks_accu_seg[j];
                         auto &yj_seg = Yp->segments[yj];
                         auto *yj_data = (Fractional_Type *) y_seg.D->data;
                         Integer_Type yj_nitems = yj_seg.D->n;
@@ -436,7 +436,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
 
         for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
         {
-            yj = A->rowgrp_ranks_accu_seg[j];
+            yj = A->follower_rowgrp_ranks_accu_seg[j];
             auto &yj_seg = Yp->segments[yj];
             auto *yj_data = (Fractional_Type *) y_seg.D->data;
             Integer_Type yj_nitems = yj_seg.D->n;
@@ -600,7 +600,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
     }    
     /*
     Y = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->follower_rowgrp_ranks_accu_seg);
     for(uint32_t yi : Y->local_segments)
     {
         auto &y_seg = Y->segments[yi];
@@ -654,7 +654,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(
                 //printf("Owner, %d %d\n", pair.row, owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
                             A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -693,7 +693,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
     }                    
     /*
     Y = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->rowgrp_ranks_accu_seg);
+                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, A->follower_rowgrp_ranks_accu_seg);
     for(uint32_t yi : Y->local_segments)
     {
         auto &y_seg = Y->segments[yi];
@@ -730,7 +730,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::init(Fractional_Type 
                 //printf("Owner, %d %d %d\n", pair.row, pair.col, owned_diag_segment);
                 YY = new Vector<Empty, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
                             A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->rowgrp_ranks_accu_seg);
+                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
                 for(uint32_t yi : YY->local_segments)
                 {
                     auto &y_seg = YY->segments[yi];
@@ -1074,6 +1074,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         if(communication)
         {
             uint32_t leader = Yp->segments[tile.rg].leader_rank;
+            uint32_t leader_cg = Yp->segments[tile.rg].leader_rank_cg;
             if(Env::rank == leader)
             {
                 if(A->tiling->tiling_type == Tiling_type::_1D_ROW)
@@ -1092,22 +1093,51 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
                      or (A->tiling->tiling_type == Tiling_type::_1D_COL))
                 {
                     MPI_Status status;
+                    
                     for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
                     {
                         uint32_t other_rank = A->follower_rowgrp_ranks[j];
-                        yj = A->rowgrp_ranks_accu_seg[j];
+                        yj = A->follower_rowgrp_ranks_accu_seg[j];
                         auto &yj_seg = Yp->segments[yj];
                         auto *yj_data = (Fractional_Type *) y_seg.D->data;
                         Integer_Type yj_nitems = yj_seg.D->n;
                         Integer_Type yj_nbytes = yj_seg.D->nbytes;
-                        //MPI_Recv(yj_data, yj_nbytes, MPI_BYTE, other_rank, pair.row, Env::MPI_WORLD, &status);
                         MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, other_rank, pair.row, Env::MPI_WORLD, &request);
                         in_requests.push_back(request);
                     }
+                    if(Env::rank == 4)
+                    {
+                        
+                        for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
+                        {
+                            uint32_t other_rank = A->follower_rowgrp_ranks_rg[j];
+                            //yj = A->follower_rowgrp_ranks_accu_seg_rg[j];
+                            
+                            
+                            //uint32_t other_rank = A->all_rowgrp_ranks[j];
+                            //printf("%d ", other_rank);
+                            //uint32_t other_seg = A->all_rowgrp_ranks_accu_seg[j];
+                            //printf("%d |", other_seg);
+                        }
+                        
+                    }
+                    
+                    
+                    /*
+                    if(Env::rank == 0)
+                    {
+                        for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
+                        {
+                            printf("%d %d\n", A->follower_rowgrp_ranks_rg[j], A->rowgrp_ranks_accu_seg_rg[j]);
+                            
+                        }
+                    }
+                    */
+                    
                     /*
                     for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
                     {
-                        yj = A->rowgrp_ranks_accu_seg[j];
+                        yj = A->follower_rowgrp_ranks_accu_seg[j];
                         auto &yj_seg = Yp->segments[yj];
                         auto *yj_data = (Fractional_Type *) y_seg.D->data;
                         Integer_Type yj_nitems = yj_seg.D->n;
@@ -1170,7 +1200,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
             {
                 for(uint32_t j = 0; j < outcount; j++)
                 {
-                    yj = A->rowgrp_ranks_accu_seg[indices[j]];
+                    yj = A->follower_rowgrp_ranks_accu_seg[indices[j]];
                     auto &yj_seg = Yp->segments[yj];
                     auto *yj_data = (Fractional_Type *) y_seg.D->data;
                     Integer_Type yj_nitems = yj_seg.D->n;
@@ -1209,7 +1239,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         
         for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
         {
-            yj = A->rowgrp_ranks_accu_seg[j];
+            yj = A->follower_rowgrp_ranks_accu_seg[j];
             auto &yj_seg = Yp->segments[yj];
             auto *yj_data = (Fractional_Type *) y_seg.D->data;
             Integer_Type yj_nitems = yj_seg.D->n;
