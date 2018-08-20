@@ -79,7 +79,7 @@ class Vector
         Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
                std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &leader_ranks_rg,
-               std::vector<uint32_t> &leader_ranks_cg, std::vector<uint32_t> &local_segments_);
+               std::vector<uint32_t> &leader_ranks_cg, std::vector<int32_t> &local_segments_);
        Vector(Integer_Type nrows_, Integer_Type ncols_, uint32_t nrowgrps_, uint32_t ncolgrps_,
                Integer_Type tile_height_, Integer_Type tile_width_, uint32_t owned_segment_,
                std::vector<uint32_t> &leader_ranks, std::vector<uint32_t> &leader_ranks_rg,
@@ -88,15 +88,15 @@ class Vector
         void del_vec();
         
         std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
-        std::vector<uint32_t> local_segments;
+        std::vector<int32_t> local_segments;
         uint32_t owned_segment;
     private:
         Integer_Type nrows, ncols;
         uint32_t nrowgrps, ncolgrps;
         Integer_Type tile_height, tile_width;
 
-        void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<uint32_t>& local_segments);
-        void init_vec(std::vector<uint32_t> &diag_ranks);
+        //void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<int32_t>& local_segments);
+        //void init_vec(std::vector<uint32_t> &diag_ranks);
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -107,7 +107,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
                uint32_t nrowgrps_, uint32_t ncolgrps_, Integer_Type tile_height_, Integer_Type tile_width_,
                uint32_t owned_segment_, std::vector<uint32_t> &leader_ranks, 
                std::vector<uint32_t> &leader_ranks_rg, std::vector<uint32_t> &leader_ranks_cg,
-               std::vector<uint32_t> &local_segments_)
+               std::vector<int32_t> &local_segments_)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -140,7 +140,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
     
     local_segments = local_segments_;
     
-    for(uint32_t s: local_segments)
+    for(int32_t s: local_segments)
     {
         
         if(segments[s].leader_rank != Env::rank)
