@@ -181,7 +181,8 @@ struct Triple<Weight, Integer_Type> Matrix<Weight, Integer_Type, Fractional_Type
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<Weight, Integer_Type> &triple)
 {
-    tiles[triple.row][triple.col].triples->push_back(triple);
+    struct Triple<Weight, Integer_Type> pair = tile_of_triple(triple);
+    tiles[pair.row][pair.col].triples->push_back(triple);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -273,12 +274,19 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.rank = i;
                 tile.ith  = tile.rg / tiling->colgrp_nranks;
                 tile.jth  = tile.cg / tiling->rowgrp_nranks;
+                
+                tile.rank_rg = j % tiling->rowgrp_nranks;
+                tile.rank_cg = i % tiling->colgrp_nranks;
             }
             if(tiling->tiling_type == Tiling_type::_1D_COL)
             {
                 tile.rank = j;
                 tile.ith  = tile.rg / tiling->colgrp_nranks;
-                tile.jth  = tile.cg / tiling->rowgrp_nranks;   
+                tile.jth  = tile.cg / tiling->rowgrp_nranks;
+
+                tile.rank_rg = j % tiling->rowgrp_nranks;
+                tile.rank_cg = i % tiling->colgrp_nranks;
+                
             }
             else if(tiling->tiling_type == Tiling_type::_2D_)
             {
@@ -289,16 +297,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 
                 tile.rank_rg = j % tiling->rowgrp_nranks;
                 tile.rank_cg = i % tiling->colgrp_nranks;
-                
-                //tiles_rg.set_rank(j % tiling->rowgrp_nranks);
-                //tiles_rg.rank = j % tiling->rowgrp_nranks;
-                //tiles_rg.rank = i % tiling->colgrp_nranks;
-                
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
             tile.allocated = false;
-            //tile.rank_rg = -1;
-            //tile.rank_cg = -1;
+            tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
         }
     }
     
@@ -484,7 +486,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         
    // }
     
-    
+    /*
     // Initialize triples 
     for(uint32_t t: local_tiles)
     {
@@ -492,8 +494,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
-        //tile.triples1 = tile.triples;
     }
+    */
     
     // Print tiling assignment
     if(Env::is_master)
@@ -522,7 +524,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("\n");
     }
     
-        
+
+
+    
     
     /*
     if(Env::rank == r)
@@ -551,8 +555,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("\n");
     }        
     */    
-Env::barrier();
-    int r = 8;
     
     
     /*
@@ -585,9 +587,17 @@ Env::barrier();
     indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
     Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
     
-    indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
-    indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
-    follower_rowgrp_ranks_accu_seg_rg = follower_rowgrp_ranks_accu_seg;
+
+    //printf(">>>>>>>>>>>> %lu\n", follower_rowgrp_ranks.size());
+    //assert(follower_rowgrp_ranks.size() > 0);
+    if(follower_rowgrp_ranks.size() > 0)
+    {
+        indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
+    
+        indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
+        follower_rowgrp_ranks_accu_seg_rg = follower_rowgrp_ranks_accu_seg;
+    }
+    //printf(">>>>>>>>>>>>wdqw");
     
         //std::vector<int32_t> idx(tiling->rowgrp_nranks);
         //std::iota(idx.begin(), idx.end(), 0);
@@ -973,8 +983,19 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csc()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
 {
-    //char c = getchar();
     // Delete triples
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto& tile = tiles[i][j];
+            tile.triples->clear();
+            delete tile.triples; 
+        }
+    }
+    
+    
+    /*
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles)
     {
@@ -996,6 +1017,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
           //  printf("%d %d %d\n", Env::rank, triple.row, triple.col );
         //}
     }
+    */
     //c = getchar();
     
 }
