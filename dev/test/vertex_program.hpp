@@ -67,6 +67,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Fractional_
     auto *data = (Fractional_Type *) segment.D->data;
     Integer_Type nitems = segment.D->n;
     Integer_Type nbytes = segment.D->nbytes;
+    /*
+    for(uint32_t i = 0; i < nitems; i++)
+    {
+        data[i] = value;
+    }
+    */
+    
     if(value)
     {
         for(uint32_t i = 0; i < nitems; i++)
@@ -78,6 +85,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Fractional_
     {
         memset(data, 0, nbytes);
     }
+    
 }                
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -570,6 +578,13 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::populate(Fractional_T
     auto *data = (Fractional_Type *) segment.D->data;
     Integer_Type nitems = segment.D->n;
     Integer_Type nbytes = segment.D->nbytes;
+    
+    for(uint32_t i = 0; i < nitems; i++)
+    {
+        data[i] = value;
+    }
+    
+    /*
     if(value)
     {
         for(uint32_t i = 0; i < nitems; i++)
@@ -581,6 +596,7 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::populate(Fractional_T
     {
         memset(data, 0, nbytes);
     }
+    */
 }                
 
 template<typename Integer_Type, typename Fractional_Type>
