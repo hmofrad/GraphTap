@@ -129,11 +129,6 @@ void Env::tock(std::string preamble)
 
 void Env::finalize()
 {
-    MPI_Finalize();
-}
-
-void Env::exit(int code)
-{
     MPI_Group_free(&rowgrps_group_);
     MPI_Group_free(&rowgrps_group);
     MPI_Comm_free(&rowgrps_comm);
@@ -141,9 +136,12 @@ void Env::exit(int code)
     MPI_Group_free(&colgrps_group_);
     MPI_Group_free(&colgrps_group);
     MPI_Comm_free(&colgrps_comm);
-    
-    MPI_Comm_free(&MPI_WORLD); 
-    
+     
+    MPI_Finalize();
+}
+
+void Env::exit(int code)
+{
     Env::finalize();
     std::exit(code);
 }
