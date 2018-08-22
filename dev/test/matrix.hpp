@@ -9,6 +9,13 @@
 #include <vector>
 #include "tiling.hpp" 
 
+enum Vertex_type
+{
+  _SRC,
+  _SNK,
+  _ISO,
+  _REG
+};
 
 
 //#include <type_traits>
@@ -24,13 +31,31 @@ struct Tile2D
     struct CSR<Weight, Integer_Type> *csr;
     struct CSC<Weight, Integer_Type> *csc;
     uint32_t rg, cg; // Row group, Column group
-    uint32_t ith, jth, nth; // ith row, jth column and nth local tile
-    uint32_t kth; // kth global tile
+    uint32_t ith, jth, nth, kth; // ith row, jth column, nth local tile and kth global tile
     uint32_t rank;
-    uint32_t rank_rg;
-    uint32_t rank_cg;
+    uint32_t rank_rg, rank_cg;
+    Integer_Type nedges_tile;
+    Integer_Type nsources, nsinks, nisolated, nregular;
     bool allocated;
+    
+    void allocate_triples();
+    void free_triples();
 };
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Tile2D<Weight, Integer_Type, Fractional_Type>::allocate_triples()
+{
+    if (!triples)
+        triples = new std::vector<Triple<Weight, Integer_Type>>;
+}
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Tile2D<Weight, Integer_Type, Fractional_Type>::free_triples()
+{
+    triples->clear();
+    triples->shrink_to_fit();
+    delete triples;
+    triples = nullptr;
+}
 
 /*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -119,6 +144,8 @@ class Matrix
         
         std::vector<int32_t> sort_indices(const std::vector<int32_t> &v);
         void indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2);
+        
+        void distribute();
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -299,8 +326,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.rank_cg = i % tiling->colgrp_nranks;
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
+            //tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
+            tile.allocate_triples();
             tile.allocated = false;
-            tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
         }
     }
     
@@ -735,9 +763,181 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     
 }
 
+/* Borrowed from LA3 code @
+   https://github.com/cmuq-ccl/LA3/blob/master/src/matrix/dist_matrix2d.hpp
+*/
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
+{
+    /* Sanity check on # of edges */
+    uint64_t nedges_start_local = 0, nedges_end_local = 0,
+             nedges_start_global = 0, nedges_end_global = 0;
+             
+
+     
+             
+            
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+            if(tile.triples->size() > 0)
+            {
+                nedges_start_local += tile.triples->size();
+                //nedges_start += tile.triples->size();
+               // printf("Send %d %lu %d\n", tile.kth, tile.triples->size(), tile.rank);
+            }
+                //if(tile.rank == 0 and tile.kth == 0)
+                  //  printf("rank=%d kth=%d size=%lu\n", tile.rank, tile.kth, tile.triples->size());
+        }
+    }
+    
+    //}
+    MPI_Datatype MANY_TRIPLES;
+    const uint32_t many_triples_size = 1;
+    
+    MPI_Type_contiguous(many_triples_size * sizeof(Triple<Weight, Integer_Type>), MPI_BYTE, &MANY_TRIPLES);
+    MPI_Type_commit(&MANY_TRIPLES);
+    //printf("%lu %lu\n", sizeof(MANY_TRIPLES), many_triples_size * sizeof(Triple<Weight, Integer_Type>));
+    
+    
+    std::vector<std::vector<Triple<Empty, Integer_Type>>> outboxes(Env::nranks);
+    std::vector<std::vector<Triple<Weight>>> inboxes(Env::nranks);
+    std::vector<uint32_t> inbox_sizes(Env::nranks);
+    
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+            if((tile.rank != Env::rank) and (tile.triples->size() > 0))
+            {
+                    auto &outbox = outboxes[tile.rank];
+                    outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
+                    //nedges_start_local += tile.triples->size();
+                    tile.free_triples();
+                    //tile.allocate_triples();
+                
+            }
+        }
+    }
+    
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            auto &outbox = outboxes[r];
+            uint32_t outbox_size = outbox.size();
+            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, 0, &inbox_sizes[r], 1, MPI_UNSIGNED, 
+                                                        r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+        }
+        //if(!Env::rank)
+          //  printf("Recv %d %d\n", r, inbox_sizes[r]);
+    }
+    
+    std::vector<MPI_Request> outreqs;
+    std::vector<MPI_Request> inreqs;
+    MPI_Request request;
+
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &inbox = inboxes[r];
+            uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
+            inbox.resize(inbox_bound);
+            //if(!Env::rank)
+              //  printf("Send %d %d\n", r, inbox_sizes[r]);
+            
+            /* Recv the triples with many_triples_size padding. */
+            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            inreqs.push_back(request);
+        }
+    }
+    
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &outbox = outboxes[r];
+            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            outbox.resize(outbox_bound);
+            /* Send the triples with many_triples_size padding. */
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            outreqs.push_back(request);
+        }
+    }
+    
+    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
+
+    
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            auto &inbox = inboxes[r];
+            for (uint32_t i = 0; i < inbox_sizes[r]; i++)
+                insert(inbox[i]);
+
+            inbox.clear();
+            inbox.shrink_to_fit();
+        }
+    }
+    
+    
+    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
+    Env::barrier();
+
+  
+    /*
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+                //if((tile.rank != Env::rank) and (tile.triples->size() > 0))
+                //{
+                    //printf("Send %d %lu %d\n", tile.kth, tile.triples->size(), tile.rank);
+                //}
+            if(tile.triples)
+            {
+                nedges_end_local += tile.triples->size();
+            }
+                    
+                    //printf("rank=%d kth=%d size=%lu\n", tile.rank, tile.kth, tile.triples->size());
+        }
+    }
+    */
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        nedges_end_local += tile.triples->size();
+    }
+    
+    
+    
+    
+    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges_start_global == nedges_end_global);
+    if(Env::is_master)
+        printf("Sanity check for exchanging %lu edges is done\n", nedges_end_global);
+    
+    auto retval = MPI_Type_free(&MANY_TRIPLES);
+    assert(retval == MPI_SUCCESS);   
+}
+
+
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
 {
+    distribute();
+    
     if(compression == Compression_type::_CSR_)
     {
         init_csr();
@@ -984,6 +1184,15 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
 {
     // Delete triples
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        tile.free_triples();
+    }
+    
+    /*
     for (uint32_t i = 0; i < nrowgrps; i++)
     {
         for (uint32_t j = 0; j < ncolgrps; j++)  
@@ -993,7 +1202,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
             delete tile.triples; 
         }
     }
-    
+    */
     
     /*
     Triple<Weight, Integer_Type> pair;
