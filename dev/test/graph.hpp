@@ -759,7 +759,6 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
 template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::parread_binary()
 {
-    printf("parread\n");
     // Open graph file.
     std::ifstream fin(filepath.c_str(), std::ios_base::binary);
     if(!fin.is_open())
