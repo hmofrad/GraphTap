@@ -326,7 +326,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.rank_cg = i % tiling->colgrp_nranks;
             }
             tile.nth   = (tile.ith * tiling->rank_ncolgrps) + tile.jth;
-            //tile.triples = new std::vector<struct Triple<Weight, Integer_Type>>;
             tile.allocate_triples();
             tile.allocated = false;
         }
@@ -773,10 +772,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     uint64_t nedges_start_local = 0, nedges_end_local = 0,
              nedges_start_global = 0, nedges_end_global = 0;
              
-
-     
-             
-            
     for (uint32_t i = 0; i < nrowgrps; i++)
     {
         for (uint32_t j = 0; j < ncolgrps; j++)  
@@ -785,22 +780,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             if(tile.triples->size() > 0)
             {
                 nedges_start_local += tile.triples->size();
-                //nedges_start += tile.triples->size();
-               // printf("Send %d %lu %d\n", tile.kth, tile.triples->size(), tile.rank);
             }
-                //if(tile.rank == 0 and tile.kth == 0)
-                  //  printf("rank=%d kth=%d size=%lu\n", tile.rank, tile.kth, tile.triples->size());
         }
     }
-    
-    //}
+
     MPI_Datatype MANY_TRIPLES;
     const uint32_t many_triples_size = 1;
     
     MPI_Type_contiguous(many_triples_size * sizeof(Triple<Weight, Integer_Type>), MPI_BYTE, &MANY_TRIPLES);
     MPI_Type_commit(&MANY_TRIPLES);
-    //printf("%lu %lu\n", sizeof(MANY_TRIPLES), many_triples_size * sizeof(Triple<Weight, Integer_Type>));
-    
     
     std::vector<std::vector<Triple<Empty, Integer_Type>>> outboxes(Env::nranks);
     std::vector<std::vector<Triple<Weight>>> inboxes(Env::nranks);
@@ -813,12 +801,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             auto &tile = tiles[i][j];
             if((tile.rank != Env::rank) and (tile.triples->size() > 0))
             {
-                    auto &outbox = outboxes[tile.rank];
-                    outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
-                    //nedges_start_local += tile.triples->size();
-                    tile.free_triples();
-                    //tile.allocate_triples();
-                
+                auto &outbox = outboxes[tile.rank];
+                outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
+                tile.free_triples();
             }
         }
     }
@@ -832,8 +817,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, 0, &inbox_sizes[r], 1, MPI_UNSIGNED, 
                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
-        //if(!Env::rank)
-          //  printf("Recv %d %d\n", r, inbox_sizes[r]);
     }
     
     std::vector<MPI_Request> outreqs;
@@ -848,9 +831,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             auto &inbox = inboxes[r];
             uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
             inbox.resize(inbox_bound);
-            //if(!Env::rank)
-              //  printf("Send %d %d\n", r, inbox_sizes[r]);
-            
             /* Recv the triples with many_triples_size padding. */
             MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
             inreqs.push_back(request);
@@ -887,30 +867,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    
     MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
     Env::barrier();
 
-  
-    /*
-    for (uint32_t i = 0; i < nrowgrps; i++)
-    {
-        for (uint32_t j = 0; j < ncolgrps; j++)  
-        {
-            auto &tile = tiles[i][j];
-                //if((tile.rank != Env::rank) and (tile.triples->size() > 0))
-                //{
-                    //printf("Send %d %lu %d\n", tile.kth, tile.triples->size(), tile.rank);
-                //}
-            if(tile.triples)
-            {
-                nedges_end_local += tile.triples->size();
-            }
-                    
-                    //printf("rank=%d kth=%d size=%lu\n", tile.rank, tile.kth, tile.triples->size());
-        }
-    }
-    */
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles)
     {
@@ -918,9 +877,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         auto& tile = tiles[pair.row][pair.col];
         nedges_end_local += tile.triples->size();
     }
-    
-    
-    
     
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
@@ -1081,52 +1037,24 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 COL_PTR[j] = COL_PTR[j - 1];
             }  
             
-        /*    
+           
         uint32_t k = 0;
-        for(i = 0; i < tile.csc->ncols_plus_one - 1; i++)
+        for(j = 0;j < tile.csc->ncols_plus_one - 1; j++)
         {
-            uint32_t nnz_per_col = COL_PTR[i + 1] - COL_PTR[i];
-                for(j = 0; j < nnz_per_col; j++)
+            uint32_t nnz_per_col = COL_PTR[j + 1] - COL_PTR[j];
+                //for(i = 0; i < nnz_per_col; i++)
+                for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
                 {
-                    printf("%d %d %d\n", i, ROW_INDEX[k], VAL[k]);
+                    //printf("%d %d %d\n", i, ROW_INDEX[k], VAL[k]);
+                    printf("r=%d t=%d ci=%d =ri%d w=%d \n", Env::rank, t, j, ROW_INDEX[j], 1);
                     k++;
                 }
         }
-            printf("%d\n", tile.csc->ncols_plus_one );
-        */    
+            //printf("%d\n", tile.csc->ncols_plus_one );
+        
         }
         
-    }    
-    /*
-    if(Env::rank == 2)
-    {    
-        uint32_t skip = 16;
-        for (uint32_t i = 0; i < nrowgrps; i++)
-        {
-            for (uint32_t j = 0; j < ncolgrps; j++)  
-            {
-                auto& tile = tiles[i][j];
-                if(tile.allocated)
-                    printf("%02lu ", tile.triples->size());
-                else
-                    printf("%02d ", 0);
-                
-                if(j > skip)
-                {
-                    printf("...");
-                    break;
-                }
-            }
-            printf("\n");
-            if(i > skip)
-            {
-                printf(".\n.\n.\n");
-                break;
-            }
-        }
-        printf("\n");
     }
-    */
     
     del_triples();
 }
@@ -1191,42 +1119,4 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
         auto& tile = tiles[pair.row][pair.col];
         tile.free_triples();
     }
-    
-    /*
-    for (uint32_t i = 0; i < nrowgrps; i++)
-    {
-        for (uint32_t j = 0; j < ncolgrps; j++)  
-        {
-            auto& tile = tiles[i][j];
-            tile.triples->clear();
-            delete tile.triples; 
-        }
-    }
-    */
-    
-    /*
-    Triple<Weight, Integer_Type> pair;
-    for(uint32_t t: local_tiles)
-    {
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        //std::vector<struct Triple<Empty, Integer_Type> *> it = tile.triples.begin();
-
-        //std::vector<struct Triple<Empty, Integer_Type> *tt = tile.triples;
-        //auto& str = tt[0];
-
-        //printf("%d %p\n", Env::rank,tile.triples);
-        //void *p = tile.triples;
-        
-        tile.triples->clear();
-        delete tile.triples;    
-        //for (auto& triple : *(tile.triples1))
-        //for(auto &triple : (Triple<Empty, Integer_Type> *) p)
-        //{ 
-          //  printf("%d %d %d\n", Env::rank, triple.row, triple.col );
-        //}
-    }
-    */
-    //c = getchar();
-    
 }
