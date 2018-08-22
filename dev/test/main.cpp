@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSR_;
     bool parread = true;
 
     if(!Env::rank)
@@ -114,13 +114,15 @@ int main(int argc, char **argv)
     //printf("combine %d\n", Env::rank);
     V.combine(f.assign);
     //printf("free %d\n",  Env::rank);
-    
+    V.checksum();
     if(!Env::rank)
         Env::tock("Degree");
     
     Env::barrier(); 
     //V.free();
     G.free();
+    //Env::finalize();
+    //return(0);
     
     
     transpose = true;
