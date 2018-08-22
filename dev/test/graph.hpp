@@ -452,7 +452,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_text(std::string filepath
     }
     
     // Compress the graph
-    A->init_compression();
+    //A->init_compression();
 }
 
 
@@ -465,10 +465,23 @@ void Graph<Empty, Integer_Type, Fractional_Type>::load_binary(std::string filepa
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, tiling_type, compression_type, parread_);
     
     // Read graph
-    read_binary();
+    if(parread_)
+    {
+        if(Env::is_master)
+            printf("%s: Distributed read using %d ranks\n", filepath_.c_str(), Env::nranks);
+        parread_binary();
+    }
+    else
+    {
+        if(Env::is_master)
+            printf("%s: Sequential read using %d ranks\n", filepath_.c_str(), Env::nranks);
+        read_binary();
+    }
+    
+    
     
     // Compress the graph
-    A->init_compression();
+    //A->init_compression();
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -563,6 +576,72 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
 }
 
 template<typename Integer_Type, typename Fractional_Type>
+void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
+{
+    // Open graph file.
+    std::ifstream fin(filepath.c_str(), std::ios_base::binary);
+    if(!fin.is_open())
+    {
+        fprintf(stderr, "Unable to open input file\n");
+        Env::exit(1); 
+    }
+    
+    // Obtain filesize
+    uint64_t filesize, offset = 0;
+    fin.seekg (0, std::ios_base::end);
+    filesize = (uint64_t) fin.tellg();
+    fin.seekg(0, std::ios_base::beg);
+    nedges = filesize / sizeof(Triple<Empty, Integer_Type>);
+    uint64_t nedges_local = 0;
+    
+    struct Triple<Empty, Integer_Type> triple;
+    struct Triple<Empty, Integer_Type> pair;
+    while (offset < filesize)
+    {
+        fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
+        
+        if(fin.gcount() != sizeof(Triple<Empty, Integer_Type>))
+        {
+            fprintf(stderr, "read() failure\n");
+            Env::exit(1);
+        }
+        
+        if(transpose)
+        {
+            std::swap(triple.row, triple.col);
+        }
+        
+        nedges_local++;    
+        
+        pair = A->tile_of_triple(triple);
+        assert((triple.row <= nrows) and (triple.col <= ncols));
+        if(A->tiles[pair.row][pair.col].rank == Env::rank)    
+        {
+            A->tiles[pair.row][pair.col].triples->push_back(triple);
+        }
+        offset += sizeof(Triple<Empty, Integer_Type>);
+        
+        if(!Env::rank)
+        {
+            if ((offset & ((1L << 26) - 1L)) == 0)
+            {
+                printf("|");
+            }
+        }
+    }
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
+    }
+    
+    fin.close();
+    assert(offset == filesize);
+    assert(nedges == nedges_local);
+}
+
+template<typename Integer_Type, typename Fractional_Type>
 void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
 {
     // Open graph file.
@@ -630,13 +709,14 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
     
     
     
-    
+    uint64_t nedges_local = 0;
+    uint64_t nedges_global = 0;
     struct Triple<Empty, Integer_Type> triple;
     struct Triple<Empty, Integer_Type> pair;
     std::istringstream iss;
     while (std::getline(fin, line) && !line.empty() && offset < endpos)
     {
-        
+        nedges_local++;
         offset++;
         
         iss.clear();
@@ -678,7 +758,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
             }
         }
     }
-    printf("%d %d\n", triple.row, triple.col);
+    //printf("%d %d\n", triple.row, triple.col);
     
     if(!Env::rank)
     {
@@ -687,16 +767,35 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
     }
         
     fin.close();
-    printf("rank=%d nedegs=%lu share=%lu ofsset=%lu endpos=%lu skip=%lu\n", Env::rank, nedges, share, offset, endpos, skip);
+    //printf("rank=%d nedegs=%lu share=%lu ofsset=%lu endpos=%lu skip=%lu\n", Env::rank, nedges, share, offset, endpos, skip);
     assert(offset == endpos);   
+    /*
+    if(Env::rank == 3)
+    {
+    int s = 0;
+    for (uint32_t i = 0; i < A->nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < A->ncolgrps; j++)  
+        {
+            auto& tile = A->tiles[i][j];
+            s += tile.triples->size();
+            printf("%lu\n", tile.triples->size());
+        }
+    }
+    printf("%d\n", s);
+    */
+    
+    
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_INT, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
+    printf("r=%d l=%lu g=%lu\n", Env::rank, nedges_local, nedges_global);
 }
 
 
-
-
 template<typename Integer_Type, typename Fractional_Type>
-void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
+void Graph<Empty, Integer_Type, Fractional_Type>::parread_binary()
 {
+    printf("parread\n");
     // Open graph file.
     std::ifstream fin(filepath.c_str(), std::ios_base::binary);
     if(!fin.is_open())
@@ -706,14 +805,25 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
     }
     
     // Obtain filesize
-    uint64_t filesize, offset = 0;
+    uint64_t filesize = 0, skip = 0,share = 0, offset = 0, endpos = 0;
     fin.seekg (0, std::ios_base::end);
     filesize = (uint64_t) fin.tellg();
     fin.seekg(0, std::ios_base::beg);
+    nedges = filesize / sizeof(Triple<Empty, Integer_Type>);
+    
+    
+    share = (filesize / Env::nranks) / sizeof(Triple<Empty, Integer_Type>) * sizeof(Triple<Empty, Integer_Type>);
+    assert(share % sizeof(Triple<Empty, Integer_Type>) == 0);
+
+    offset += share * Env::rank;
+    endpos = (Env::rank == Env::nranks - 1) ? filesize : offset + share;
+    
+    uint64_t nedges_local = 0;
+    uint64_t nedges_global = 0;
     
     struct Triple<Empty, Integer_Type> triple;
     struct Triple<Empty, Integer_Type> pair;
-    while (offset < filesize)
+    while (offset < endpos)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
         
@@ -727,17 +837,25 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
         {
             std::swap(triple.row, triple.col);
         }
-        nedges++;    
+        nedges_local++;    
+        A->insert(triple);
         
+        /*
         pair = A->tile_of_triple(triple);
         assert((triple.row <= nrows) and (triple.col <= ncols));
+        
         // A better but expensive way is to determine the file size beforehand
+        
         if(A->tiles[pair.row][pair.col].rank == Env::rank)    
         {
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset += sizeof(Triple<Empty, Integer_Type>);
-        
+        */
+        //pair = A->tile_of_triple(triple);
+        //if(!Env::rank)
+            //printf("%d %d %d %d %d\n", triple.row, triple.col, pair.row, pair.col, A->tile_height);
+        offset += sizeof(Triple<Empty, Integer_Type>);
         if(!Env::rank)
         {
             if ((offset & ((1L << 26) - 1L)) == 0)
@@ -754,6 +872,29 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
     }
     
     fin.close();
-    assert(offset == filesize);
+    assert(offset == endpos);
+    
+    //if(Env::rank == 3)
+    //{
+    int s = 0;
+    for (uint32_t i = 0; i < A->nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < A->ncolgrps; j++)  
+        {
+            auto& tile = A->tiles[i][j];
+            s += tile.triples->size();
+            if(!Env::rank)
+                printf("%lu\n", tile.triples->size());
+        }
+    }
+    
+    //}
+    printf("%d %lu %d\n", Env::rank, nedges, A->tile_height);
+    
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_INT, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
+    printf("r=%d l=%lu g=%lu\n", Env::rank, nedges_local, nedges_global);
 }
+
+
 
