@@ -563,6 +563,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
                 printf("|");
+                fflush(stdout);
             }
         }
     }
@@ -626,6 +627,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
                 printf("|");
+                fflush(stdout);
             }
         }
     }
@@ -734,6 +736,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
                 printf("|");
+                fflush(stdout);
             }
         }
     }
@@ -808,6 +811,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_binary()
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
                 printf("|");
+                fflush(stdout);
             }
         }
     }
