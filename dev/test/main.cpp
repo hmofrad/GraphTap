@@ -53,8 +53,6 @@ struct Generic_functions
 int main(int argc, char **argv)
 { 
     Env::init();
-    ///if(!Env::rank)
-       // Env::tick();
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
     
@@ -79,19 +77,23 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
+    bool parread = true;
 
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> G;
     //Graph<> G;
     
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
+    
     if(!Env::rank)
         Env::tock("Ingress");
     
+    
+    
     //if(!Env::rank);
       //  Env::tock("Test");
-    
+    //exit(0);
     //G.free();
     
     if(!Env::rank)
@@ -112,21 +114,21 @@ int main(int argc, char **argv)
     //printf("combine %d\n", Env::rank);
     V.combine(f.assign);
     //printf("free %d\n",  Env::rank);
-    //V.free();
-    G.free();
+    
     if(!Env::rank)
         Env::tock("Degree");
-    Env::barrier(); 
     
+    Env::barrier(); 
+    //V.free();
+    G.free();
     
     
     transpose = true;
-    //Env::barrier();
     
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT);
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
     if(!Env::rank)
         Env::tock("Ingress transpose");
     
@@ -195,6 +197,7 @@ int main(int argc, char **argv)
         time2 = Env::clock();
         printf("Pagerank time=%f\n", time2 - time1);
     }
+    
     Env::barrier();
     VR.free();
     GR.free();
