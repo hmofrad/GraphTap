@@ -1287,9 +1287,9 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::combine(Fractional_Ty
         //print(v_seg);
         
         
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
-        //Env::barrier();
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();
+        Env::barrier();
     }
 }
 
