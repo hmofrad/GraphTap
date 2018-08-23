@@ -185,7 +185,25 @@ struct Triple<Weight, Integer_Type> Matrix<Weight, Integer_Type, Fractional_Type
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<Weight, Integer_Type> &triple)
 {
+    if(triple.row >= nrows)
+        printf("%d (triple.row %d < tile_height %d)\n", Env::rank, triple.row, nrows);
+    if(triple.col >= ncols)
+        printf("%d (triple.col %d < tile_width %d)\n", Env::rank, triple.col, ncols);
+    
+    assert(triple.row < nrows);
+    assert(triple.col < ncols);
+    
     struct Triple<Weight, Integer_Type> pair = tile_of_triple(triple);
+    
+    if(pair.row >= nrowgrps)
+        printf("%d (pair.row %d< nrowgrps %d)\n", Env::rank, pair.row, nrowgrps);
+    
+    if(pair.col >= ncolgrps)
+        printf("%d (pair.col %d < ncolgrps %d)\n", Env::rank, pair.col, ncolgrps);
+    
+    assert(pair.row < nrowgrps);
+    assert(pair.col < ncolgrps);
+    
     tiles[pair.row][pair.col].triples->push_back(triple);
 }
 
@@ -544,7 +562,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
 {
+    if(Env::is_master)
+        printf("Edge distribution among %d ranks\n", Env::nranks);
+    
     distribute();
+    
+    if(Env::is_master)
+        printf("Starting edge compression ...\n");
     
     if(compression == Compression_type::_CSR_)
     {
@@ -567,7 +591,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
     /* Check if weights are empty or not */
     bool has_weight = (std::is_same<Weight, Empty>::value) ? false : true;
-    //printf("type=%d\n", has_weight);
     
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
@@ -609,7 +632,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                     j++;
                     IA[j] = IA[j - 1];
                 }            
-                 // In case weights are there
+                // In case weights are there
                 if(has_weight)
                 {
                     A[i] = triple.weight;
