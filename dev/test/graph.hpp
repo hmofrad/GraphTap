@@ -427,7 +427,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
     fin.close();
     assert(offset == endpos);   
     
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     
     if(!Env::rank)
@@ -499,7 +499,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     
     fin.close();
     assert(offset == endpos);
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     
     if(!Env::rank)
@@ -964,7 +964,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
     fin.close();
     assert(offset == endpos);   
     
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     
     if(!Env::rank)
@@ -1037,7 +1037,7 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_binary()
     
     fin.close();
     assert(offset == endpos);
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     
     if(!Env::rank)
