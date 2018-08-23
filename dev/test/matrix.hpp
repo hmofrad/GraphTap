@@ -608,21 +608,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     }
     */
     
-    indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
-    Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
-    
-    indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
-    Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
-    
-
-    //printf(">>>>>>>>>>>> %lu\n", follower_rowgrp_ranks.size());
-    //assert(follower_rowgrp_ranks.size() > 0);
-    if(follower_rowgrp_ranks.size() > 0)
+    if(Env::comm_split)
     {
-        indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
-    
-        indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
-        follower_rowgrp_ranks_accu_seg_rg = follower_rowgrp_ranks_accu_seg;
+        indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
+        Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
+        
+        indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
+        Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
+        
+        if(follower_rowgrp_ranks.size() > 0)
+        {
+            indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
+        
+            indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
+            follower_rowgrp_ranks_accu_seg_rg = follower_rowgrp_ranks_accu_seg;
+        }
     }
     //printf(">>>>>>>>>>>>wdqw");
     
@@ -790,7 +790,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Type_contiguous(many_triples_size * sizeof(Triple<Weight, Integer_Type>), MPI_BYTE, &MANY_TRIPLES);
     MPI_Type_commit(&MANY_TRIPLES);
     
-    std::vector<std::vector<Triple<Empty, Integer_Type>>> outboxes(Env::nranks);
+    std::vector<std::vector<Triple<Weight, Integer_Type>>> outboxes(Env::nranks);
     std::vector<std::vector<Triple<Weight>>> inboxes(Env::nranks);
     std::vector<uint32_t> inbox_sizes(Env::nranks);
     
@@ -799,7 +799,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         for (uint32_t j = 0; j < ncolgrps; j++)  
         {
             auto &tile = tiles[i][j];
-            if((tile.rank != Env::rank) and (tile.triples->size() > 0))
+            if(tile.rank != Env::rank)
             {
                 auto &outbox = outboxes[tile.rank];
                 outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
