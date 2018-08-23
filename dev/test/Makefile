@@ -3,7 +3,7 @@
 CXX = g++
 MPI_CXX = mpicxx
 CXX_FLAGS = -std=c++14 -fpermissive
-DEBUG = -g
+DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 obj=main
 
 .PHONY: all clean
