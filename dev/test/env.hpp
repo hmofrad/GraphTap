@@ -18,10 +18,12 @@ class Env
     static int rank;
     static int nranks;
     static bool is_master;
+    static uint32_t owned_segment;
     static void init(bool comm_split_);
     static void barrier();
     static void finalize();
     static void exit(int code);
+    
     
     static bool comm_split; // Splitting the world communicator
     static MPI_Group rowgrps_group_, rowgrps_group;
@@ -49,8 +51,9 @@ MPI_Comm Env::MPI_WORLD;
 int  Env::rank = -1;
 int  Env::nranks = -1;
 bool Env::is_master = false;
+uint32_t Env::owned_segment = -1;
 
-bool Env::comm_split;
+bool Env::comm_split = false;
 MPI_Group Env::rowgrps_group_;
 MPI_Group Env::rowgrps_group;
 MPI_Comm Env::rowgrps_comm;
