@@ -20,7 +20,10 @@ class Vertex_Program
         void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void gather();
         void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        void checksum();
         void free();
+        
     
     protected:
         void print(Segment<Weight, Integer_Type, Fractional_Type> &segment);
@@ -473,6 +476,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
     }   
     
 }
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
+                   (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type)) {};
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum() {};
+
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::print(Segment<Weight,
