@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSR_;
+    Compression_type CT = _CSC_;
     bool parread = true;
     
 
@@ -94,10 +94,10 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tock("Ingress");
-    
-    //G.free();
-    //Env::finalize();
-    ///return(0);
+    Env::barrier();
+    G.free();
+    Env::finalize();
+    return(0);
     
     
     //if(!Env::rank);
@@ -128,10 +128,10 @@ int main(int argc, char **argv)
         Env::tock("Degree");
     
     Env::barrier(); 
-    //V.free();
+    V.free();
     G.free();
-    //Env::finalize();
-    //return(0);
+    Env::finalize();
+    return(0);
     
     
     transpose = true;
