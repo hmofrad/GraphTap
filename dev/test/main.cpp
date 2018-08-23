@@ -8,13 +8,17 @@
 #include "graph.hpp"
 #include "vertex_program.hpp"
 
-using em = Empty;
-using wp = em;   // Weight (default is Empty)
+/* HAS_WEIGHT macro will be defined by compiler.
+   So, you don't have to change this.            */
+using em = Empty; // Weight (default is Empty)
+#ifdef HAS_WEIGHT
+using wp = uint32_t;
+#else
+using wp = em;
+#endif
+
 using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
-
-
-
 
 struct Generic_functions
 {
