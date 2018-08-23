@@ -9,9 +9,9 @@
 #include "vertex_program.hpp"
 
 using em = Empty;
-using wp = Empty;   // Weight (default is Empty)
+using wp = em;   // Weight (default is Empty)
 using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = float;   // Fractional precision (default is float)
+using fp = double;   // Fractional precision (default is float)
 
 
 
@@ -51,8 +51,9 @@ struct Generic_functions
 
 
 int main(int argc, char **argv)
-{ 
-    Env::init();
+{
+    bool comm_split = true;
+    Env::init(comm_split);
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
     
@@ -78,6 +79,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSR_;
     bool parread = true;
+    
 
     if(!Env::rank)
         Env::tick();
@@ -89,6 +91,9 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
     
+    //G.free();
+    //Env::finalize();
+    ///return(0);
     
     
     //if(!Env::rank);
