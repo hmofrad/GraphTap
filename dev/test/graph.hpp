@@ -257,13 +257,14 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         }
     }
     
+    fin.close();
+    assert(offset == filesize);   
+    
     if(!Env::rank)
     {
         printf("\n");
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-
-    fin.close();
-    assert(offset == filesize);   
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -317,13 +318,14 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         }
     }
     
+    fin.close();
+    assert(offset == filesize);
+    
     if(!Env::rank)
     {
         printf("\n");
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-    
-    fin.close();
-    assert(offset == filesize);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -422,18 +424,17 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
             }
         }
     }
+    fin.close();
+    assert(offset == endpos);   
+    
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
     
     if(!Env::rank)
     {
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-        
-    fin.close();
-    assert(offset == endpos);   
-    
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
-    assert(nedges == nedges_global);
 }
 
 
@@ -496,16 +497,16 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         }
     }
     
+    fin.close();
+    assert(offset == endpos);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
+    
     if(!Env::rank)
     {
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-    
-    fin.close();
-    assert(offset == endpos);
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
-    assert(nedges == nedges_global);
 }
 
 
@@ -785,13 +786,15 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_text()
             }
         }
     }
-    if(!Env::rank)
-    {
-        printf("\n");
-    }
         
     fin.close();
     assert(offset == filesize);   
+    
+    if(!Env::rank)
+    {
+        printf("\n");
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
+    }
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -850,15 +853,15 @@ void Graph<Empty, Integer_Type, Fractional_Type>::read_binary()
         }
     }
     
+    fin.close();
+    assert(offset == filesize);
+    assert(nedges == nedges_local);
+      
     if(!Env::rank)
     {
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-    
-    fin.close();
-    assert(offset == filesize);
-    assert(nedges == nedges_local);
 }
 
 template<typename Integer_Type, typename Fractional_Type>
@@ -957,19 +960,19 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_text()
                 fflush(stdout);
             }
         }
-    }
+    }     
+    fin.close();
+    assert(offset == endpos);   
+    
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
     
     if(!Env::rank)
     {
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-        
-    fin.close();
-    assert(offset == endpos);   
     
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
-    assert(nedges == nedges_global);
 }
 
 
@@ -1032,14 +1035,14 @@ void Graph<Empty, Integer_Type, Fractional_Type>::parread_binary()
         }
     }
     
+    fin.close();
+    assert(offset == endpos);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges == nedges_global);
+    
     if(!Env::rank)
     {
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-    
-    fin.close();
-    assert(offset == endpos);
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED, MPI_SUM, Env::MPI_WORLD);
-    assert(nedges == nedges_global);
 }
