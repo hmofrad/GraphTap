@@ -6,6 +6,9 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
+#ifndef COMPRESSED_STORAGE_HPP
+#define COMPRESSED_STORAGE_HPP
+ 
 enum Compression_type
 {
   _CSR_,
@@ -148,3 +151,5 @@ CSC<Weight, Integer_Type>::~CSC()
     delete ROW_INDEX;
     delete COL_PTR;
 }
+
+#endif
