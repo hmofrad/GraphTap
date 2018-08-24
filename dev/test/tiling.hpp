@@ -4,6 +4,9 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
+#ifndef TILING_HPP
+#define TILING_HPP
+ 
 #include <cassert> 
 #include <cmath>
  
@@ -93,3 +96,4 @@ void Tiling::integer_factorize(uint32_t n, uint32_t& a, uint32_t& b)
   }
   assert(a * b == n);
 }
+#endif
