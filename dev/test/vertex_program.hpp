@@ -3,6 +3,9 @@
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
+
+#ifndef VERTEX_PROGRAM_HPP
+#define VERTEX_PROGRAM_HPP
  
 #include "vector.hpp"
  
@@ -23,6 +26,7 @@ class Vertex_Program
         void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void checksum();
         void free();
+        void test(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s);
         
     
     protected:
@@ -1382,3 +1386,4 @@ void Vertex_Program<Empty, Integer_Type, Fractional_Type>::free()
     }
 }
 
+#endif
