@@ -5,6 +5,9 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
  
+#ifndef BASIC_STORAEG_HPP
+#define BASIC_STORAEG_HPP
+ 
 #include <sys/mman.h>
 #include <cstring>
 
@@ -80,3 +83,4 @@ Basic_Storage<Empty, Integer_Type>::~Basic_Storage()
         Env::exit(1);
     }
 }
+#endif
