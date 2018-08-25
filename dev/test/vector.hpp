@@ -106,11 +106,12 @@ class Vector
         std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
         uint32_t owned_segment;
+        uint32_t vector_length;
     private:
         Integer_Type nrows, ncols;
         uint32_t nrowgrps, ncolgrps;
         Integer_Type tile_height, tile_width;
-        uint32_t vector_length;
+        
         //void init_vec(std::vector<uint32_t> &diag_ranks, std::vector<int32_t>& local_segments);
         //void init_vec(std::vector<uint32_t> &diag_ranks);
 };
@@ -118,6 +119,8 @@ class Vector
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+Vector<Weight, Integer_Type, Fractional_Type>::~Vector() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, std::vector<int32_t> &local_segments_)
@@ -225,13 +228,12 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nrows_, Integ
 }
     
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vector<Weight, Integer_Type, Fractional_Type>::~Vector() {}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vector<Weight, Integer_Type, Fractional_Type>::del_vec_1()
 {
     //uint32_t i = 0;
-    //for(int32_t s: local_segments)
+    //f/or(int32_t s: local_segments)
+        //if(!Env::rank)
+          //  printf("len=%d\n", vector_length);
     for(uint32_t i = 0; i < vector_length; i++)
     //for(int32_t s: local_segments)
     //{
