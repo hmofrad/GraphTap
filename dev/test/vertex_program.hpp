@@ -9,30 +9,46 @@
  
 #include "vector.hpp"
  
+enum Order_type
+{
+  _ROW_,
+  _COL_
+}; 
+ 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class Vertex_Program
 {
     public:
         Vertex_Program();
-        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph);
+        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, Order_type = _ROW_);
         ~Vertex_Program();
         
-        void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s);
+        //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s);
         void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Vertex_Program<Weight,
                   Integer_Type, Fractional_Type> *VProgram);
+        void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s,
+                            Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);                  
         void scatter(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void gather();
         void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void checksum();
         void free();
-        void test(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s);
-        
     
     protected:
         void print(Segment<Weight, Integer_Type, Fractional_Type> &segment);
         void apply();
-        void populate(Fractional_Type value, Segment<Weight, Integer_Type, Fractional_Type> &segment);
+        void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
+        void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
+                      Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
+        
+        Order_type order;
+        Integer_Type nelems;
+        uint32_t ngrps;
+        std::vector<int32_t> accu_segment_vec, all_accu_segment_vec;
+        int32_t owned_segment;
+        std::vector<uint32_t> local_tiles_order;
+        std::vector<int32_t> local_segments;
         
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
@@ -49,10 +65,33 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program() {};
                 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weight,
-                       Integer_Type, Fractional_Type> &Graph)
+                       Integer_Type, Fractional_Type> &Graph, Order_type order_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
+    owned_segment = A->owned_segment;
+    order = order_;
+    
+    if(order == _ROW_)
+    {
+        nelems = A->nrows;
+        ngrps = A->tiling->rank_nrowgrps;
+        accu_segment_vec = A->accu_segment_rg_vec;
+        all_accu_segment_vec = A->all_rowgrp_ranks_accu_seg;
+        local_tiles_order = A->local_tiles_row_order;
+        local_segments = A->local_col_segments;
+    }
+    else if (order == _COL_)
+    {
+        nelems = A->ncols;
+        ngrps = A->tiling->rank_ncolgrps;
+        accu_segment_vec = A->accu_segment_cg_vec;
+        all_accu_segment_vec = A->all_colgrp_ranks_accu_seg;
+        local_tiles_order = A->local_tiles_col_order;
+        local_segments = A->local_col_segments;
+        //If we wanted to work with the transpose
+        //local_segments = A->local_row_segments;
+    }   
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -61,12 +100,28 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
     delete X;
     delete V;
     delete S;   
-    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
+    
+    for (uint32_t i = 0; i < ngrps; i++)
     {
         delete Y[i];
     }
 };
 
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
+{
+    X->del_vec();
+    V->del_vec();
+    S->del_vec();
+    for (uint32_t i = 0; i < ngrps; i++)
+    {
+        Y[i]->del_vec();
+    }
+}
+
+
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Fractional_Type value,
             Segment<Weight, Integer_Type, Fractional_Type> &segment)
@@ -74,13 +129,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Fractional_
     auto *data = (Fractional_Type *) segment.D->data;
     Integer_Type nitems = segment.D->n;
     Integer_Type nbytes = segment.D->nbytes;
-    /*
-    for(uint32_t i = 0; i < nitems; i++)
-    {
-        data[i] = value;
-    }
-    */
-    
+
     if(value)
     {
         for(uint32_t i = 0; i < nitems; i++)
@@ -92,152 +141,226 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Fractional_
     {
         memset(data, 0, nbytes);
     }
-    
-}                
+}   
+*/
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(
+        Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value)
+{
+    for(uint32_t i; i < vec->vector_length; i++)
+    {
+        auto &seg = vec->segments[i];
+        auto *data = (Fractional_Type *) seg.D->data;
+        Integer_Type nitems = seg.D->n;
+        Integer_Type nbytes = seg.D->nbytes;
 
+        if(value)
+        {
+            for(uint32_t i = 0; i < nitems; i++)
+            {
+                data[i] = value;
+            }
+        } 
+        else
+        {
+            memset(data, 0, nbytes);
+        }
+    }
+}         
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
+                      Vector<Weight, Integer_Type, Fractional_Type> *vec_src)
+{
+    for(uint32_t i; i < vec_src->vector_length; i++)
+    {
+        auto &seg_src = vec_src->segments[i];
+        auto *data_src = (Fractional_Type *) seg_src.D->data;
+        Integer_Type nitems_src = seg_src.D->n;
+        Integer_Type nbytes_src = seg_src.D->nbytes;
+        
+        auto &seg_dst = vec_dst->segments[i];
+        auto *data_dst = (Fractional_Type *) seg_dst.D->data;
+        Integer_Type nitems_dst = seg_dst.D->n;
+        Integer_Type nbytes_dst = seg_dst.D->nbytes;
+
+        memcpy(data_dst, data_src, nbytes_src);
+    }
+}
+
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
+     Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+{
+    X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, local_segments);
+    populate(X, x);
+    
+    V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, accu_segment_vec);
+    populate(V, v);
+    
+    S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, accu_segment_vec);
+    if(VProgram)
+    {
+        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
+        Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
+        populate(S, V_);
+    }
+    else
+    {
+        populate(S, s);
+    }
+    
+    Vector<Weight, Integer_Type, Fractional_Type> *Y_;
+    for(uint32_t t: local_tiles_order)
+    {
+        auto pair = A->tile_of_local_tile(t);
+        auto &tile = A->tiles[pair.row][pair.col];
+        
+        uint32_t tile_th;
+        uint32_t pair_idx;
+        if(order == _ROW_)
+        {
+            tile_th = tile.nth;
+            pair_idx = pair.row;
+        }
+        else if(order == _COL_)
+        {
+            tile_th = tile.mth;
+            pair_idx = pair.col;
+        }
+        
+        bool vec_add = (((tile_th + 1) % ngrps) == 0);
+        if(vec_add)
+        {
+            bool vec_owner = (pair_idx == owned_segment);
+            
+            if(vec_owner)
+            {
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, all_accu_segment_vec);
+            }
+            else
+            {
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, accu_segment_vec);
+            }
+            Y.push_back(Y_);
+        }
+    }
+    printf("DONE init %d\n", Env::rank);
+}
+
+
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init( 
         Fractional_Type x, Fractional_Type y, Fractional_Type v, 
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
-    uint32_t owned_diag_segment = std::distance(A->leader_ranks.begin(), 
-          std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-    X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
-    for(uint32_t xi : X->local_segments)
-    {
-        auto &x_seg = X->segments[xi];
-        populate(x, x_seg);
-    }    
     
-    V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                    A->leader_ranks_rg, A->leader_ranks_cg);
-    uint32_t vi = V->owned_segment;
-    auto &v_seg = V->segments[vi];
-    populate(v, v_seg);
+    X = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, local_segments);
+    populate(x, X);
+    
+    V = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, accu_segment_vec);
+    populate(x, V);
+    
+    S = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, accu_segment_vec);
     
     Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
-    uint32_t vi_ = VP->V->owned_segment;
-    auto &v_seg_ = VP->V->segments[vi_];
-    auto *v_data_ = (Fractional_Type *) v_seg_.D->data;
-    Integer_Type v_nitems_ = v_seg_.D->n;
-    Integer_Type v_nbytes_ = v_seg_.D->nbytes;
     
-    S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-               A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                A->leader_ranks_rg, A->leader_ranks_cg);    
-    uint32_t si = S->owned_segment;
-    auto &s_seg = S->segments[si];
-    auto *s_data = (Fractional_Type *) s_seg.D->data;
-    Integer_Type s_nitems = s_seg.D->n;
-    Integer_Type s_nbytes = s_seg.D->nbytes;
+    Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
+    populate(S, V_);
     
-    assert(vi_ == si);
-    assert(v_nitems_ == s_nitems);
-    assert(v_nbytes_ == s_nbytes);
-    
-    for(uint32_t i = 0; i < s_nitems; i++)
-    {
-        s_data[i] = v_data_[i];
-    }
-    
-    Vector<Weight, Integer_Type, Fractional_Type> *YY;
-    for(uint32_t t: A->local_tiles)
+    Vector<Weight, Integer_Type, Fractional_Type> *Y_;
+    for(uint32_t t: local_tiles_order)
     {
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
-
-        if(((tile.nth + 1) % A->tiling->rank_ncolgrps) == 0)
+        
+        uint32_t tile_th;
+        uint32_t pair_idx;
+        if(order == _ROW_)
         {
-            if(pair.row == owned_diag_segment)
+            tile_th = tile.nth;
+            pair_idx = pair.row;
+        }
+        else if(order == _COL_)
+        {
+            tile_th = tile.mth;
+            pair_idx = pair.col;
+        }
+        
+        bool vec_add = (((tile_th + 1) % ngrps) == 0);
+        if(vec_add)
+        {
+            bool vec_owner = (pair_idx == owned_segment);
+            
+            if(vec_owner)
             {
-                YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
-                for(uint32_t yi : YY->local_segments)
-                {
-                    auto &y_seg = YY->segments[yi];
-                    populate(y, y_seg);
-                } 
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, all_accu_segment_vec);
             }
             else
             {
-                YY = new Vector<Weight, Integer_Type, Fractional_Type>
-                    (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
-                uint32_t yi = YY->owned_segment;  
-                auto &y_seg = YY->segments[yi];
-                populate(y, y_seg);   
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, accu_segment_vec);
             }
-            Y.push_back(YY);
+            Y.push_back(Y_);
         }
-    }    
+    }
+    printf("DONE init %d\n", Env::rank);
 }
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, 
-                           Fractional_Type y, Fractional_Type v, Fractional_Type s)
-{    
-    uint32_t owned_diag_segment = std::distance(A->leader_ranks.begin(), 
-              std::find(A->leader_ranks.begin(), A->leader_ranks.end(), Env::rank));
-              
-    X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                    A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks, 
-                     A->leader_ranks_rg, A->leader_ranks_cg, A->local_col_segments);
-    for(uint32_t xi : X->local_segments)
-    {
-        auto &x_seg = X->segments[xi];
-        populate(x, x_seg);
-    }                    
-
-    V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                    A->leader_ranks_rg, A->leader_ranks_cg);
-    uint32_t vi = V->owned_segment;
-    auto &v_seg = V->segments[vi];
-    populate(v, v_seg);
-                   
-    S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                   A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                    A->leader_ranks_rg, A->leader_ranks_cg);
-    uint32_t si = S->owned_segment;
-    auto &s_seg = S->segments[si];
-    populate(s, s_seg);
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
+                                                                 Fractional_Type v, Fractional_Type s)
+{
+    X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, local_segments);
+    populate(x, X);
     
-    Vector<Weight, Integer_Type, Fractional_Type> *YY;
-    for(uint32_t t: A->local_tiles)
+    V = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, accu_segment_vec);
+    populate(x, V);
+    
+    S = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, accu_segment_vec);
+    populate(s, S);
+    
+    Vector<Weight, Integer_Type, Fractional_Type> *Y_;
+    for(uint32_t t: local_tiles_order)
     {
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
-
-        if(((tile.nth + 1) % A->tiling->rank_ncolgrps) == 0)
+        
+        uint32_t tile_th;
+        uint32_t pair_idx;
+        if(order == _ROW_)
         {
-            if(pair.row == owned_diag_segment)
+            tile_th = tile.nth;
+            pair_idx = pair.row;
+        }
+        else if(order == _COL_)
+        {
+            tile_th = tile.mth;
+            pair_idx = pair.col;
+        }
+        
+        bool vec_add = (((tile_th + 1) % ngrps) == 0);
+        if(vec_add)
+        {
+            bool vec_owner = (pair_idx == owned_segment);
+            
+            if(vec_owner)
             {
-                YY = new Vector<Weight, Integer_Type, Fractional_Type>(A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, 
-                            A->tile_height, A->tile_width, owned_diag_segment, A->leader_ranks,
-                            A->leader_ranks_rg, A->leader_ranks_cg, A->follower_rowgrp_ranks_accu_seg);
-                for(uint32_t yi : YY->local_segments)
-                {
-                    auto &y_seg = YY->segments[yi];
-                    populate(y, y_seg);
-                } 
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, all_accu_segment_vec);
             }
             else
             {
-                YY = new Vector<Weight, Integer_Type, Fractional_Type>
-                    (A->nrows, A->ncols, A->nrowgrps, A->ncolgrps, A->tile_height, A->tile_width,
-                     owned_diag_segment, A->leader_ranks, A->leader_ranks_rg, A->leader_ranks_cg);
-                uint32_t yi = YY->owned_segment;  
-                auto &y_seg = YY->segments[yi];
-                populate(y, y_seg);   
+                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(nelems, accu_segment_vec);
             }
-            Y.push_back(YY);
+            Y.push_back(Y_);
         }
-    }     
+    }
+    printf("DONE init %d\n", Env::rank);
 }
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_Type (*f)
@@ -508,20 +631,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::print(Segment<Weight
     } 
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
-{
-    X->del_vec();
-    V->del_vec();
-    S->del_vec();
-    
-    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
-    {
-        Y[i]->del_vec();
-    }
-}
-
-
 
 /* Duplicate code for Graphs with Empty weights
    Note, the better way is to use inheritance. */
@@ -548,7 +657,7 @@ class Vertex_Program<Empty, Integer_Type, Fractional_Type>
         void print(Segment<Empty, Integer_Type, Fractional_Type> &segment);
         void apply();
         void populate(Fractional_Type value, Segment<Empty, Integer_Type, Fractional_Type> &segment);
-        
+        void populate(Fractional_Type value, Vector<Empty, Integer_Type, Fractional_Type> &vec);
         
         uint32_t rank_nrowgrps;
         
@@ -557,7 +666,6 @@ class Vertex_Program<Empty, Integer_Type, Fractional_Type>
     
         Matrix<Empty, Integer_Type, Fractional_Type> *A;
         Vector<Empty, Integer_Type, Fractional_Type> *X;
-        //Vector<Empty, Integer_Type, Fractional_Type> *Y;
         Vector<Empty, Integer_Type, Fractional_Type> *V;
         Vector<Empty, Integer_Type, Fractional_Type> *S;
         std::vector<Vector<Empty, Integer_Type, Fractional_Type> *> Y;
