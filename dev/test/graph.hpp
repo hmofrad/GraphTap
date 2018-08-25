@@ -3,6 +3,10 @@
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
+
+#ifndef GRAPH_HPP
+#define GRAPH_HPP 
+ 
 #include <fstream>
 #include <sstream>
 #include <cassert>
@@ -546,3 +550,5 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
 }
+
+#endif
