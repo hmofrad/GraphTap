@@ -588,7 +588,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     
     
     uint32_t other, accu;
-    if(Env::rank == 4)
+    if(!Env::rank)
     {
         printf("all_rowgrp_ranks\n");
         for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
@@ -802,7 +802,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
     std::vector<Vector<Weight, Integer_Type, uint64_t> *> X;
     Vector<Weight, Integer_Type, uint64_t> *XX;
 
-    for(uint32_t t: local_tiles_row_order)
+    for(uint32_t t: local_tiles_col_order)
     {
         auto pair = tile_of_local_tile(t);
         auto &tile = tiles[pair.row][pair.col];
@@ -811,8 +811,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         {
             if(pair.col == owned_segment)
             {
+                //printf("ALL %d\n" ,t);
                 XX = new Vector<Weight, Integer_Type, uint64_t>(1, all_colgrp_ranks_accu_seg);
-                   // printf("ALL %d\n" ,t);
+                //if(Env::rank == 1)
+                    //printf("ALL %d %lu %d %d\n" ,t, all_colgrp_ranks_accu_seg.size(), all_colgrp_ranks_accu_seg[0], all_colgrp_ranks_accu_seg[1]);
             }
             else
             {
@@ -822,31 +824,124 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
             X.push_back(XX);
         }
     }
-    uint32_t x = 0, xi = 0, xj = 0; 
+    //printf("SZ=%lu\n",X.size());
+    uint32_t x = 0, xi = 0, xj = 0, xk = 0, xo = 0; 
     Vector<Weight, Integer_Type, uint64_t> *Xp = nullptr;    
     for(uint32_t t: local_tiles_col_order)
     {
         auto pair = tile_of_local_tile(t);
         auto &tile = tiles[pair.row][pair.col];
-        //if(Env::rank == 4)
-        //printf("myr=%d rank=%d rank_rg=%d rank_cg=%d leader_rank_rg=%d leader_rank_cg=%d leader_rank_rg_rg=%d leader_rank_cg_cg=%d \n", Env::rank, tile.rank, tile.rank_rg, tile.rank_cg, tile.leader_rank_rg, tile.leader_rank_cg, tile.leader_rank_rg_rg, tile.leader_rank_cg_cg); 
-        //Xp = X[x];
-        //xi = Yp->owned_segment;
-        //auto &x_seg = Xp->segments[accu_segment_cg];
-        //auto *x_data = (uint64_t *) x_seg.D->data;
-        //Integer_Type x_nitems = x_seg.D->n;
-        //Integer_Type y_nbytes = x_seg.D->nbytes;  
-        if(Env::rank == 5)
+        
+        if(pair.col == owned_segment)
+            xo = accu_segment_cg;
+        else
+            xo = 0;
+        
+        Xp = X[xi];
+        auto &x_seg = Xp->segments[xo];
+        auto *x_data = (uint64_t *) x_seg.D->data;
+        Integer_Type x_nitems = x_seg.D->n;
+        Integer_Type x_nbytes = x_seg.D->nbytes;
+        if(tile.allocated)
         {
-            Xp = X[xi];
-            if(pair.col == owned_segment)
+            for(uint32_t i = 0; i < x_nitems; i++)
+                x_data[0] += tile.nedges;             
+        }
+        
+        bool communication = (((tile.mth + 1) % tiling->rank_nrowgrps) == 0);
+        if(communication)
+        {
+            if(Env::comm_split)
+                leader = tile.leader_rank_cg_cg;
+            else
+                leader = tile.leader_rank_cg;
+            
+            if(leader == Env::rank)
             {
-                printf("mine %d \n", t);
-                auto &x_seg = Xp->segments[accu_segment_cg];
-                auto *x_data = (uint64_t *) x_seg.D->data;
-                Integer_Type x_nitems = x_seg.D->n;
-                Integer_Type x_nbytes = x_seg.D->nbytes;
-                printf("mine %d %d %d %d %d\n", t, x_nitems, x_nbytes, x_seg.g, accu_segment_cg);
+                for(uint32_t j = 0; j < tiling->colgrp_nranks - 1; j++)
+                {
+                    if(Env::comm_split)
+                    {
+                        
+                        other = follower_colgrp_ranks_cg[j];
+                        accu = follower_colgrp_ranks_accu_seg_cg[j];
+                        auto &xj_seg = Xp->segments[accu];
+                        auto *xj_data = (uint64_t *) xj_seg.D->data;
+                        Integer_Type xj_nitems = xj_seg.D->n;
+                        Integer_Type xj_nbytes = xj_seg.D->nbytes;
+                        if(!Env::rank)
+                            printf("<<<accu=%d xk=%d %d %p>>>\n", accu, xk, xi, xj_seg);
+                        MPI_Irecv(xj_data, xj_nbytes, MPI::UNSIGNED_LONG, other, pair.col, Env::colgrps_comm, &request);
+                    }
+                    else
+                    {
+                        other = follower_colgrp_ranks[j];
+                        accu = follower_colgrp_ranks_accu_seg[j];
+                        auto &xj_seg = Xp->segments[accu];
+                        auto *xj_data = (uint64_t *) xj_seg.D->data;
+                        Integer_Type xj_nitems = xj_seg.D->n;
+                        Integer_Type xj_nbytes = xj_seg.D->nbytes;
+                        MPI_Irecv(xj_data, xj_nbytes, MPI::UNSIGNED_LONG, other, pair.col, Env::MPI_WORLD, &request);
+                    }
+                    in_requests.push_back(request);
+                }
+                xk = xi;
+            }
+            else 
+            {
+                if(Env::comm_split)
+                    MPI_Isend(x_data, x_nbytes, MPI::UNSIGNED_LONG, leader, pair.col, Env::colgrps_comm, &request);
+                else
+                    MPI_Isend(x_data, x_nbytes, MPI::UNSIGNED_LONG, leader, pair.col, Env::MPI_WORLD,    &request);
+                out_requests.push_back(request);
+                if(Env::rank == 1)
+                    printf("<<<send xk=%d xi=%d>>>\n", xk, xi);
+            }                
+            xi++;
+            //if(!Env::rank)
+              //  printf("%d %d %d\n" , t, xk, xi);
+        }
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    
+    
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    Env::barrier();
+    if(!Env::rank)
+        printf("xk=%d\n", xk);
+    Xp = X[xk];
+    xo = accu_segment_cg;
+    auto &x_seg = Xp->segments[xo];
+    auto *x_data = (uint64_t *) x_seg.D->data;
+    Integer_Type x_nitems = x_seg.D->n;
+    Integer_Type x_nbytes = x_seg.D->nbytes;
+    
+    for(uint32_t j = 0; j < tiling->colgrp_nranks - 1; j++)
+    {
+        accu = follower_colgrp_ranks_accu_seg_cg[j];
+        auto &xj_seg = Xp->segments[accu];
+        //auto *xj_data = (uint64_t *) xj_seg.D->data;
+        //Integer_Type xj_nitems = xj_seg.D->n;
+        //if(Env::rank == 1)
+           //printf("vl=%d\n", Xp->local_segments);
+        //
+        //Integer_Type xj_nitems = xj_seg.D->n;
+        //Integer_Type xj_nbytes = xj_seg.D->nbytes;
+        //for(uint32_t i = 0; i < x_nitems; i++)
+        //    x_data[i] += xj_data[i];        
+    }
+    
+    
+
+    
+    //printf("r=%d e=%lu\n", Env::rank, x_data[0]);
+        
+        
+            //printf("mine %d %d %d %d %d\n", t, x_nitems, x_nbytes, x_seg.g, accu_segment_cg);
+            /*
                 for(uint32_t j = 0; j < tiling->colgrp_nranks - 1; j++)
                 {
                     xj = follower_colgrp_ranks_accu_seg[j];
@@ -854,8 +949,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
                     auto *xj_data = (uint64_t *) xj_seg.D->data;
                     Integer_Type xj_nitems = xj_seg.D->n;
                     Integer_Type xj_nbytes = xj_seg.D->nbytes;
-                    printf("mine %d %d %d %d %d %d %d\n", t, j, follower_colgrp_ranks_accu_seg[j], follower_colgrp_ranks_cg[j], xj_nitems, xj_nbytes, xj_seg.g);
+                    //printf("mine %d %d %d %d %d %d %d\n", t, j, follower_colgrp_ranks_accu_seg[j], follower_colgrp_ranks_cg[j], xj_nitems, xj_nbytes, xj_seg.g);
                 }
+                */
+                /*
             }
             else
             {
@@ -863,33 +960,32 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
                 auto *x_data = (uint64_t *) x_seg.D->data;
                 Integer_Type x_nitems = x_seg.D->n;
                 Integer_Type x_nbytes = x_seg.D->nbytes;  
-                printf("Not mine %d %d %d %d\n", t, x_nitems, x_nbytes, x_seg.g);
+               // printf("Not mine %d %d %d %d\n", t, x_nitems, x_nbytes, x_seg.g);
             }
-        }
-        
-        if(tile.allocated)
-        {
+       // }
+        */
+        //if(tile.allocated)
+        //{
             //inbox_sizes += tile.nedges;
             
-        }   
+        //}   
         
         
-        bool communication = (((tile.mth + 1) % tiling->rank_nrowgrps) == 0);
-        if(communication)
-            xi++;
+
         
         //printf("t=%d c=%d rg=%d\n", t, tile.mth, ((tile.mth + 1) % tiling->rank_nrowgrps) == 0);
-    }
+    //}
          
     
     
     
-                 
+               
     for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
     {
         X[i]->del_vec_1();
         delete X[i];
     }
+    
     /*
     for(uint32_t t: local_tiles_col_order)
     {
