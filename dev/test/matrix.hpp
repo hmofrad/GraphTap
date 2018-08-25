@@ -869,9 +869,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
                         auto *xj_data = (uint64_t *) xj_seg.D->data;
                         Integer_Type xj_nitems = xj_seg.D->n;
                         Integer_Type xj_nbytes = xj_seg.D->nbytes;
-                        if(!Env::rank)
-                            printf("<<<accu=%d xk=%d %d %p>>>\n", accu, xk, xi, xj_seg);
+                        
                         MPI_Irecv(xj_data, xj_nbytes, MPI::UNSIGNED_LONG, other, pair.col, Env::colgrps_comm, &request);
+                        if(!Env::rank)
+                            printf("<< <accu=%d xk=%d %d %p d=%lu>>>\n", accu, xk, xi, xj_seg, xj_data[0]);
                     }
                     else
                     {
