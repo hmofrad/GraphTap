@@ -73,31 +73,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
     A = Graph.A;
     owned_segment = A->owned_segment;
     order = order_;
-    
-    /*
-        std::vector<int32_t> all_rowgrp_ranks;
-        std::vector<int32_t> all_rowgrp_ranks_accu_seg;
-        std::vector<int32_t> all_colgrp_ranks; 
-        std::vector<int32_t> all_colgrp_ranks_accu_seg;
-        
-        std::vector<int32_t> follower_rowgrp_ranks;
-        std::vector<int32_t> follower_rowgrp_ranks_accu_seg;
-        std::vector<int32_t> follower_colgrp_ranks; 
-        std::vector<int32_t> follower_colgrp_ranks_accu_seg;
-        
-        
-        std::vector<int32_t> all_rowgrp_ranks_rg;
-        std::vector<int32_t> all_rowgrp_ranks_accu_seg_rg;
-        std::vector<int32_t> all_colgrp_ranks_cg;
-        std::vector<int32_t> all_colgrp_ranks_accu_seg_cg;
-        
-        std::vector<int32_t> follower_rowgrp_ranks_rg;
-        std::vector<int32_t> follower_rowgrp_ranks_accu_seg_rg;
-        std::vector<int32_t> follower_colgrp_ranks_cg;
-        std::vector<int32_t> follower_colgrp_ranks_accu_seg_cg;
-        */
-    
-    
+
     if(order == _ROW_)
     {
         nelems = A->nrows;
@@ -308,7 +284,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     
-    uint32_t xo = A->accu_segment_rg;
+    uint32_t xo = A->accu_segment_cg;
     auto &x_seg = X->segments[xo];
     auto *x_data = (Fractional_Type *) x_seg.D->data;
     Integer_Type x_nitems = x_seg.D->n;
@@ -338,25 +314,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
             if(Env::comm_split)
             {
                 follower = A->follower_colgrp_ranks_cg[j];
-                //if(!Env::rank)
-                //    printf(">> %d ", follower);
-                //accu = A->follower_colgrp_ranks_accu_seg_cg[j];
                 MPI_Isend(x_data, x_nbytes, MPI_BYTE, follower, 0, Env::colgrps_comm, &request);
-               // if(Env::rank == 4)
-                 //   printf("[%d %d %d] ", follower, accu, x_seg.g);
             }
             else
             {
                 follower = A->follower_colgrp_ranks[j];
-                //accu = A->follower_colgrp_ranks_accu_seg[j];
                 MPI_Isend(x_data, x_nbytes, MPI_BYTE, follower, 0, Env::MPI_WORLD, &request);
             }
-            //out_requests.push_back(request);
         }
-        //if(!Env::rank)
-          //  printf("\n");
-        //if(Env::rank == 4)
-          //  printf("\n");
     }
     else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
     {
@@ -372,8 +337,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
 {   
-    //uint32_t xi = X->owned_segment;
     uint32_t o = 0;
+    uint32_t leader;
     MPI_Request request;
     if((A->tiling->tiling_type == Tiling_type::_2D_)
         or (A->tiling->tiling_type == Tiling_type::_1D_ROW))
@@ -391,14 +356,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
                 //printf("[%d %d %d %d %d] ", i, xj_seg.g, A->leader_ranks[xj_seg.g], (A->leader_ranks[xj_seg.g] == Env::rank), A->owned_segment);
                 //printf("[%d %d %d %d] ", i, xj_seg.g, A->leader_ranks_cg[xj_seg.g], (A->leader_ranks_cg[xj_seg.g] == Env::rank_cg));
             //}
+            
             if(Env::comm_split)
             {
-                if(A->leader_ranks_cg[xj_seg.g] != Env::rank_cg)
+                leader = A->leader_ranks_cg[A->local_col_segments[i]];
+                if(leader != Env::rank_cg)
+                //if(A->leader_ranks_cg[xj_seg.g] != Env::rank_cg)
                     MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, A->leader_ranks_cg[xj_seg.g], 0, Env::colgrps_comm, &request);
             }
             else
             {
-                if(A->leader_ranks[xj_seg.g] != Env::rank)
+                leader = A->leader_ranks[A->local_col_segments[i]];
+                if(leader != Env::rank)
+                //if(A->leader_ranks[xj_seg.g] != Env::rank)
                     MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, A->leader_ranks[xj_seg.g], 0, Env::MPI_WORLD, &request);
             }
             
