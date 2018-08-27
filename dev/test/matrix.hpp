@@ -468,7 +468,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     {
         pair = tile_of_local_tile(t);
         if(pair.row == pair.col)
-        {
+        {            
             for(uint32_t j = 0; j < ncolgrps; j++)
             {
                 if(tiles[pair.row][j].rank == Env::rank) 
@@ -482,8 +482,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                         all_rowgrp_ranks_rg.push_back(tiles[pair.row][j].rank_rg);
                         all_rowgrp_ranks_accu_seg_rg.push_back(tiles[pair.row][j].cg);
                         
-                        accu_segment_rg = tiles[pair.row][j].cg;
-                        accu_segment_rg_vec.push_back(accu_segment_rg);
+                        //accu_segment_rg = tiles[pair.row][j].cg;
+                        //accu_segment_rg_vec.push_back(accu_segment_rg);
                     }
                 }
                 else
@@ -519,8 +519,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                         all_colgrp_ranks_cg.push_back(tiles[i][pair.col].rank_cg);
                         all_colgrp_ranks_accu_seg_cg.push_back(tiles[i][pair.col].rg);
                         
-                        accu_segment_cg = tiles[i][pair.col].rg;
-                        accu_segment_cg_vec.push_back(accu_segment_cg);
+                        //accu_segment_cg = tiles[i][pair.col].rg;
+                        //accu_segment_cg_vec.push_back(accu_segment_cg);
                     }
                 }
                 else
@@ -546,7 +546,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             /* We do not keep iterating as the ranks in row/col groups are the same */
         }
     }
+    
+    
+    
 
+    for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++)
+    {
+        if(local_col_segments[j] == owned_segment)
+        {
+            accu_segment_cg = j;
+            accu_segment_cg_vec.push_back(accu_segment_cg);
+            //printf("%d\n", accu_segment_cg );
+        }
+    }
+    
+    
     
  
     // Print tiling assignment
@@ -585,10 +599,19 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         }
     }
     
-    
+
+    for(uint32_t j = 0; j < tiling->rank_nrowgrps; j++)
+    {
+        if(all_rowgrp_ranks[j] == Env::rank)
+        {
+            accu_segment_rg = j;
+            accu_segment_rg_vec.push_back(accu_segment_rg);
+        }
+    }
+        
     
     uint32_t other, accu;
-    if(!Env::rank)
+    if(Env::rank == 3)
     {
         printf("all_rowgrp_ranks\n");
         for(uint32_t j = 0; j < tiling->rowgrp_nranks; j++)
@@ -679,6 +702,30 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         }
         printf("\n"); 
         
+        printf("leader_ranks\n");
+        for(uint32_t j = 0; j < Env::nranks; j++)
+        {
+            other = leader_ranks[j];
+            printf("[%d] ", other);
+        }
+        printf("\n"); 
+        
+        printf("leader_ranks_rg\n");
+        for(uint32_t j = 0; j < tiling->nrowgrps; j++)
+        {
+            other = leader_ranks_rg[j];
+            printf("[%d] ", other);
+        }
+        printf("\n"); 
+        
+        printf("leader_ranks_cg\n");
+        for(uint32_t j = 0; j < tiling->ncolgrps; j++)
+        {
+            other = leader_ranks_cg[j];
+            printf("[%d] ", other);
+        }
+        printf("\n"); 
+        
         printf("os=%d asr=%d asc=%d\n", owned_segment, accu_segment_rg, accu_segment_cg);   
         
     }
@@ -737,7 +784,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
         printf("Edge distribution among %d ranks\n", Env::nranks);
     
     distribute();
-    filter();
+    //filter();
     
     
     
@@ -758,7 +805,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
         Env::exit(1);
     }    
 }
-
+/*
 #include "vector.hpp"
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -981,7 +1028,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
     }
     
 }
-
+*/
 /* Borrowed from LA3 code @
    https://github.com/cmuq-ccl/LA3/blob/master/src/matrix/dist_matrix2d.hpp
 */
