@@ -20,22 +20,14 @@ struct Segment
     //friend class Vertex_Program;
     
     Segment();
-    Segment(Integer_Type nrows_, Integer_Type ncols_, 
-            uint32_t rg_, uint32_t cg_, uint32_t leader_rank_, 
-            uint32_t leader_rank_rg_, uint32_t leader_rank_cg_, bool allocated_);
     ~Segment();
-    void allocate();
+
     void allocate(Integer_Type n);
     void del_seg();
     
     struct Basic_Storage<Fractional_Type, Integer_Type> *D;
 
-    Integer_Type nrows, ncols;
-    uint32_t g;
-    uint32_t rg, cg;
-    uint32_t leader_rank;
-    uint32_t leader_rank_rg;
-    uint32_t leader_rank_cg;
+    uint32_t g, cg, rg;
     bool allocated;
 };
 
@@ -43,29 +35,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::Segment() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type nrows_, Integer_Type ncols_,
-                              uint32_t rg_, uint32_t cg_, uint32_t leader_rank_,
-                              uint32_t leader_rank_rg_, uint32_t leader_rank_cg_, bool allocated_)
-{
-    nrows  = nrows_;
-    ncols  = ncols_;
-    rg     = rg_;
-    cg     = cg_;
-    leader_rank   = leader_rank_;       
-    leader_rank_rg   = leader_rank_rg_;
-    leader_rank_cg   = leader_rank_cg_;
-    allocated = allocated_;
-    D = nullptr;
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::~Segment() {};
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Segment<Weight, Integer_Type, Fractional_Type>::allocate()
-{
-    D = new struct Basic_Storage<Fractional_Type, Integer_Type>(nrows);
-}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n)
@@ -85,9 +55,6 @@ class Vector
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Graph;
     
-    //template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
-    //friend class Matrix;
-    
     public:
         Vector();
         Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
@@ -96,9 +63,7 @@ class Vector
         
         std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
-        uint32_t owned_segment;
         uint32_t vector_length;
-    private:
         Integer_Type nelems;
 };
 
