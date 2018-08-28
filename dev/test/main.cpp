@@ -7,7 +7,8 @@
 #include "env.hpp"
 #include "graph.hpp"
 #include "vertex_program.hpp"
-
+#include <iostream>
+#include <unistd.h>
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
    make WEIGHT="-DHASWEIGHT"         */
@@ -84,7 +85,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    bool parread = false;
+    bool parread = true;
     
 
     if(!Env::rank)
@@ -150,7 +151,7 @@ int main(int argc, char **argv)
     G.free();
     //Env::finalize();
     //return(0);
-    
+    //sleep(3);
     
     transpose = true;
     
@@ -158,20 +159,23 @@ int main(int argc, char **argv)
         Env::tick();
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
+    //printf("GR.load?\n");
     if(!Env::rank)
         Env::tock("Ingress transpose");
     
     fp alpha = 0.1;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
-    
+    //printf("Vertex_Program?\n");
     if(!Env::rank)
         Env::tick();
+    //printf("init\n"); 
     VR.init(x, y, v, s, &V);
     if(!Env::rank)
         Env::tock("Init"); 
-     
+    //printf("V.free\n"); 
     V.free();
+    //printf("free is done\n"); 
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     
@@ -219,6 +223,7 @@ int main(int argc, char **argv)
         
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
+       // printf("barrier\n"); 
         Env::barrier();
     }
     
