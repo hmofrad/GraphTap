@@ -74,15 +74,20 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Graph<Weight, Integer_Type, Fractional_Type>::Graph() : A(nullptr) {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Graph<Weight, Integer_Type, Fractional_Type>::~Graph()
-{
-    delete A;
-}
+Graph<Weight, Integer_Type, Fractional_Type>::~Graph(){};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::free()
 {
+   // if(!Env::rank)
+     //   printf("del_compression\n");
     A->del_compression();
+    //if(!Env::rank)
+      //  printf("free_tiling\n");
+    A->free_tiling();
+    //if(!Env::rank)
+      //  printf("A khodam\n");
+    delete A;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
