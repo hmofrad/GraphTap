@@ -9,7 +9,9 @@
 #include "vertex_program.hpp"
 
 /* HAS_WEIGHT macro will be defined by compiler.
-   So, you don't have to change this.            */
+   So, you don't have to change this.   
+   make WEIGHT="-DHASWEIGHT"         */
+   
 using em = Empty; // Weight (default is Empty)
 #ifdef HAS_WEIGHT
 using wp = uint32_t;
@@ -94,10 +96,10 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tock("Ingress");
-    Env::barrier();
-    G.free();
-    Env::finalize();
-    return(0);
+    //Env::barrier();
+    //G.free();
+    //Env::finalize();
+    //return(0);
     
     
     //if(!Env::rank);
@@ -108,30 +110,42 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tick();
 
-
+    Env::barrier();
     Vertex_Program<wp, ip, fp> V(G);
     fp x = 0, y = 0, v = 0, s = 0;
     //printf("init\n");
     V.init(x, y, v, s);
     
     Generic_functions f;
-    //printf("scatter\n");
+    
+    if(!Env::rank)
+        printf("bcast\n");
     V.bcast(f.ones);
-    //V.scatter(f.ones);    
-    //printf("gather\n");
-    //V.gather();
+    
+    /*
+    if(!Env::rank)
+        printf("scatter\n");
+    V.scatter(f.ones);    
+    if(!Env::rank)
+        printf("gather\n");
+    V.gather();
+    */
     //printf("combine %d\n", Env::rank);
+    if(!Env::rank)
+        printf("combine\n");
+
+    
     V.combine(f.assign);
-    //printf("free %d\n",  Env::rank);
+    
     V.checksum();
     if(!Env::rank)
         Env::tock("Degree");
     
     Env::barrier(); 
-    V.free();
+    //V.free();
     G.free();
-    Env::finalize();
-    return(0);
+    //Env::finalize();
+    //return(0);
     
     
     transpose = true;
@@ -149,7 +163,7 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tick();
-    VR.init(x, y, v, &V);
+    VR.init(x, y, v, s, &V);
     if(!Env::rank)
         Env::tock("Init"); 
      
@@ -168,7 +182,7 @@ int main(int argc, char **argv)
         if(!Env::rank)
             Env::tick();
 
-        VR.bcast(f.ones);
+        VR.bcast(f.div);
         
         if(!Env::rank)
             Env::tock("Bcast"); 
@@ -201,6 +215,7 @@ int main(int argc, char **argv)
         
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
+        Env::barrier();
     }
     
     if(!Env::rank)
