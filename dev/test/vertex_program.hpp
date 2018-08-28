@@ -622,10 +622,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         
         
         
-        print(v_seg);
-        Env::barrier();
-        if(!Env::rank)
-            printf("###########\n");
+       //print(v_seg);
+        //Env::barrier();
+        //if(!Env::rank)
+         //   printf("###########\n");
         
         /*
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
