@@ -685,10 +685,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parread)
 {
-    if(Env::is_master)
-        printf("Edge distribution among %d ranks\n", Env::nranks);
+    
     if(parread)
+    {
+        if(Env::is_master)
+            printf("Edge distribution among %d ranks\n", Env::nranks);    
         distribute();
+    }
+    
     //filter();
     
     
