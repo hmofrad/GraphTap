@@ -124,7 +124,7 @@ class Matrix
         
         void init_matrix();
         void del_triples();
-        void init_compression();
+        void init_compression(bool parread);
         void init_csr();
         void init_csc();
         void init_bv();
@@ -683,12 +683,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parread)
 {
     if(Env::is_master)
         printf("Edge distribution among %d ranks\n", Env::nranks);
-    
-    distribute();
+    if(parread)
+        distribute();
     //filter();
     
     
