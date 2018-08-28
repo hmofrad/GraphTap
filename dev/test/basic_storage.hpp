@@ -82,5 +82,7 @@ Basic_Storage<Empty, Integer_Type>::~Basic_Storage()
         fprintf(stderr, "Error unmapping memory\n");
         Env::exit(1);
     }
+    //if(!Env::rank)
+    //    printf("removing data\n");
 }
 #endif
