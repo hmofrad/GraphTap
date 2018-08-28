@@ -122,6 +122,7 @@ class Matrix
         std::vector<int32_t> accu_segment_rg_vec;
         std::vector<int32_t> accu_segment_cg_vec;
         
+        void free_tiling();
         void init_matrix();
         void del_triples();
         void init_compression(bool parread);
@@ -166,9 +167,17 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Matrix<Weight, Integer_Type, Fractional_Type>::~Matrix()
+void Matrix<Weight, Integer_Type, Fractional_Type>::free_tiling()
 {
     delete tiling;
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+Matrix<Weight, Integer_Type, Fractional_Type>::~Matrix()
+{
+    //delete tiling;
+    //if(!Env::rank)
+      //  printf("Delete matrix\n");
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1185,8 +1194,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
             }
         }
     }
-    
+    //printf("DONE compression %d\n",Env::rank);
     del_triples();
+    //printf("DONE deletion %d\n",Env::rank);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
