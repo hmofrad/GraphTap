@@ -40,6 +40,9 @@ class Vertex_Program
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
         void clear(Vector<Weight, Integer_Type, Fractional_Type> *vec);
         Order_type order;
+        Tiling_type tiling_type;
+        uint32_t rowgrp_nranks, colgrp_nranks;
+        uint32_t rank_nrowgrps, rank_ncolgrps;
         
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
@@ -61,7 +64,13 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
 {
     A = Graph.A;
     order = order_;
-
+    
+    tiling_type = A->tiling->tiling_type;
+    rowgrp_nranks = A->tiling->rowgrp_nranks;
+    colgrp_nranks = A->tiling->colgrp_nranks;
+    rank_nrowgrps = A->tiling->rank_nrowgrps;
+    rank_ncolgrps = A->tiling->rank_ncolgrps;
+    
     if(order == _ROW_)
     {
         ;
@@ -80,7 +89,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
     delete V;
     delete S;   
     
-    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
+    for (uint32_t i = 0; i < rank_nrowgrps; i++)
     {
         delete Y[i];
     }
@@ -93,7 +102,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     X->del_vec();
     V->del_vec();
     S->del_vec();
-    for (uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
+    for (uint32_t i = 0; i < rank_nrowgrps; i++)
     {
         Y[i]->del_vec();
     }
@@ -200,7 +209,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         
         uint32_t tile_th = tile.nth;
         uint32_t pair_idx = pair.row;        
-        bool vec_add = (((tile_th + 1) % A->tiling->rank_ncolgrps) == 0);
+        bool vec_add = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(vec_add)
         {
             bool vec_owner = (pair_idx == A->owned_segment);
@@ -245,10 +254,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
     
     MPI_Request request;
     uint32_t follower, accu;
-    if((A->tiling->tiling_type == Tiling_type::_2D_)
-        or (A->tiling->tiling_type == Tiling_type::_1D_ROW))
+    if((tiling_type == Tiling_type::_2D_)
+        or (tiling_type == Tiling_type::_1D_ROW))
     {
-        for(uint32_t i = 0; i < A->tiling->colgrp_nranks - 1; i++)
+        for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
         {
             if(Env::comm_split)
             {
@@ -265,7 +274,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
             
         }
     }
-    else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
+    else if(tiling_type == Tiling_type::_1D_COL)
     {
         ;
     }
@@ -282,8 +291,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
 {   
     uint32_t leader;
     MPI_Request request;
-    if((A->tiling->tiling_type == Tiling_type::_2D_)
-        or (A->tiling->tiling_type == Tiling_type::_1D_ROW))
+    if((tiling_type == Tiling_type::_2D_)
+        or (tiling_type == Tiling_type::_1D_ROW))
     {    
         for(uint32_t i = 0; i < A->tiling->rank_ncolgrps; i++)
         {
@@ -358,10 +367,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
     }
     
-    if((A->tiling->tiling_type == Tiling_type::_2D_)
-        or (A->tiling->tiling_type == Tiling_type::_1D_ROW))
+    if((tiling_type == Tiling_type::_2D_)
+        or (tiling_type == Tiling_type::_1D_ROW))
     {
-        for(uint32_t i = 0; i < A->tiling->rank_ncolgrps; i++)
+        for(uint32_t i = 0; i < rank_ncolgrps; i++)
         {
             leader = A->leader_ranks_cg[A->local_col_segments[i]];
             auto &xj_seg = X->segments[i];
@@ -376,7 +385,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
             }
         }
     }
-    else if(A->tiling->tiling_type == Tiling_type::_1D_COL)
+    else if(tiling_type == Tiling_type::_1D_COL)
     {
         ;
     }
@@ -474,7 +483,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         }
         
         xi++;
-        communication = (((tile_th + 1) % A->tiling->rank_ncolgrps) == 0);
+        communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
         {
             if(Env::comm_split)
@@ -489,7 +498,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
             }
             if(leader == my_rank)
             {
-                if(A->tiling->tiling_type == Tiling_type::_1D_ROW)
+                if(tiling_type == Tiling_type::_1D_ROW)
                 {   
                     uint32_t vo = 0;
                     auto &v_seg = V->segments[o];
@@ -501,11 +510,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                         v_data[i] = (*f)(0, y_data[i], 0, 0);
                     }
                 }
-                else if((A->tiling->tiling_type == Tiling_type::_2D_)
-                     or (A->tiling->tiling_type == Tiling_type::_1D_COL))
+                else if((tiling_type == Tiling_type::_2D_)
+                     or (tiling_type == Tiling_type::_1D_COL))
                 {
                     MPI_Status status;
-                    for(uint32_t j = 0; j < A->tiling->rowgrp_nranks - 1; j++)
+                    for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
                     {
                         if(Env::comm_split)
                         {   
@@ -555,8 +564,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         printf("Combine Tile processing time: %f\n", t2 - t1);
     
     
-    if((A->tiling->tiling_type == Tiling_type::_2D_)
-        or (A->tiling->tiling_type == Tiling_type::_1D_COL))
+    if((tiling_type == Tiling_type::_2D_)
+        or (tiling_type == Tiling_type::_1D_COL))
     {
         /* Better way of waiting for ncoming messages using MPI_Waitsome */
         auto *Yp = Y[yk];
@@ -568,7 +577,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         
         int32_t incount = in_requests.size();
         int32_t outcount = 0;
-        int32_t incounts = A->tiling->rowgrp_nranks - 1;
+        int32_t incounts = rowgrp_nranks - 1;
         std::vector<MPI_Status> statuses(incounts);
         std::vector<int> indices(incounts);
         uint32_t received = 0;
@@ -618,7 +627,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
            // printf("r=%d i=%d v=%f y=%f\n", Env::rank, i, v_data[i], y_data[i]);
         }
         //memset(y_data, 0, y_nbytes);
-        for(uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
+        for(uint32_t i = 0; i < rank_nrowgrps; i++)
             clear(Y[i]);
         
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
