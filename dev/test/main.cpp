@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    bool parread = true;
+    bool parread = false;
     
 
     if(!Env::rank)
@@ -136,8 +136,12 @@ int main(int argc, char **argv)
 
     
     V.combine(f.assign);
+
+    if(!Env::rank)
+        printf("Checksum\n");
     
     V.checksum();
+
     if(!Env::rank)
         Env::tock("Degree");
     
