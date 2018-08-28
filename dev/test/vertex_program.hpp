@@ -396,7 +396,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
     bool vec_owner, communication;
     MPI_Request request;
     uint32_t xi= 0, y = 0, yi = 0, yo = 0, o = 0, xo = 0, yj, yk, si, vi;
-   
+    double t1, t2;
+    t1 = Env::clock();
     for(uint32_t t: A->local_tiles_row_order)
     {
         auto pair = A->tile_of_local_tile(t);
@@ -549,6 +550,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
             yi++;
         }
     }
+    t2 = Env::clock();
+    if(!Env::rank)
+        printf("Combine Tile processing time: %f\n", t2 - t1);
+    
     
     if((A->tiling->tiling_type == Tiling_type::_2D_)
         or (A->tiling->tiling_type == Tiling_type::_1D_COL))
@@ -568,7 +573,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         std::vector<int> indices(incounts);
         uint32_t received = 0;
         
-        double t1 = Env::clock();
+        t1 = Env::clock();
         while(received < incount)
         {
             MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
@@ -595,10 +600,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
             }
         }
         in_requests.clear();
-        double t2 = Env::clock();
+        t2 = Env::clock();
         if(!Env::rank)
             printf("Combine MPI_Waitsome for in_req: %f\n", t2 - t1);
         
+        t1 = Env::clock();
         uint32_t vo = 0;
         auto &v_seg = V->segments[vo];
         auto *v_data = (Fractional_Type *) v_seg.D->data;
@@ -612,12 +618,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
            // printf("r=%d i=%d v=%f y=%f\n", Env::rank, i, v_data[i], y_data[i]);
         }
         //memset(y_data, 0, y_nbytes);
-        for(uint32_t i = 0; i < A->tiling->rank_ncolgrps; i++)
+        for(uint32_t i = 0; i < A->tiling->rank_nrowgrps; i++)
             clear(Y[i]);
         
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
         //Env::barrier();
+        t2 = Env::clock();
+        if(!Env::rank)
+            printf("Combine Copy v to y time: %f\n", t2 - t1);
         
         
         
