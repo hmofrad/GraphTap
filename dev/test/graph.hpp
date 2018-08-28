@@ -175,7 +175,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     }
     
     // Compress the graph
-    A->init_compression();
+    A->init_compression(parread_);
 }
 
 
@@ -202,7 +202,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     }
     
     // Compress the graph
-    A->init_compression();
+    A->init_compression(parread_);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
