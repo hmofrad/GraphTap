@@ -97,6 +97,7 @@ int main(int argc, char **argv)
     
     if(!Env::rank)
         Env::tock("Ingress");
+
     //Env::barrier();
     //G.free();
     //Env::finalize();
@@ -119,18 +120,19 @@ int main(int argc, char **argv)
     
     Generic_functions f;
     
+    /*
     if(!Env::rank)
         printf("bcast\n");
     V.bcast(f.ones);
+    */
     
-    /*
     if(!Env::rank)
         printf("scatter\n");
     V.scatter(f.ones);    
     if(!Env::rank)
         printf("gather\n");
     V.gather();
-    */
+    
     //printf("combine %d\n", Env::rank);
     if(!Env::rank)
         printf("combine\n");
@@ -146,15 +148,16 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Degree");
     
-    Env::barrier(); 
+    
     //V.free();
     G.free();
+    
     //Env::finalize();
     //return(0);
     //sleep(3);
     
     transpose = true;
-    
+    Env::barrier(); 
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
@@ -162,7 +165,7 @@ int main(int argc, char **argv)
     //printf("GR.load?\n");
     if(!Env::rank)
         Env::tock("Ingress transpose");
-    
+    Env::barrier();
     fp alpha = 0.1;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
@@ -224,7 +227,7 @@ int main(int argc, char **argv)
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
        // printf("barrier\n"); 
-        Env::barrier();
+        //Env::barrier();
     }
     
     if(!Env::rank)
@@ -232,6 +235,10 @@ int main(int argc, char **argv)
         time2 = Env::clock();
         printf("Pagerank time=%f\n", time2 - time1);
     }
+    
+    VR.checksumPR();
+    
+    
     
     Env::barrier();
     VR.free();
