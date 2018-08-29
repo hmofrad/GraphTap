@@ -532,8 +532,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Print tiling assignment
     print("rank");    
     // Want some debug info?
-    debug(-1);
-    Env::barrier();
+    //Env::barrier();
+    //debug(-1);
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -697,10 +698,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
     
     if(parread)
     {
-        if(Env::is_master)
-            printf("Edge distribution among %d ranks\n", Env::nranks);    
+       if(Env::is_master)
+            printf("Edge distribution among %d ranks\n", Env::nranks);     
         distribute();
     }
+    
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        tile.nedges = tile.triples->size();
+        if(tile.nedges)
+            tile.allocated = true;
+    }
+    
     
     //filter();
     
@@ -1061,9 +1073,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         nedges_end_local += tile.triples->size();
-        tile.nedges = tile.triples->size();
-        if(tile.nedges)
-            tile.allocated = true;
+        //tile.nedges = tile.triples->size();
+        //if(tile.nedges)
+        //    tile.allocated = true;
     }
     
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1,MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
@@ -1079,6 +1091,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
+        uint64_t nedges_local = 0;
+    uint64_t nedges_global = 0;
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
     struct Triple<Weight, Integer_Type> pair;
@@ -1088,10 +1102,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         
-        if(tile.triples->size())
+        if(tile.allocated)
         {
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
-            tile.allocated = true;
+            //tile.allocated = true;
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
@@ -1112,6 +1126,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
             IA[0] = 0;
             for (auto& triple : *(tile.triples))
             {
+                nedges_local++;
                 pair = rebase(triple);
                 while((j - 1) != pair.row)
                 {
@@ -1137,6 +1152,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         }
     }    
     del_triples();
+    
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        if(!Env::rank)
+            printf("1. %lu\n", nedges_global);
+        
+                  
+        
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1149,11 +1172,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         
-        if(tile.triples->size())
+        if(tile.allocated)
         {
-            tile.nedges = tile.triples->size();
+            //tile.nedges = tile.triples->size();
             tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
-            tile.allocated = true;
+            //tile.allocated = true;
         }        
         
         std::sort(tile.triples->begin(), tile.triples->end(), f);
