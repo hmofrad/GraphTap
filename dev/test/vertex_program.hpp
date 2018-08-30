@@ -165,6 +165,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
         Integer_Type nitems_dst = seg_dst.D->n;
         Integer_Type nbytes_dst = seg_dst.D->nbytes;
         memcpy(data_dst, data_src, nbytes_src);
+        printf("%d %f %f\n", Env::rank, data_dst[0], data_src[0]);
     }
 }
 
@@ -327,6 +328,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
         in_requests.clear();
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
+        Env::barrier();
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -364,7 +366,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     
     for(uint32_t i = 0; i < x_nitems; i++)
     {
-        //printf("r=%d i=%d x=%f s=%f v=%f\n", Env::rank, i, x_data[i], s_data[i], v_data[i]);
         x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
     }
     
@@ -401,6 +402,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    
     std::vector<uint32_t> tags;
     uint64_t nedges_local = 0;
     uint64_t nedges_global = 0;
@@ -482,9 +484,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                             y_data[ROW_INDEX[i]] += VAL[i] * x_data[j];   
                         #else
                         //if(x_data[ROW_INDEX[i]])
+                        //if(((t == 0) or (t == 1) or (t == 2) or (t == 3)) and ROW_INDEX[i] == 0)
+                          //  printf("<<<<<r=%d t=%d ri=%d yd=%f %f\n", Env::rank, t, ROW_INDEX[i], y_data[0], x_data[j]);   
                         if(x_data[j])
                         {
                             y_data[ROW_INDEX[i]] += x_data[j]; //x_data[ROW_INDEX[i]];   
+
                             //nedges_local +=x_data[ROW_INDEX[i]];
                         }
                         #endif
@@ -492,7 +497,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                 }
             }            
         }
-        
+        if(t == 0)
+        {
+            //for(uint32_t i = 0; i < y_nitems; i++)
+                //if(!t and i == 0)
+               //printf(">>>>>%d y=%f\n", Env::rank, y_data[0]);
+        }
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
@@ -768,11 +778,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         auto *v_data = (Fractional_Type *) v_seg.D->data;
         Integer_Type v_nitems = v_seg.D->n;
         Integer_Type v_nbytes = v_seg.D->nbytes;
-        
+        //Fractional_Type tol = 1e-5;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
+            //Fractional_Type tmp = y_data[i];
+            
             v_data[i] = (*f)(0, y_data[i], 0, 0); 
-            nedges_local += nedges_local;
+            
+            //if(fabs(v_data[i] - tmp) > tol)
+            //    printf("Converged\n");
+            //printf("%d %d %f\n", Env::rank, i, (fabs(v_data[i] - tmp) > tol));
+            //nedges_local += nedges_local;
         }
         
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
@@ -786,9 +802,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         
         
         //Env::barrier();
-        MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-        if(!Env::rank)
-            printf("VP: %lu\n", nedges_global);
+        //MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        //if(!Env::rank)
+          //  printf("VP: %lu\n", nedges_global);
         
         
         
@@ -809,6 +825,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     for(uint32_t i = 0; i < v_nitems; i++)
     {
         v_sum_local += v_data[i];
+        if(i == 0)
+        printf("%d %f\n", Env::rank, v_data[i]);
     }
     
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
@@ -832,6 +850,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
         s_local += s_data[i];
     }
     
+    
     MPI_Allreduce(&s_local, &s_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
@@ -852,19 +871,38 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
     MPI_Allreduce(&v_local, &v_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Value checksum: %f\n", v_gloabl); 
-    
-    
+    uint32_t NUM = 30;
+    uint32_t count = v_nitems < NUM ? v_nitems : NUM;
+    std::vector<double> nums(count);
+    std::vector<double> snums(count);
+    //for (uint32_t i = 0; i < nrowgrps; i++)
+    //{
+        for (uint32_t j = 0; j < A->tiling->ncolgrps; j++)  
+        {
+            auto &tile = A->tiles[0][j];
+            if(tile.rank == Env::rank)
+            {
+                //uint32_t vo = 0;
+                for(uint32_t i = 0; i < count; i++)
+                {
+                    //nums[i] += v_data[i];
+                    printf("r=%d i=%d v=%f\n", Env::rank, i, v_data[i]);
+                }
+                
+            }
+        }
+    //}
+    MPI_Allreduce(nums.data(), snums.data(), count, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(!Env::rank)
     {
-        Triple<Weight, Integer_Type> pair;
-        Triple<Weight, Integer_Type> pair1;
-        uint32_t bound = v_nitems < 30 ? v_nitems : 30;
-        for(uint32_t i = 0; i < bound; i++)
+        for(uint32_t i = 0; i < count; i++)
         {
-            pair.row = i;
-            pair.col = 0;
-            auto pair1 = A->base(pair, A->owned_segment, A->owned_segment);
-            printf("Rank[%d],Value[%d]=%f,Degree[%d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+            //MPI_Allreduce(&v_local, &v_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+            
+            //pair.row = i;
+            //pair.col = 0;
+            //auto pair1 = A->base(pair, A->owned_segment, A->owned_segment);
+            printf("Rank[%d],Value[%d]=%f,Degree[%d]=%f\n",  Env::rank, i, v_data[i], 1, .1);
         } 
     }
         
