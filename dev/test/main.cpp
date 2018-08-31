@@ -152,7 +152,7 @@ int main(int argc, char **argv)
     G.free();
     
     //Env::finalize();
-    //return(0);
+    ///return(0);
     //sleep(3);
     
     transpose = true;
@@ -161,23 +161,23 @@ int main(int argc, char **argv)
         Env::tick();
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
-    //printf("GR.load?\n");
+
     if(!Env::rank)
         Env::tock("Ingress transpose");
+    
     Env::barrier();
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
-    //printf("Vertex_Program?\n");
+    
     if(!Env::rank)
         Env::tick();
-    //printf("init\n"); 
     VR.init(x, y, v, s, &V);
     if(!Env::rank)
         Env::tock("Init"); 
-    //printf("V.free\n"); 
+    
     V.free();
-    //printf("free is done\n"); 
+    
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     while(iter < niters)
     {
         iter++;
-
+        
         if(!Env::rank)
             Env::tick();
 
