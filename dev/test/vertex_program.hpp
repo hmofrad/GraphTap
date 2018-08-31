@@ -592,7 +592,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         or (tiling_type == Tiling_type::_1D_COL))
     {
         /* Better way of waiting for ncoming messages using MPI_Waitsome */
-        /*
+        
         t1 = Env::clock();
         auto *Yp = Y[yk];
         yo = A->accu_segment_rg;
@@ -621,7 +621,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
             {
                 
                 uint32_t j = indices[i];
-                MPI_Status status;
+                //MPI_Status status;
                 //MPI_Wait(&in_requests[j], &status);
                  //if(!Env::rank)
                  //   printf(">> %d %d\n", i, j);   
@@ -638,7 +638,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
                // MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, follower, tags[j], Env::rowgrps_comm, &in_requests[j]);
                 
                 //MPI_Recv(yj_data, yj_nbytes, MPI_BYTE, follower, tags[j], Env::rowgrps_comm, &status);
-                received += outcount;
+                
                 for(uint32_t k = 0; k < yj_nitems; k++)
                 {
                     if(yj_data[k])
@@ -647,6 +647,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
 
                 
             }
+            received += outcount;
         }
         in_requests.clear();
         t2 = Env::clock();
@@ -675,7 +676,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         t2 = Env::clock();
         if(!Env::rank)
             printf("Combine Copy v to y time: %f\n", t2 - t1);
-        */
+        
         /*
         auto *Yp = Y[yk];
         yo = A->accu_segment_rg;
@@ -754,7 +755,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         */
         
         
-       
+       /*
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
         Env::barrier();
@@ -805,7 +806,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
         Env::barrier();         
-        
+        */
         //Env::barrier();
 
         //print(v_seg);
