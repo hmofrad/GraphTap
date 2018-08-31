@@ -49,12 +49,11 @@ struct Generic_functions
     
     static fp rank(fp x, fp y, fp v, fp s)
     {
-        fp alpha = 0.1;
-        return(alpha + (1 - alpha) * y);
+        //fp tol = 1e-5;
+        fp alpha = 0.15;
+        return(alpha + (1.0 - alpha) * y);
     }
 };
-
-
 
 
 int main(int argc, char **argv)
@@ -120,19 +119,19 @@ int main(int argc, char **argv)
     
     Generic_functions f;
     
-    /*
+    
     if(!Env::rank)
         printf("bcast\n");
     V.bcast(f.ones);
-    */
     
+    /*
     if(!Env::rank)
         printf("scatter\n");
     V.scatter(f.ones);    
     if(!Env::rank)
         printf("gather\n");
     V.gather();
-    
+    */
     //printf("combine %d\n", Env::rank);
     if(!Env::rank)
         printf("combine\n");
@@ -147,7 +146,7 @@ int main(int argc, char **argv)
 
     if(!Env::rank)
         Env::tock("Degree");
-    
+    //V.checksumPR();
     
     //V.free();
     G.free();
@@ -166,7 +165,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress transpose");
     Env::barrier();
-    fp alpha = 0.1;
+    fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
     //printf("Vertex_Program?\n");
