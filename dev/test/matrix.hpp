@@ -494,7 +494,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         indexed_sort(all_rowgrp_ranks_rg, all_rowgrp_ranks_accu_seg_rg);
         Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
         // Make sure there is at least one follower
-        if(follower_rowgrp_ranks.size())
+        if(follower_rowgrp_ranks.size() > 1)
         {
             indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
             indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
@@ -503,7 +503,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
         indexed_sort(all_colgrp_ranks_cg, all_colgrp_ranks_accu_seg_cg);
         Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
-        if(follower_colgrp_ranks.size())
+        if(follower_colgrp_ranks.size() > 1)
         {
             indexed_sort(follower_colgrp_ranks, follower_colgrp_ranks_accu_seg);
             indexed_sort(follower_colgrp_ranks_cg, follower_colgrp_ranks_accu_seg_cg);
@@ -528,13 +528,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             accu_segment_rg_vec.push_back(accu_segment_rg);
         }
     }
-        
+    owned_segment_vec.push_back(owned_segment);    
     // Print tiling assignment
     print("rank");    
     // Want some debug info?
-    //Env::barrier();
-    //debug(-1);
-    //Env::barrier();
+    Env::barrier();
+    debug(1);
+    Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
