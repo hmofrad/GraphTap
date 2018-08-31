@@ -305,6 +305,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
 {
+    
+    //std::vector<uint32_t> deg(30, 0);
     // Open graph file.
     std::ifstream fin(filepath.c_str(), std::ios_base::binary);
     if(!fin.is_open())
@@ -335,7 +337,21 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         {
             std::swap(triple.row, triple.col);
         }
-        nedges++;    
+        nedges++;
+           
+        /*    
+        if(!Env::rank)
+        {
+        //if(triple.row == 0)
+        if((triple.row >= 0) and (triple.row < 30))
+        {
+            printf("%d %d\n", triple.row, triple.col);
+            deg[triple.row]++;
+            
+        }
+        }
+        
+        */
         
         pair = A->tile_of_triple(triple);
         assert((triple.row <= nrows) and (triple.col <= ncols));
@@ -361,6 +377,17 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
+    /*
+    if(!Env::rank)
+    {
+    for(uint32_t i = 0; i < 30; i++)
+        printf("%d %d\n", i, deg[i]);
+    }
+    */
+    
+    //Env::barrier();
+    //Env::finalize();
+    //exit(0);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -500,7 +527,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     uint64_t filesize = 0, skip = 0,share = 0, offset = 0, endpos = 0;
     fin.seekg (0, std::ios_base::end);
     filesize = (uint64_t) fin.tellg();
-    fin.seekg(0, std::ios_base::beg);
+    //fin.seekg(0, std::ios_base::beg);
     nedges = filesize / sizeof(Triple<Weight, Integer_Type>);
     
     
@@ -509,6 +536,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
 
     offset += share * Env::rank;
     endpos = (Env::rank == Env::nranks - 1) ? filesize : offset + share;
+    fin.seekg(offset, std::ios_base::beg);
     
     uint64_t nedges_local = 0;
     uint64_t nedges_global = 0;
