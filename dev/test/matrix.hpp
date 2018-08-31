@@ -1020,7 +1020,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    Env::barrier();
+    //Env::barrier();
     std::vector<MPI_Request> outreqs;
     std::vector<MPI_Request> inreqs;
     
