@@ -711,6 +711,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
         tile.nedges = tile.triples->size();
         if(tile.nedges)
             tile.allocated = true;
+        //if(!Env::rank)
+        //    printf("t=%d n=%lu\n", t, tile.triples->size());
+        
     }
     
     
@@ -988,7 +991,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Type_commit(&MANY_TRIPLES);
     
     std::vector<std::vector<Triple<Weight, Integer_Type>>> outboxes(Env::nranks);
-    std::vector<std::vector<Triple<Weight>>> inboxes(Env::nranks);
+    std::vector<std::vector<Triple<Weight, Integer_Type>>> inboxes(Env::nranks);
     std::vector<uint32_t> inbox_sizes(Env::nranks);
     
     for (uint32_t i = 0; i < nrowgrps; i++)
@@ -998,6 +1001,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             auto &tile = tiles[i][j];
             if(tile.rank != Env::rank)
             {
+                //if(!Env::rank)
+                //    printf("r=%d s=%lu k=%d\n", tile.rank, tile.triples->size(), tile.kth);
                 auto &outbox = outboxes[tile.rank];
                 outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
                 tile.free_triples();
@@ -1015,41 +1020,59 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    
+    Env::barrier();
     std::vector<MPI_Request> outreqs;
     std::vector<MPI_Request> inreqs;
+    
     MPI_Request request;
-
+    MPI_Status status;
+     
     for (uint32_t i = 0; i < Env::nranks; i++)
     {
         uint32_t r = (Env::rank + i) % Env::nranks;
         if(r != Env::rank)
         {
+            //if(!Env::rank)
+            //    printf("<<--%d %lu\n",r, outboxes[r].size());
             auto &inbox = inboxes[r];
             uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
             inbox.resize(inbox_bound);
             /* Recv the triples with many_triples_size padding. */
+//            MPI_Recv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &status);
             MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            //MPI_Wait(&request, &status);
+
             inreqs.push_back(request);
         }
     }
-    
+
+     
     for (uint32_t i = 0; i < Env::nranks; i++)
     {
         uint32_t r = (Env::rank + i) % Env::nranks;
         if(r != Env::rank)
         {
+            //if(!Env::rank)
+            //    printf("-->%d %lu\n",r, outboxes[r].size());
             auto &outbox = outboxes[r];
             uint32_t outbox_bound = outbox.size() + many_triples_size;
             outbox.resize(outbox_bound);
             /* Send the triples with many_triples_size padding. */
+            //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
             MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            //MPI_Wait(&request, &status);
             outreqs.push_back(request);
         }
     }
     
-    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
+    
+    //MPI_Request request;
 
+
+
+    
+    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
+    //Env::barrier();
     
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -1065,7 +1088,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     }
     
     MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
-    Env::barrier();
+    
 
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles_row_order)
@@ -1076,6 +1099,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         //tile.nedges = tile.triples->size();
         //if(tile.nedges)
         //    tile.allocated = true;
+    //if(!Env::rank)
+      //  printf("%lu\n", tile.triples->size());
     }
     
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1,MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
@@ -1086,6 +1111,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
+    Env::barrier();
+        /*
+        1121410
+        1130954
+        975723
+        977375
+    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
