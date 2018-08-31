@@ -165,7 +165,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
         Integer_Type nitems_dst = seg_dst.D->n;
         Integer_Type nbytes_dst = seg_dst.D->nbytes;
         memcpy(data_dst, data_src, nbytes_src);
-        printf("%d %f %f\n", Env::rank, data_dst[0], data_src[0]);
+        //printf("%d %f %f\n", Env::rank, data_dst[0], data_src[0]);
     }
 }
 
@@ -592,7 +592,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         or (tiling_type == Tiling_type::_1D_COL))
     {
         /* Better way of waiting for ncoming messages using MPI_Waitsome */
-        /*
+        
         auto *Yp = Y[yk];
         yo = A->accu_segment_rg;
         auto &y_seg = Yp->segments[yo];
@@ -666,7 +666,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
         Env::barrier();
-        */
+        
         
         /*
         auto *Yp = Y[yk];
@@ -746,7 +746,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         */
         
         
-       
+       /*
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
         Env::barrier();
@@ -796,6 +796,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(Fractional_T
         
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
+        */
+        
         //Env::barrier();
 
         //print(v_seg);
@@ -825,8 +827,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     for(uint32_t i = 0; i < v_nitems; i++)
     {
         v_sum_local += v_data[i];
-        if(i == 0)
-        printf("%d %f\n", Env::rank, v_data[i]);
+        //if(i == 0)
+        //printf("%d %f\n", Env::rank, v_data[i]);
     }
     
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
@@ -838,6 +840,23 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
 {
+    double v_local = 0, v_gloabl = 0;
+    uint32_t vo = 0;
+    auto &v_seg = V->segments[vo];
+    auto *v_data = (Fractional_Type *) v_seg.D->data;
+    Integer_Type v_nitems = v_seg.D->n;
+    Integer_Type v_nbytes = v_seg.D->nbytes;
+        
+    for(uint32_t i = 0; i < v_nitems; i++)
+    {
+        v_local += v_data[i];
+    }
+    
+    MPI_Allreduce(&v_local, &v_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+    if(Env::is_master)
+        printf("Value checksum: %f\n", v_gloabl); 
+    
+    
     uint64_t s_local = 0, s_gloabl = 0;
     uint32_t so = 0;
     auto &s_seg = S->segments[so];
@@ -855,28 +874,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
     
-    
-    double v_local = 0, v_gloabl = 0;
-    uint32_t vo = 0;
-    auto &v_seg = V->segments[vo];
-    auto *v_data = (Fractional_Type *) v_seg.D->data;
-    Integer_Type v_nitems = v_seg.D->n;
-    Integer_Type v_nbytes = v_seg.D->nbytes;
-        
-    for(uint32_t i = 0; i < v_nitems; i++)
-    {
-        v_local += v_data[i];
-    }
-    
-    MPI_Allreduce(&v_local, &v_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
-    if(Env::is_master)
-        printf("Value checksum: %f\n", v_gloabl); 
-    uint32_t NUM = 30;
+
+    uint32_t NUM = 31;
     uint32_t count = v_nitems < NUM ? v_nitems : NUM;
-    std::vector<double> nums(count);
-    std::vector<double> snums(count);
+    //std::vector<double> v_nums(count);
+    //std::vector<double> v_sum_nums(count);
+    //std::vector<double> nums(count);
+    //std::vector<double> snums(count);
     //for (uint32_t i = 0; i < nrowgrps; i++)
     //{
+        /*
         for (uint32_t j = 0; j < A->tiling->ncolgrps; j++)  
         {
             auto &tile = A->tiles[0][j];
@@ -891,8 +898,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
                 
             }
         }
+        */
     //}
-    MPI_Allreduce(nums.data(), snums.data(), count, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+    //MPI_Allreduce(nums.data(), snums.data(), count, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(!Env::rank)
     {
         for(uint32_t i = 0; i < count; i++)
@@ -902,7 +910,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
             //pair.row = i;
             //pair.col = 0;
             //auto pair1 = A->base(pair, A->owned_segment, A->owned_segment);
-            printf("Rank[%d],Value[%d]=%f,Degree[%d]=%f\n",  Env::rank, i, v_data[i], 1, .1);
+            printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, i, v_data[i], i, s_data[i]);
         } 
     }
         
