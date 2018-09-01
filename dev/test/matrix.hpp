@@ -116,11 +116,12 @@ class Matrix
         std::vector<int32_t> follower_colgrp_ranks_cg;
         std::vector<int32_t> follower_colgrp_ranks_accu_seg_cg;
         
-        int32_t owned_segment, accu_segment_rg, accu_segment_cg;
+        int32_t owned_segment, accu_segment_rg, accu_segment_cg, accu_segment_row;
         // In case of owning multiple segments
         std::vector<int32_t> owned_segment_vec;
         std::vector<int32_t> accu_segment_rg_vec;
         std::vector<int32_t> accu_segment_cg_vec;
+
         
         void free_tiling();
         void init_matrix();
@@ -528,12 +529,19 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             accu_segment_rg_vec.push_back(accu_segment_rg);
         }
     }
-    owned_segment_vec.push_back(owned_segment);    
+    owned_segment_vec.push_back(owned_segment);   
+    
+    for(uint32_t j = 0; j < tiling->rank_nrowgrps; j++)
+    {
+        if(leader_ranks[local_row_segments[j]] == Env::rank)
+            accu_segment_row = j;
+    }
+    
     // Print tiling assignment
     print("rank");    
     // Want some debug info?
     Env::barrier();
-    debug(0);
+    debug(5);
     Env::barrier();
 }
 
@@ -1022,10 +1030,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    //Env::barrier();
+    
+    Env::barrier();
     std::vector<MPI_Request> outreqs;
     std::vector<MPI_Request> inreqs;
-    
     MPI_Request request;
     MPI_Status status;
      
