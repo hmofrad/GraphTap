@@ -58,7 +58,7 @@ struct Generic_functions
 
 int main(int argc, char **argv)
 {
-    bool comm_split = true;
+    bool comm_split = false;
     Env::init(comm_split);
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
@@ -119,33 +119,33 @@ int main(int argc, char **argv)
     
     Generic_functions f;
     
+    if(comm_split)
+    {
+        if(!Env::rank)
+            printf("bcast\n");
+        V.bcast(f.ones);
+    }
+    else
+    {
     
-    if(!Env::rank)
-        printf("bcast\n");
-    V.bcast(f.ones);
+        if(!Env::rank)
+            printf("scatter\n");
+        V.scatter(f.ones);    
+        if(!Env::rank)
+            printf("gather\n");
+        V.gather();
+    }
     
-    /*
-    if(!Env::rank)
-        printf("scatter\n");
-    V.scatter(f.ones);    
-    if(!Env::rank)
-        printf("gather\n");
-    V.gather();
-    */
-    //printf("combine %d\n", Env::rank);
     if(!Env::rank)
         printf("combine\n");
-
-    
     V.combine(f.assign);
-
     if(!Env::rank)
-        printf("Checksum\n");
-    
+        printf("Checksum\n");    
     V.checksum();
 
     if(!Env::rank)
         Env::tock("Degree");
+    
     //V.checksumPR();
     
     //V.free();
@@ -188,45 +188,44 @@ int main(int argc, char **argv)
     while(iter < niters)
     {
         iter++;
-        
-        if(!Env::rank)
-            Env::tick();
+    
+        if(comm_split)
+        {
+            if(!Env::rank)
+                Env::tick();
 
-        VR.bcast(f.div);
-        
-        if(!Env::rank)
-            Env::tock("Bcast"); 
-        
-        /*
-        if(!Env::rank)
-            Env::tick();
+            VR.bcast(f.div);
+            
+            if(!Env::rank)
+                Env::tock("Bcast"); 
+        }
+        else
+        {        
+            if(!Env::rank)
+                Env::tick();
 
-        VR.scatter(f.div);
-        
-        if(!Env::rank)
-            Env::tock("Scatter"); 
+            VR.scatter(f.div);
+            
+            if(!Env::rank)
+                Env::tock("Scatter"); 
+            
+            if(!Env::rank)
+                Env::tick();
+            
+            VR.gather();
+            
+            if(!Env::rank)
+                Env::tock("Gather"); 
+        }
         
         if(!Env::rank)
             Env::tick();
-        
-        VR.gather();
-        
-        if(!Env::rank)
-            Env::tock("Gather"); 
-        */
-        
-        if(!Env::rank)
-            Env::tick();
-        
-        VR.combine(f.rank);
-        
+        VR.combine(f.rank);        
         if(!Env::rank)
             Env::tock("Combine"); 
         
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
-       // printf("barrier\n"); 
-        //Env::barrier();
     }
     
     if(!Env::rank)
@@ -242,13 +241,6 @@ int main(int argc, char **argv)
     Env::barrier();
     VR.free();
     GR.free();
-    
-    
-    
-    
-    //Graph<Weight>::combine(f.assign);
-    
-    //Env::barrier();
     Env::finalize();
     return(0);
 }
