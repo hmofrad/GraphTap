@@ -533,7 +533,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     print("rank");    
     // Want some debug info?
     Env::barrier();
-    debug(1);
+    debug(0);
     Env::barrier();
 }
 
@@ -713,7 +713,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
             tile.allocated = true;
         //if(!Env::rank)
         //    printf("t=%d n=%lu\n", t, tile.triples->size());
-        
     }
     
     
@@ -738,6 +737,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
         Env::exit(1);
     }    
 }
+
+
 /*
 #include "vector.hpp"
 
@@ -798,6 +799,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         }
         xi++;
     }
+    
     if(Env::rank == rr)
     {
         uint32_t other = 0;
