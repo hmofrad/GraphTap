@@ -136,23 +136,32 @@ int main(int argc, char **argv)
         V.gather();
     }
     
+    /*
     if(!Env::rank)
         printf("combine\n");
     V.combine(f.assign);
+    */
+
+    
+    //V.checksumPR();
+    V.filter(f.assign);
+
     if(!Env::rank)
-        printf("Checksum\n");    
+        printf("Checksum\n");        
     V.checksum();
 
     if(!Env::rank)
         Env::tock("Degree");
+
+
     
-    //V.checksumPR();
-    
-    //V.free();
+    V.free();
     G.free();
     
-    //Env::finalize();
-    ///return(0);
+        
+    
+    Env::finalize();
+    return(0);
     //sleep(3);
     
     transpose = true;
