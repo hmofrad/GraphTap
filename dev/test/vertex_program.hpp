@@ -52,8 +52,27 @@ class Vertex_Program
         
         Order_type order;
         Tiling_type tiling_type;
+        Compression_type compression;
         uint32_t rowgrp_nranks, colgrp_nranks;
         uint32_t rank_nrowgrps, rank_ncolgrps;
+        Integer_Type tile_height, tile_width;
+        int32_t owned_segment, accu_segment_rg, accu_segment_cg, accu_segment_row, accu_segment_col;
+        std::vector<int32_t> local_col_segments;
+        std::vector<int32_t> accu_segment_col_vec;
+        std::vector<int32_t> all_rowgrp_ranks_accu_seg;
+        std::vector<int32_t> accu_segment_rg_vec;
+        std::vector<int32_t> local_row_segments;
+        std::vector<int32_t> follower_rowgrp_ranks_rg;
+        std::vector<int32_t> follower_rowgrp_ranks_accu_seg_rg;
+        std::vector<int32_t> follower_colgrp_ranks_cg;
+        std::vector<int32_t> follower_colgrp_ranks;
+        std::vector<uint32_t> leader_ranks;
+        std::vector<uint32_t> leader_ranks_cg;
+        std::vector<uint32_t> local_tiles_row_order;
+        std::vector<uint32_t> local_tiles_col_order;
+        std::vector<int32_t> follower_rowgrp_ranks;
+        std::vector<int32_t> follower_rowgrp_ranks_accu_seg;
+        
         
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
@@ -63,6 +82,9 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *V;
         Vector<Weight, Integer_Type, Fractional_Type> *S;
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y;
+        
+        
+        
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -75,21 +97,45 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
 {
     A = Graph.A;
     order = order_;
-    
+    tiling_type = A->tiling->tiling_type;
+    compression = A->compression;
+    owned_segment = A->owned_segment;
+    leader_ranks = A->leader_ranks;
+    /*
     tiling_type = A->tiling->tiling_type;
     rowgrp_nranks = A->tiling->rowgrp_nranks;
     colgrp_nranks = A->tiling->colgrp_nranks;
     rank_nrowgrps = A->tiling->rank_nrowgrps;
     rank_ncolgrps = A->tiling->rank_ncolgrps;
-    
+    */
     if(order == _ROW_)
     {
-        ;
+        rowgrp_nranks = A->tiling->rowgrp_nranks;
+        colgrp_nranks = A->tiling->colgrp_nranks;
+        rank_nrowgrps = A->tiling->rank_nrowgrps;
+        rank_ncolgrps = A->tiling->rank_ncolgrps;
+        tile_height = A->tile_height;
+        local_col_segments = A->local_col_segments;
+        accu_segment_col = A->accu_segment_col;
+        accu_segment_col_vec = A->accu_segment_col_vec;
+        all_rowgrp_ranks_accu_seg = A->all_rowgrp_ranks_accu_seg;
+        accu_segment_rg_vec = A->accu_segment_rg_vec;
+        accu_segment_row = A->accu_segment_row;
+        accu_segment_rg = A->accu_segment_rg;
+        local_row_segments = A->local_row_segments;
+        follower_rowgrp_ranks_rg = A->follower_rowgrp_ranks_rg;
+        follower_rowgrp_ranks_accu_seg_rg = A->follower_rowgrp_ranks_accu_seg_rg;
+        leader_ranks_cg = A->leader_ranks_cg;
+        follower_colgrp_ranks_cg = A->follower_colgrp_ranks_cg;
+        follower_colgrp_ranks = A->follower_colgrp_ranks;
+        local_tiles_row_order = A->local_tiles_row_order;
+        local_tiles_col_order = A->local_tiles_col_order;
+        follower_rowgrp_ranks = A->follower_rowgrp_ranks;
+        follower_rowgrp_ranks_accu_seg = A->follower_rowgrp_ranks_accu_seg;
     }
     else if (order == _COL_)
     {
-        fprintf(stderr, "Has not been implemented\n");
-        Env::exit(1);
+        
     }   
 }
 
@@ -183,11 +229,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
      Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
-    X = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height,  A->local_col_segments);
+    X = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height,  local_col_segments);
     populate(X, x);
     
     //if(Env::comm_split)
-        V = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height, A->accu_segment_cg_vec);
+        //V = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height, A->accu_segment_cg_vec);
+        V = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height, accu_segment_col_vec);
     //else
     //    V = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height, A->owned_segment_vec);
     populate(V, v);
@@ -204,7 +251,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     printf("***********************************************\n");
     */
     //if(Env::comm_split)
-        S = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height, A->accu_segment_cg_vec);
+        S = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height, accu_segment_col_vec);
     //else
     //    S = new Vector<Weight, Integer_Type, Fractional_Type>(A->tile_height, A->owned_segment_vec);
     
@@ -219,6 +266,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         populate(S, s);
     }
     
+    Vector<Weight, Integer_Type, Fractional_Type> *Y_;
+    for(uint32_t j = 0; j < rank_nrowgrps; j++)
+    {
+        //if(!Env::rank)
+        //printf("%d %d\n", A->local_col_segments[j], A->local_col_segments[j] == A->owned_segment);
+        if(local_row_segments[j] == owned_segment)
+            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height, all_rowgrp_ranks_accu_seg);
+        else
+            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height, accu_segment_rg_vec);
+        Y.push_back(Y_);
+    }
+    /*
     Vector<Weight, Integer_Type, Fractional_Type> *Y_;
     for(uint32_t t: A->local_tiles_row_order)
     {
@@ -245,8 +304,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             }
             Y.push_back(Y_);
         }
-        
     }
+    */
 }
 
 
@@ -254,7 +313,8 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
-    uint32_t xo = A->accu_segment_cg;
+    //uint32_t xo = A->accu_segment_cg;
+    uint32_t xo = accu_segment_col;
     auto &x_seg = X->segments[xo];
     auto *x_data = (Fractional_Type *) x_seg.D->data;
     Integer_Type x_nitems = x_seg.D->n;
@@ -282,13 +342,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
         {
             if(Env::comm_split)
             {
-               follower = A->follower_colgrp_ranks_cg[i];
+               follower = follower_colgrp_ranks_cg[i];
                MPI_Isend(x_data, x_nbytes, MPI_BYTE, follower, x_seg.g, Env::colgrps_comm, &request);
                out_requests.push_back(request);
             }
             else
             {
-                follower = A->follower_colgrp_ranks[i];
+                follower = follower_colgrp_ranks[i];
                 MPI_Isend(x_data, x_nbytes, MPI_BYTE, follower, x_seg.g, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
                 //printf("Send r=%d i=%d f=%d g=%d\n", Env::rank, i, follower, x_seg.g);
@@ -325,7 +385,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
 
             if(Env::comm_split)
             {
-                leader = A->leader_ranks_cg[xj_seg.g];
+                leader = leader_ranks_cg[xj_seg.g];
                 if(leader != Env::rank_cg)
                 {
                     MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, leader, xj_seg.g, Env::colgrps_comm, &request);
@@ -334,7 +394,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
             }
             else
             {
-                leader = A->leader_ranks[xj_seg.g];
+                leader = leader_ranks[xj_seg.g];
                 if(leader != Env::rank)
                 {
                     MPI_Irecv(xj_data, xj_nbytes, MPI_BYTE, leader, xj_seg.g, Env::MPI_WORLD, &request);
@@ -367,7 +427,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     uint32_t leader;
-    uint32_t xo = A->accu_segment_cg;
+    //uint32_t xo = A->accu_segment_cg;
+    uint32_t xo = accu_segment_col;
     auto &x_seg = X->segments[xo];
     auto *x_data = (Fractional_Type *) x_seg.D->data;
     Integer_Type x_nitems = x_seg.D->n;
@@ -395,7 +456,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     {
         for(uint32_t i = 0; i < rank_ncolgrps; i++)
         {
-            leader = A->leader_ranks_cg[A->local_col_segments[i]];
+            leader = leader_ranks_cg[local_col_segments[i]];
             auto &xj_seg = X->segments[i];
             auto *xj_data = (Fractional_Type *) xj_seg.D->data;
             Integer_Type xj_nbytes = xj_seg.D->nbytes;
@@ -436,7 +497,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     
     if(tile.allocated)
     {
-        if(A->compression == Compression_type::_CSR_)
+        if(compression == Compression_type::_CSR_)
         {
             #ifdef HAS_WEIGHT
             Weight *A = (Weight *) tile.csr->A->data;
@@ -459,7 +520,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                 }
             }
         }
-        else if(A->compression == Compression_type::_CSC_)    
+        else if(compression == Compression_type::_CSC_)    
         {
             #ifdef HAS_WEIGHT
             Weight *VAL = (Weight *) tile.csc->VAL->data;
@@ -507,12 +568,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
 {
-    uint32_t yi = A->accu_segment_row;
+    uint32_t yi = accu_segment_row;
     uint32_t xi = 0;
-    uint32_t yo = A->accu_segment_rg;
+    uint32_t yo = accu_segment_rg;
     
     // SPMV
-    for(uint32_t t: A->local_tiles_row_order)
+    for(uint32_t t: local_tiles_row_order)
     {
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
@@ -531,19 +592,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
     }
 }
 
-/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
 {
-    uint32_t yi = 0;
-    uint32_t xi = 0;
-    uint32_t yo = 0;
-    
-    // SPMV
-    for(uint32_t t: A->local_tiles_col_order)
+    MPI_Comm communicator;
+    MPI_Request request;
+    uint32_t tile_th, pair_idx;
+    uint32_t leader, follower, my_rank, accu;
+    bool vec_owner, communication;
+    uint32_t xi= 0, yi = 0, yo = 0;
+    //double t1, t2;
+    //t1 = Env::clock();
+    for(uint32_t t: local_tiles_col_order)
     {
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
+        
+        tile_th = tile.mth;
+        pair_idx = pair.row;
+        vec_owner = (pair_idx == owned_segment);
+        
+        if(vec_owner)
+            yo = accu_segment_rg;
+        else
+            yo = 0;
         
         auto *Yp = Y[yi];
         auto &y_seg = Yp->segments[yo];
@@ -554,11 +626,84 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
         auto &x_seg = X->segments[xi];
         
         spmv(y_seg, x_seg, tile);
-
         yi++;
-    }    
+        
+        //if(!Env::rank)
+        //    printf(">>t=%d, com=%d as=%d\n", t, communication, A->accu_segment_rg);
+    }
+    //t2 = Env::clock();
+    
+    yi = 0, xi = 0, yo = 0;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        auto pair = A->tile_of_local_tile(t);
+        auto &tile = A->tiles[pair.row][pair.col];
+        
+        tile_th = tile.nth;
+        pair_idx = pair.row;
+        vec_owner = (pair_idx == owned_segment);
+        
+        if(vec_owner)
+            yo = accu_segment_rg;
+        else
+            yo = 0;
+        
+        auto *Yp = Y[yi];
+        auto &y_seg = Yp->segments[yo];
+        auto *y_data = (Fractional_Type *) y_seg.D->data;
+        Integer_Type y_nitems = y_seg.D->n;
+        Integer_Type y_nbytes = y_seg.D->nbytes;
+        
+        communication = (((tile_th + 1) % rank_ncolgrps) == 0);
+        if(communication)
+        {
+            if(Env::comm_split)
+            {
+                leader = tile.leader_rank_rg_rg;
+                my_rank = Env::rank_rg;
+                communicator = Env::rowgrps_comm;
+            }
+            else
+            {
+                leader = tile.leader_rank_rg;
+                my_rank = Env::rank;
+                communicator = Env::MPI_WORLD;
+            }
+            
+            if(leader == my_rank)
+            {
+                for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+                {
+                    if(Env::comm_split)
+                    {
+                        follower = follower_rowgrp_ranks_rg[j];
+                        accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                    }
+                    else
+                    {
+                        follower = follower_rowgrp_ranks[j];
+                        accu = follower_rowgrp_ranks_accu_seg[j];
+                    }
+                    
+                    auto &yj_seg = Yp->segments[accu];
+                    auto *yj_data = (Fractional_Type *) yj_seg.D->data;
+                    Integer_Type yj_nitems = yj_seg.D->n;
+                    Integer_Type yj_nbytes = yj_seg.D->nbytes;
+                    MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, follower, pair_idx, communicator, &request);
+                    in_requests.push_back(request);
+                }
+            }
+            else
+            {
+                MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair_idx, communicator, &request);
+                out_requests.push_back(request);
+            }
+            yi++;
+        }
+    }
+    
+    wait_for_all();
 }
-*/
                    
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
@@ -571,17 +716,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     uint32_t xi= 0, y = 0, yi = 0, yo = 0, o = 0, xo = 0, yj, yk, si, vi;
     //double t1, t2;
     //t1 = Env::clock();
-    for(uint32_t t: A->local_tiles_row_order)
+    for(uint32_t t: local_tiles_row_order)
     {
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
         
         tile_th = tile.nth;
         pair_idx = pair.row;
-        vec_owner = (pair_idx == A->owned_segment);
+        vec_owner = (pair_idx == owned_segment);
 
         if(vec_owner)
-            yo = A->accu_segment_rg;
+            yo = accu_segment_rg;
         else
             yo = 0;
         
@@ -634,13 +779,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     {                        
                         if(Env::comm_split)
                         {   
-                            follower = A->follower_rowgrp_ranks_rg[j];
-                            accu = A->follower_rowgrp_ranks_accu_seg_rg[j];
+                            follower = follower_rowgrp_ranks_rg[j];
+                            accu = follower_rowgrp_ranks_accu_seg_rg[j];
                         }
                         else
                         {
-                            follower = A->follower_rowgrp_ranks[j];
-                            accu = A->follower_rowgrp_ranks_accu_seg[j];
+                            follower = follower_rowgrp_ranks[j];
+                            accu = follower_rowgrp_ranks_accu_seg[j];
                         }                
                         
                         auto &yj_seg = Yp->segments[accu];
@@ -670,142 +815,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
-{
-    MPI_Comm communicator;
-    MPI_Request request;
-    uint32_t tile_th, pair_idx;
-    uint32_t leader, follower, my_rank, accu;
-    bool vec_owner, communication;
-    uint32_t xi= 0, y = 0, yi = 0, yo = 0;
-    //double t1, t2;
-    //t1 = Env::clock();
-    for(uint32_t t: A->local_tiles_col_order)
-    {
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        
-        tile_th = tile.mth;
-        pair_idx = pair.row;
-        vec_owner = (pair_idx == A->owned_segment);
-        
-        if(vec_owner)
-            yo = A->accu_segment_rg;
-        else
-            yo = 0;
-        
-        auto *Yp = Y[yi];
-        auto &y_seg = Yp->segments[yo];
-        auto *y_data = (Fractional_Type *) y_seg.D->data;
-        Integer_Type y_nitems = y_seg.D->n;
-        Integer_Type y_nbytes = y_seg.D->nbytes;
-
-        auto &x_seg = X->segments[xi];
-        
-        spmv(y_seg, x_seg, tile);
-        yi++;
-        
-        communication = (((tile_th + 1) % rank_nrowgrps) == 0);
-        
-        //if(!Env::rank)
-        //    printf("t=%d, com=%d\n", t, communication);
-        
-        
-        if(communication)
-        {
-            //if(!Env::rank)
-            //    printf("rank=%d t=%d xi=%d yi=%d l=%d m=%d\n", Env::rank, t, xi, yi, leader, my_rank);            
-            xi++;
-            yi = 0;
-        }
-    }
-    //t2 = Env::clock();
-    
-    yi = 0, xi = 0, yo = 0;
-    for(uint32_t t: A->local_tiles_row_order)
-    {
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        
-        tile_th = tile.nth;
-        pair_idx = pair.row;
-        vec_owner = (pair_idx == A->owned_segment);
-        
-        if(vec_owner)
-            yo = A->accu_segment_rg;
-        else
-            yo = 0;
-        
-        auto *Yp = Y[yi];
-        auto &y_seg = Yp->segments[yo];
-        auto *y_data = (Fractional_Type *) y_seg.D->data;
-        Integer_Type y_nitems = y_seg.D->n;
-        Integer_Type y_nbytes = y_seg.D->nbytes;
-        
-        communication = (((tile_th + 1) % rank_ncolgrps) == 0);
-        if(communication)
-        {
-            if(Env::comm_split)
-            {
-                leader = tile.leader_rank_rg_rg;
-                my_rank = Env::rank_rg;
-                communicator = Env::rowgrps_comm;
-            }
-            else
-            {
-                leader = tile.leader_rank_rg;
-                my_rank = Env::rank;
-                communicator = Env::MPI_WORLD;
-            }
-            
-            if(leader == my_rank)
-            {
-                for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-                {
-                    if(Env::comm_split)
-                    {
-                        follower = A->follower_rowgrp_ranks_rg[j];
-                        accu = A->follower_rowgrp_ranks_accu_seg_rg[j];
-                    }
-                    else
-                    {
-                        follower = A->follower_rowgrp_ranks[j];
-                        accu = A->follower_rowgrp_ranks_accu_seg[j];
-                    }
-                    
-                    auto &yj_seg = Yp->segments[accu];
-                    auto *yj_data = (Fractional_Type *) yj_seg.D->data;
-                    Integer_Type yj_nitems = yj_seg.D->n;
-                    Integer_Type yj_nbytes = yj_seg.D->nbytes;
-                    MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, follower, pair_idx, communicator, &request);
-                    in_requests.push_back(request);
-                    //if(!Env::rank or Env::rank == 2)
-                    //    printf("Recv: tile=%d l_rank=%d <-- follower=%d g=%d\n", t, leader, follower, yj_seg.g);
-                }
-                //yk = yi;
-            }
-            else
-            {
-                MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair_idx, communicator, &request);
-                out_requests.push_back(request);
-                //if(!Env::rank or Env::rank == 2)
-                //    printf("Send: tile=%d rank=%d --> leader=%d g=%d\n", t, Env::rank, leader, y_seg.g);
-            }
-            yi++;
-        }
-    }
-    
-    wait_for_all();
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     uint32_t accu;
-    uint32_t yi = A->accu_segment_row;
+    uint32_t yi = accu_segment_row;
     auto *Yp = Y[yi];
-    uint32_t yo = A->accu_segment_rg;
+    uint32_t yo = accu_segment_rg;
     auto &y_seg = Yp->segments[yo];
     auto *y_data = (Fractional_Type *) y_seg.D->data;
     Integer_Type y_nitems = y_seg.D->n;
@@ -814,9 +830,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
     {
         if(Env::comm_split)
-            accu = A->follower_rowgrp_ranks_accu_seg_rg[j];
+            accu = follower_rowgrp_ranks_accu_seg_rg[j];
         else
-            accu = A->follower_rowgrp_ranks_accu_seg[j];
+            accu = follower_rowgrp_ranks_accu_seg[j];
         auto &yj_seg = Yp->segments[accu];
         auto *yj_data = (Fractional_Type *) yj_seg.D->data;
         Integer_Type yj_nitems = yj_seg.D->n;
@@ -970,7 +986,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::print(Segment<Weight
     {
         pair.row = i;
         pair.col = 0;
-        auto pair1 = A->base(pair, A->owned_segment, A->owned_segment);
+        auto pair1 = A->base(pair, owned_segment, owned_segment);
         printf("R(%d),V[%d]=%f\n",  Env::rank, pair1.row, data[i]);
     } 
 }
