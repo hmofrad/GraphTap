@@ -136,15 +136,16 @@ int main(int argc, char **argv)
         V.gather();
     }
     
-    /*
+    
     if(!Env::rank)
         printf("combine\n");
-    V.combine(f.assign);
-    */
+    V.combine();
+    //V.filter();
+    V.apply(f.assign);
 
     
     //V.checksumPR();
-    V.filter(f.assign);
+    
 
     if(!Env::rank)
         printf("Checksum\n");        
@@ -155,13 +156,13 @@ int main(int argc, char **argv)
 
 
     
-    V.free();
+    //V.free();
     G.free();
     
         
     
-    Env::finalize();
-    return(0);
+    //Env::finalize();
+    //return(0);
     //sleep(3);
     
     transpose = true;
@@ -229,7 +230,8 @@ int main(int argc, char **argv)
         
         if(!Env::rank)
             Env::tick();
-        VR.combine(f.rank);        
+        VR.combine();        
+        VR.apply(f.rank);
         if(!Env::rank)
             Env::tock("Combine"); 
         
