@@ -540,9 +540,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Print tiling assignment
     print("rank");    
     // Want some debug info?
-    Env::barrier();
-    debug(5);
-    Env::barrier();
+    //Env::barrier();
+    //debug(-1);
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
