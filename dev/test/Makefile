@@ -15,7 +15,7 @@ obj=main
 all: clean app
 
 app:
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(WEIGHT) -o $(obj) $(obj).cpp
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(MACROS) -o $(obj) $(obj).cpp
 clean:
 	rm -rf $(obj)
 	
