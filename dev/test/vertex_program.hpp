@@ -213,7 +213,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::clear(
         Integer_Type nbytes = seg.D->nbytes;
         memset(data, 0, nbytes);
     }
-    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -338,7 +337,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
                 MPI_Isend(x_data, x_nbytes, MPI_BYTE, follower, x_seg.g, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
             }
-            
         }
     }
     else if(tiling_type == Tiling_type::_1D_COL)
@@ -1055,7 +1053,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
     
     uint32_t NUM = 31;
     uint32_t count = v_nitems < NUM ? v_nitems : NUM;
-    if(!Env::rank)
+    if(1)
     {
         Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
