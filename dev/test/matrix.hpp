@@ -834,7 +834,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         pair_idx = pair.col;
         
         vec_owner = (leader_ranks[pair_idx] == Env::rank);
-        
+        //if(!Env::rank)
+        //printf("%d %d %d\n", Env::rank, vec_owner, pair_idx == owned_segment);
         if(vec_owner)
             fo = accu_segment_cg;
         else
