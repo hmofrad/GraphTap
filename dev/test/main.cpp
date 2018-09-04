@@ -58,7 +58,7 @@ struct Generic_functions
 
 int main(int argc, char **argv)
 {
-    bool comm_split = true;
+    bool comm_split = false;
     Env::init(comm_split);
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
@@ -83,6 +83,7 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
+    Order_type OT = _ROW_;
     Compression_type CT = _CSC_;
     bool parread = true;
     
@@ -112,7 +113,7 @@ int main(int argc, char **argv)
         Env::tick();
 
     Env::barrier();
-    Vertex_Program<wp, ip, fp> V(G);
+    Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
     //printf("init\n");
     V.init(x, y, v, s);
@@ -140,6 +141,8 @@ int main(int argc, char **argv)
     if(!Env::rank)
         printf("combine\n");
     V.combine();
+    if(!Env::rank)
+        printf("apply\n");
     //V.filter();
     V.apply(f.assign);
 
@@ -150,6 +153,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         printf("Checksum\n");        
     V.checksum();
+    V.checksumPR();
 
     if(!Env::rank)
         Env::tock("Degree");
@@ -157,14 +161,14 @@ int main(int argc, char **argv)
 
     
     //V.free();
-    G.free();
+    //G.free();
     
         
     
     //Env::finalize();
     //return(0);
     //sleep(3);
-    
+    /*
     transpose = true;
     Env::barrier(); 
     if(!Env::rank)
@@ -176,9 +180,12 @@ int main(int argc, char **argv)
         Env::tock("Ingress transpose");
     
     Env::barrier();
+    */
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
-    Vertex_Program<wp, ip, fp> VR(GR);
+    //Vertex_Program<wp, ip, fp> VR(GR);
+    OT = _COL_;
+    Vertex_Program<wp, ip, fp> VR(G, OT);
     
     if(!Env::rank)
         Env::tick();
@@ -251,7 +258,8 @@ int main(int argc, char **argv)
     
     Env::barrier();
     VR.free();
-    GR.free();
+    //GR.free();
+    G.free();
     Env::finalize();
     return(0);
 }
