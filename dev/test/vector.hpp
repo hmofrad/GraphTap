@@ -58,6 +58,7 @@ class Vector
     public:
         Vector();
         Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
+        Vector(std::vector<Integer_Type> nelems_, std::vector<int32_t> &local_segments_);
         ~Vector();
         void del_vec();
         
@@ -91,6 +92,26 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nelems_, std:
         #endif
     }
 }
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> nelems_, std::vector<int32_t> &local_segments_)
+{
+    nelems = -1;
+    local_segments = local_segments_;
+    vector_length = local_segments.size();
+    // Reserve the 1D vector of segments. 
+    segments.resize(vector_length);
+    for(uint32_t i = 0; i < vector_length; i++)
+    {
+        segments[i].allocate(nelems[i]);
+        segments[i].allocated = true;
+        segments[i].g = local_segments[i];
+        #ifdef PREFETCH
+        madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
+        #endif
+    }
+}
+
     
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vector<Weight, Integer_Type, Fractional_Type>::del_vec()
