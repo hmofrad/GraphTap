@@ -81,6 +81,7 @@ class Matrix
         
         Tiling *tiling;
         Compression_type compression;
+        std::vector<struct Basic_Storage<Integer_Type, Integer_Type> *> isolated_col;
 
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles;
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles_rg;
@@ -782,12 +783,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
 {
+    printf("? %d\n", Env::rank);
+    Env::barrier();
     std::vector<MPI_Request> out_requests;
     std::vector<MPI_Request> in_requests;
     MPI_Comm communicator;
     MPI_Request request;
     MPI_Status status;
-    uint32_t leader, follower, my_rank, accu;
+    uint32_t leader, follower, my_rank, accu, this_segment;
     uint32_t tile_th, pair_idx;
     bool vec_owner, communication;
     uint32_t fi = 0, fo = 0;
@@ -1043,29 +1046,193 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
             nnz_col_local++;
     }
     
+    
+    std::vector<uint32_t> nnz_col_sizes(tiling->ncolgrps);
+    nnz_col_sizes[owned_segment] = nnz_col_local;
+    Env::barrier();
+    for (uint32_t j = 0; j < tiling->ncolgrps; j++)
+    {
+        uint32_t r = leader_ranks[j];
+        if (j != owned_segment)
+        {
+            //auto nnz_col_size = nnz_col_sizes[r];
+            MPI_Sendrecv(&nnz_col_sizes[owned_segment], 1, MPI_UNSIGNED, r, 0, &nnz_col_sizes[j], 1, MPI_UNSIGNED, 
+                                                        r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+        }
+    }
+    Env::barrier();  
+    assert(nnz_col_local == nnz_col_sizes[owned_segment]);
+    printf("r=%d nnz=%d\n", Env::rank, nnz_col_sizes[owned_segment]);
+    
+    
+    //isolated_col.resize(tiling->rank_ncolgrps);
+    struct Basic_Storage<Integer_Type, Integer_Type> *isolated_col_;
+    for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++)
+    {
+        uint32_t this_segment = local_col_segments[j];
+        if(this_segment == owned_segment)
+        {
+            if(nnz_col_sizes[owned_segment])
+            {
+                isolated_col_ = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz_col_sizes[owned_segment]);
+                auto *icol_data_ = (Integer_Type *) isolated_col_->data;
+                Integer_Type j = 0;
+                for(uint32_t i = 0; i < f_nitems; i++)
+                {
+                    if(f_data[i])
+                    {
+                        icol_data_[j] = i;
+                        j++;
+                    }
+                }
+            }
+            else
+                isolated_col_ = nullptr;
+        }
+        else
+        {
+            if(nnz_col_sizes[this_segment])
+                isolated_col_ = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz_col_sizes[this_segment]);
+            else
+                isolated_col_ = nullptr;
+        }
+        isolated_col.push_back(isolated_col_);
+    }
+    
+    printf("r=%d sz=%lu\n", Env::rank, isolated_col.size());
+    
+    
+    for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++)
+    {
+        
+        this_segment = local_col_segments[j];
+        leader = leader_ranks[this_segment];
+        if(this_segment == owned_segment)
+        {
+            if(nnz_col_sizes[owned_segment])
+            {
+                for(uint32_t i = 0; i < tiling->colgrp_nranks - 1; i++)
+                {
+                    follower = follower_colgrp_ranks[i];
+                    printf("send %d --> %d %d %d\n", leader, follower, this_segment, j); 
+                    auto *icol_data = (Integer_Type *) isolated_col[j]->data;
+                    Integer_Type icol_nitems = isolated_col[j]->n;
+                            
+                    MPI_Isend(icol_data, icol_nitems, MPI_UNSIGNED, follower, owned_segment, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+            
+        }
+        else
+        {
+            if(nnz_col_sizes[this_segment])
+            {
+                //leader = leader_ranks[this_segment];
+                printf("recv %d <-- %d %d %d\n", Env::rank, leader, this_segment, j); 
+
+                auto *icol_data = (Integer_Type *)  isolated_col[j]->data;
+                Integer_Type icol_nitems = isolated_col[j]->n;
+                MPI_Irecv(icol_data, icol_nitems, MPI_UNSIGNED, leader, this_segment, Env::MPI_WORLD, &request);
+                in_requests.push_back(request);   
+            }
+            
+        }
+        /*
+        //bool found = (std::find(local_col_segments.begin(), local_col_segments.end(), j) != local_col_segments.end());
+        if(found)
+        {
+            leader = leader_ranks[j];
+            my_rank = Env::rank;
+            if(my_rank == leader)
+            {
+                for(uint32_t i = 0; i < tiling->colgrp_nranks - 1; i++)
+                {
+                    follower = follower_colgrp_ranks_cg[i];
+                    printf("send %d --> %d %d\n", leader, follower, j); 
+                    
+                }
+            }
+            else
+            {
+                printf("recv %d <-- %d %d\n", my_rank, leader, j); 
+            }
+            
+        }
+        */
+        /*
+        if(my_rank == leader)
+        {
+            for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
+            {
+                follower = follower_colgrp_ranks_cg[i];
+                printf("send %d --> %d\n", leader, follower);    
+            }
+        }
+        else
+        {
+            printf("recv %d\n", my_rank);
+        }  
+        */
+    } 
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    Env::barrier();
+
+    for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++)
+    {
+        this_segment = local_col_segments[j];
+        if(nnz_col_sizes[this_segment])
+        {
+            //printf("r=%d s=%d ni=%d sz=%d\n", Env::rank, this_segment, isolated_col[j]->n, tile_height);
+            auto *icol_data = (Integer_Type *) isolated_col[j]->data;
+            Integer_Type icol_nitems = isolated_col[j]->n;
+            for(uint32_t i = 0; i < icol_nitems; i++)
+            {
+                printf("r=%d s=%d i=%d d=%d\n", Env::rank, j, i, icol_data[i]);
+            }
+        }
+    }
+    
+    
+    
+    
+ 
+    /*
+    //printf("! %d %d %d\n", Env::rank, nnz_col_local, tile_height);
     if(nnz_col_local)
     {
         tiles[owned_segment][owned_segment].isolated_col = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz_col_local);
-    
+        //printf("???\n");
         auto *icol_data = (Integer_Type *) tiles[owned_segment][owned_segment].isolated_col->data;
+        //printf("!!!\n");
         //Integer_Type icol_nitems = tiles[owned_segment][owned_segment].isolated_col->n;
         Integer_Type j = 0;
         
         for(uint32_t i = 0; i < f_nitems; i++)
         {
+            //printf("r=%d i=%d j=%d n=%d\n", Env::rank, i, j, nnz_col_local);
             if(f_data[i])
+            {
                 icol_data[j] = i;
-            j++;
+                j++;
+            }
         }
-        
+        //printf("###\n");
         //for(uint32_t j = 0; j < nnz_col_local; j++)
         //{
         //    printf(">>>>%d %d\n", Env::rank, icol_data[j]);
         //}
-    }   
-    
+    }  
+    */
+    /*    
+    printf("# %d\n", Env::rank);
     std::vector<uint32_t> nnz_col_sizes(Env::nranks);
     nnz_col_sizes[Env::rank] = nnz_col_local;
+    Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -1076,14 +1243,35 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         }
     }
     Env::barrier();
+    */
+    
+    
+
     
     
     
+  
+    /*
+    if(!Env::rank)
+    {
+        for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
+            printf("%d ", local_col_segments[i]);
+        printf("\n");
+    }
+    */
+    
+    //isolated_col.resize(tiling->rank_ncolgrps)
+    
+    
+    
+    
+    /*
     if(!Env::rank)
     {
         for (uint32_t r = 0; r < Env::nranks; r++)
-            printf("%d %d\n", r, nnz_col_sizes[r]);
+            printf("r=%d nnz=%d\n", r, nnz_col_sizes[r]);
     }
+    */
     
     
     /*
@@ -1107,9 +1295,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         //}
     //}
     */
+
+
     
-    
-    
+    /*
     for(uint32_t j = 0; j < ncolgrps; j++)
     {
         leader = tiles[j][j].rank;
@@ -1122,8 +1311,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
                 tile.nnz_col = nnz_col_sizes[leader];
                 if(tile.rank != Env::rank)
                 {
-                    if(!Env::rank)
-                        printf("Send %d --> %d %d\n", leader, tile.rank, tile.rg);
+                    //if(!Env::rank)
+                       // printf("Send %d --> %d %d\n", leader, tile.rank, tile.rg);
                     if(nnz_col_sizes[leader])
                     {
                         auto *icol_data = (Integer_Type *) tiles[owned_segment][owned_segment].isolated_col->data;
@@ -1164,8 +1353,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
                 tile.nnz_col = nnz_col_sizes[leader];
                 if(tile.rank == Env::rank)
                 {
-                    if(!Env::rank)
-                    printf("Recv %d <-- %d %d\n", tile.rank, leader, tile.rg);
+                    //if(!Env::rank)
+                    //printf("Recv %d <-- %d %d\n", tile.rank, leader, tile.rg);
                     if(nnz_col_sizes[leader])
                     {
                         tile.isolated_col = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz_col_sizes[leader]);
@@ -1187,32 +1376,34 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
     Env::barrier();
+    */
     
-    
-    if(Env::rank == 0)
-    {
+    //if(Env::rank == 0)
+    //{
+        /*
         for(uint32_t i = 0; i < nrowgrps; i++)
         {
             for(uint32_t j = 0; j < ncolgrps; j++)
             {
                 auto &tile = tiles[i][j];
-                printf("%d %d %d: ", i, j, tile.nnz_col);
-                if(tile.nnz_col)
+                
+                if((tile.rank == Env::rank) and tile.nnz_col)
                 {
-                    /*
+                //printf("%d %d %d: ", i, j, tile.nnz_col);    
                     auto *icol_data = (Integer_Type *) tile.isolated_col->data;
                     Integer_Type icol_nitems = tile.isolated_col->n;
-                    for(uint32_t k = 0; k < icol_nitems; k++)
-                    {
-                        printf("%d ", icol_data[k]);
-                    }
-                    */
+                    //for(uint32_t k = 0; k < icol_nitems; k++)
+                    //{
+                  //      printf("%d ", icol_data[k]);
+                    //}
+                //printf("\n");    
                 }
-                printf("\n");
+                
             }
          
         }
-    }
+        */
+    //}
         /*
         for(uint32_t i = 0; i < tiling->rowgrp_nranks; i++)
         {
@@ -1461,6 +1652,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter()
         }
     }
     */
+    
     for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
     {
         F[i]->del_vec();
