@@ -98,25 +98,27 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
 
-    //Env::barrier();
-    //G.free();
-    //Env::finalize();
-    //return(0);
+
     
     
     //if(!Env::rank);
       //  Env::tock("Test");
     //exit(0);
     //G.free();
-    
-    if(!Env::rank)
-        Env::tick();
+    //Env::barrier();
+    //if(!Env::rank)
+    //    Env::tick();
 
-    Env::barrier();
+    
     Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
-    //printf("init\n");
     V.init(x, y, v, s);
+    
+
+    
+    
+    
+    
     
     
     
@@ -165,14 +167,15 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Degree");
 
-
-    
-    
     //V.free();
-    G.free();
+    //G.free();
     
     //Env::finalize();
     //return(0);
+    
+    
+    
+
     
     //sleep(3);
     
