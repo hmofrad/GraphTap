@@ -103,8 +103,11 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     segments.resize(vector_length);
     for(uint32_t i = 0; i < vector_length; i++)
     {
-        segments[i].allocate(nelems[i]);
-        segments[i].allocated = true;
+        if(nelems_[i])
+            segments[i].allocated = true;
+        else
+            segments[i].allocated = false;
+        segments[i].allocate(nelems_[i]);
         segments[i].g = local_segments[i];
         #ifdef PREFETCH
         madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
