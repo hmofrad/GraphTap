@@ -87,6 +87,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
     A->free_tiling();
     //if(!Env::rank)
       //  printf("A khodam\n");
+    A->E->del_vec();
+    A->I->del_vec();
+    delete A->E;
+    delete A->I;
     delete A;
 }
 
