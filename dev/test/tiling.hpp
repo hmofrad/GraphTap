@@ -17,7 +17,6 @@ enum Tiling_type
   _2D_
 };
 
-
 class Tiling
 {    
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
