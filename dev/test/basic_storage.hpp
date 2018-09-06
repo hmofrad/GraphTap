@@ -26,29 +26,36 @@ struct Basic_Storage
 template <typename Weight, typename Integer_Type>
 Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
 {
-    assert(n_ > 0);
     n = n_;
     nbytes = n_ * sizeof(Weight);
     assert(nbytes == (n * sizeof(Weight)));
-    if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
-                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    {    
-        fprintf(stderr, "Error mapping memory\n");
-        Env::exit(1);
+    if(!n)
+        data = nullptr;
+    else
+    {
+        if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
+                                                   | MAP_PRIVATE, -1, 0)) == (void*) -1)
+        {    
+            fprintf(stderr, "Error mapping memory\n");
+            Env::exit(1);
+        }
+        memset(data, 0, nbytes);
     }
-    memset(data, 0, nbytes);
 }
 
 template <typename Weight, typename Integer_Type>
 Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
 {
-    if(munmap(data, nbytes) == -1)
+    if(n)
     {
-        fprintf(stderr, "Error unmapping memory\n");
-        Env::exit(1);
+        if(munmap(data, nbytes) == -1)
+        {
+            fprintf(stderr, "Error unmapping memory\n");
+            Env::exit(1);
+        }
     }
 }
-
+/*
 template <typename Integer_Type>
 struct Basic_Storage <Empty, Integer_Type>
 {
@@ -86,4 +93,5 @@ Basic_Storage<Empty, Integer_Type>::~Basic_Storage()
     //if(!Env::rank)
     //    printf("removing data\n");
 }
+*/
 #endif
