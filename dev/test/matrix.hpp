@@ -81,11 +81,11 @@ class Matrix
         //Vector<Weight, Integer_Type, Integer_Type> *E; //empty columns
         //Vector<Weight, Integer_Type, Integer_Type> *I; // Indices
         
-        Vector<Weight, Integer_Type, Integer_Type> *R = nullptr;  // Non-empty rows
-        Vector<Weight, Integer_Type, Integer_Type> *I = nullptr; // Row indices
+        Vector<Weight, Integer_Type, int32_t> *R = nullptr;  // Non-empty rows
+        Vector<Weight, Integer_Type, int32_t> *I = nullptr; // Row indices
         
-        Vector<Weight, Integer_Type, Integer_Type> *C = nullptr;  // Non-empty columns
-        Vector<Weight, Integer_Type, Integer_Type> *J = nullptr; // Column indices
+        Vector<Weight, Integer_Type, int32_t> *C = nullptr;  // Non-empty columns
+        Vector<Weight, Integer_Type, int32_t> *J = nullptr; // Column indices
         
 
 
@@ -791,7 +791,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
     }    
     //filter();
     //printf("Outside filter %d\n", Env::rank);
-    filter(_ROW_);
+    //filter(_ROW_);
     filter(_COL_);
     
     //filter1();
@@ -868,15 +868,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     uint32_t tile_th, pair_idx;
     bool vec_owner, communication;
     uint32_t fi = 0, fo = 0;
-    std::vector<Vector<Weight, Integer_Type, Integer_Type> *> F;
-    Vector<Weight, Integer_Type, Integer_Type> *F_;
+    std::vector<Vector<Weight, Integer_Type, int32_t> *> F;
+    Vector<Weight, Integer_Type, int32_t> *F_;
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         if(local_row_segments_[j] == owned_segment)
         {
             std::vector<Integer_Type> tile_length_sizes(rowgrp_nranks_, tile_length);
             //printf("11111.rank=%d sz1=%lu sz2=%lu tl%d\n", Env::rank, tile_length_sizes.size(), tile_length_sizes.size(), tile_length);
-            F_ = new Vector<Weight, Integer_Type, Integer_Type>(tile_length_sizes, all_rowgrp_ranks_accu_seg_);
+            F_ = new Vector<Weight, Integer_Type, int32_t>(tile_length_sizes, all_rowgrp_ranks_accu_seg_);
             //if(Env::rank == 0)
                 
         }
@@ -884,7 +884,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         {
             std::vector<Integer_Type> tile_length_sizes(1, tile_length);
             //printf("2222.rank=%d sz1=%lu sz2=%lu tl=%d\n", Env::rank, tile_length_sizes.size(), tile_length_sizes.size(), tile_length);
-            F_ = new Vector<Weight, Integer_Type, Integer_Type>(tile_length_sizes, accu_segment_row_vec_);
+            F_ = new Vector<Weight, Integer_Type, int32_t>(tile_length_sizes, accu_segment_row_vec_);
             //if(Env::rank == 0)
                 //printf("2.rank=%d j=%d lrs=%d og=%d %lu %lu\n", Env::rank, j, local_row_segments_[j], owned_segment, tile_length_sizes.size(), all_rowgrp_ranks_accu_seg_.size());
         }
@@ -1090,10 +1090,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     
     
     
-    Vector<Weight, Integer_Type, Integer_Type> *T = new Vector<Weight, Integer_Type, Integer_Type>(nnz_sizes_loc,  local_row_segments_);
+    Vector<Weight, Integer_Type, int32_t> *T = new Vector<Weight, Integer_Type, int32_t>(nnz_sizes_loc,  local_row_segments_);
     
     std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
-    Vector<Weight, Integer_Type, Integer_Type> *K = new Vector<Weight, Integer_Type, Integer_Type>(tile_length_sizes,  local_row_segments_);
+    Vector<Weight, Integer_Type, int32_t> *K = new Vector<Weight, Integer_Type, int32_t>(tile_length_sizes,  local_row_segments_);
     
     //printf("3.####################### %d\n", Env::rank);
     if(nnz_sizes_all[owned_segment])
@@ -1112,6 +1112,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
                 tj_data[j] = i;
                 kj_data[i] = j;
                 j++;
+            }
+            else
+            {
+                kj_data[i] = -1;
             }
         }
         assert(j == nnz_sizes_all[owned_segment]);
@@ -1271,6 +1275,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         F_->del_vec();
         delete F_;
     } 
+    Env::barrier();
 }
 
 
