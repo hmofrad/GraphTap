@@ -161,11 +161,11 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Degree");
 
-    //V.free();
-    //G.free();
+    V.free();
+    G.free();
     
-    //Env::finalize();
-    //return(0);
+    Env::finalize();
+    return(0);
     
     
     
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
         time2 = Env::clock();
         printf("Pagerank time=%f\n", time2 - time1);
     }
-    
+    Env::barrier();
     VR.checksumPR();
     
     
