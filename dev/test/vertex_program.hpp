@@ -673,7 +673,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         //if(x_data[j])
                         //    y_data[ROW_INDEX[i]] += x_data[j];
-                        printf("%d %d \n", j, c_data[j_data[j]]);
+                        
+                        if( j != c_data[j_data[j]])
+                            printf("r=%d j=%d jd=%d c_d=%d ?=%d\n", Env::rank, j, j_data[j], c_data[j_data[j]], j == c_data[j_data[j]]);
                         assert(j == c_data[j_data[j]]);
                         if(x_data[j_data[j]])
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
@@ -1195,7 +1197,7 @@ if(c_seg.allocated)
         //printf("%d %f\n", Env::rank, v_data[i]);
     }
 }
-    printf("%d %lu\n", Env::rank, v_sum_local);
+    //printf("%d %lu\n", Env::rank, v_sum_local);
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum: %lu\n", v_sum_gloabl);
