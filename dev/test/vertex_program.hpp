@@ -677,9 +677,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         if( j != c_data[j_data[j]])
                         {
                             printf("r=%d j=%d jd=%d c_d=%d ?=%d\n", Env::rank, j, j_data[j], c_data[j_data[j]], j == c_data[j_data[j]]);
-                            for(uint32_t k = 0; k < j+1; k++)
+                            for(uint32_t k = 0; k < j+2; k++)
                             {
-                                printf("%d %d %d\n", j, k, c_data[j_data[j]]);
+                                printf("j=%d k=%d jd=%d cd=%d\n", j, k, j_data[k], c_data[j_data[k]]);
                             }
                         }
                         assert(j == c_data[j_data[j]]);
