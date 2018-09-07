@@ -26,6 +26,7 @@ struct Basic_Storage
 template <typename Weight, typename Integer_Type>
 Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
 {
+    //assert(n_ > 0);
     n = n_;
     nbytes = n_ * sizeof(Weight);
     assert(nbytes == (n * sizeof(Weight)));
