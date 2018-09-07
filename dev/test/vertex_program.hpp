@@ -675,7 +675,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         //    y_data[ROW_INDEX[i]] += x_data[j];
                         
                         if( j != c_data[j_data[j]])
+                        {
                             printf("r=%d j=%d jd=%d c_d=%d ?=%d\n", Env::rank, j, j_data[j], c_data[j_data[j]], j == c_data[j_data[j]]);
+                            for(uint32_t k = 0; k < j+1; k++)
+                            {
+                                printf("%d %d %d\n", j, k, c_data[j_data[j]]);
+                            }
+                        }
                         assert(j == c_data[j_data[j]]);
                         if(x_data[j_data[j]])
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
@@ -931,6 +937,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
         
+        if(Env::rank == 2)
+            printf("tile=%2d, row=%d, col=%d\n", t, pair.row, pair.col);
         
         auto pair1 = tile_info(tile, pair); 
         tile_th = pair1.row;
