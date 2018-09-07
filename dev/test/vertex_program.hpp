@@ -673,7 +673,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         //if(x_data[j])
                         //    y_data[ROW_INDEX[i]] += x_data[j];
-                        //printf("%d %d \n", j, c_data[j_data[j]]);
+                        printf("%d %d \n", j, c_data[j_data[j]]);
                         assert(j == c_data[j_data[j]]);
                         if(x_data[j_data[j]])
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
