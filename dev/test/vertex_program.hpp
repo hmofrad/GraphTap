@@ -285,6 +285,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         
     }
     */
+    
+    //X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nnz_row_sizes_loc,  local_row_segments);
     X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nnz_col_sizes_loc,  local_col_segments);
     populate(X, x);
     
@@ -469,11 +471,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     Integer_Type j_nbytes = j_seg.D->nbytes;
     
     
-    for(uint32_t i = 0; i < x_nitems; i++)
+    for(uint32_t i = 0; i < c_nitems; i++)
     {
         x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
     }
     
+    //printf("%d %d %d %d\n", Env::rank, c_nitems, tile_height, x_nitems );
     
     //if(!Env::rank)
     //    printf(">>>>>>>%d %d\n", owned_segment, x_nitems);
@@ -567,6 +570,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     Integer_Type j_nitems = j_seg.D->n;
     Integer_Type j_nbytes = j_seg.D->nbytes;
     
+    //printf("c=%d j=%d x=%d y=%d\n", c_nitems, j_nitems, x_nitems, y_nitems);
     /*
     printf("??\n");
     
@@ -622,8 +626,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         if(x_data[JA[j]] and A[j])
                             y_data[i] += A[j] * x_data[JA[j]];
                         #else
-                        if(x_data[JA[j]])
-                            y_data[i] += x_data[JA[j]];
+                        //if(x_data[JA[j]])
+                        //    y_data[i] += x_data[JA[j]];
+                        if(x_data[j_data[JA[j]]])
+                            y_data[i] += x_data[j_data[JA[j]]];
+                    
                         #endif                        
                     }
                 }
@@ -666,7 +673,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         //if(x_data[j])
                         //    y_data[ROW_INDEX[i]] += x_data[j];
-                        
+                        //printf("%d %d \n", j, c_data[j_data[j]]);
+                        assert(j == c_data[j_data[j]]);
                         if(x_data[j_data[j]])
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
                         
@@ -1153,17 +1161,65 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     auto *v_data = (Fractional_Type *) v_seg.D->data;
     Integer_Type v_nitems = v_seg.D->n;
     Integer_Type v_nbytes = v_seg.D->nbytes;
-        
+    
+    uint32_t co = accu_segment_col;
+    auto &c_seg = C->segments[co];
+    auto *c_data = (Integer_Type *) c_seg.D->data;
+    Integer_Type c_nitems = c_seg.D->n;
+    Integer_Type c_nbytes = c_seg.D->nbytes;
+    
+    uint32_t jo = accu_segment_col;
+    auto &j_seg = J->segments[jo];
+    auto *j_data = (Integer_Type *) j_seg.D->data;
+    Integer_Type j_nitems = j_seg.D->n;
+    Integer_Type j_nbytes = j_seg.D->nbytes;
+    
+    v_sum_local = 0;  
+if(c_seg.allocated)
+{    
     for(uint32_t i = 0; i < v_nitems; i++)
     {
-        v_sum_local += v_data[i];
+       v_sum_local += v_data[i];
+       // if(!Env::rank)
+            //printf("i=%d v=%f j=%d c=%d v=%f\n", i, v_data[i], j_data[i], c_data[j_data[i]], v_data[c_data[j_data[i]]]);
+/*
+        if(i == c_data[j_data[i]])
+        {
+            //printf("i=%d v=%f j=%d c=%d v=%f\n", i, v_data[i], j_data[i], c_data[j_data[i]], v_data[c_data[j_data[i]]]);
+            assert(v_data[i] == v_data[c_data[j_data[i]]]);
+            v_sum_local += v_data[c_data[j_data[i]]];
+        }
+        */
         //if(i == 0)
+            
         //printf("%d %f\n", Env::rank, v_data[i]);
+    }
+}
+    printf("%d %lu\n", Env::rank, v_sum_local);
+    MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    if(Env::is_master)
+        printf("Degree checksum: %lu\n", v_sum_gloabl);
+    /*
+    v_sum_local = 0, v_sum_gloabl = 0;
+    
+    
+
+    
+    
+    for(uint32_t i = 0; i < c_nitems; i++)
+    {
+        v_sum_local += v_data[c_data[i]];
+        //if(!Env::rank)
+        //    printf("%d %d %f\n", i, c_data[i], v_data[c_data[i]]);
     }
     
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
-        printf("Degree checksum: %lu\n", v_sum_gloabl);
+        printf("Degree checksum1: %lu\n", v_sum_gloabl);
+    */
+    
+    
+    
 }
 
 
