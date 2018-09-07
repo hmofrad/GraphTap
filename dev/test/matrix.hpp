@@ -561,7 +561,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         {
         //if(leader_ranks[local_row_segments[j]] == Env::rank)
             accu_segment_row = j;
-        accu_segment_row_vec.push_back(accu_segment_row);
+            accu_segment_row_vec.push_back(accu_segment_row);
         }
     }
     
@@ -791,7 +791,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression(bool parrea
     }    
     //filter();
     //printf("Outside filter %d\n", Env::rank);
+    filter(_ROW_);
     filter(_COL_);
+    
     //filter1();
 }
 
@@ -1201,6 +1203,17 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     out_requests.clear();
     Env::barrier(); 
     
+    if(!Env::rank)
+    {
+        Integer_Type sum = 0;
+        for(uint32_t j = 0; j < nrowgrps_; j++)
+        {
+            sum += nnz_sizes_all[j];
+            printf(" r=%d %d ", Env::rank, nnz_sizes_all[j]);
+        }
+        printf("/%d\n", sum);
+    }
+        
     /*
     if(1)
     {
