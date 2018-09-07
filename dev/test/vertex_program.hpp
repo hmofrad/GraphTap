@@ -33,8 +33,8 @@ class Vertex_Program
     protected:
         void spmv(Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
                   Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
-                  Segment<Weight, Integer_Type, Integer_Type> &c_seg,
-                  Segment<Weight, Integer_Type, Integer_Type> &j_seg,
+                  Segment<Weight, Integer_Type, int32_t> &c_seg,
+                  Segment<Weight, Integer_Type, int32_t> &j_seg,
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
         void print(Segment<Weight, Integer_Type, Fractional_Type> &segment);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
@@ -88,10 +88,10 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *V;
         Vector<Weight, Integer_Type, Fractional_Type> *S;
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y;
-        Vector<Weight, Integer_Type, Integer_Type> *C;
-        Vector<Weight, Integer_Type, Integer_Type> *J;
-        Vector<Weight, Integer_Type, Integer_Type> *R;
-        Vector<Weight, Integer_Type, Integer_Type> *I;
+        Vector<Weight, Integer_Type, int32_t> *C;
+        Vector<Weight, Integer_Type, int32_t> *J;
+        Vector<Weight, Integer_Type, int32_t> *R;
+        Vector<Weight, Integer_Type, int32_t> *I;
         
 };
 
@@ -549,8 +549,8 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
             Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
-            Segment<Weight, Integer_Type, Integer_Type> &c_seg,
-            Segment<Weight, Integer_Type, Integer_Type> &j_seg,
+            Segment<Weight, Integer_Type, int32_t> &c_seg,
+            Segment<Weight, Integer_Type, int32_t> &j_seg,
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile)
 {
     
@@ -674,15 +674,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         //if(x_data[j])
                         //    y_data[ROW_INDEX[i]] += x_data[j];
                         
-                        if( j != c_data[j_data[j]])
+                        if(j_data[j] == -1)
+                        //if( j != c_data[j_data[j]])
                         {
-                            printf("r=%d j=%d jd=%d c_d=%d ?=%d\n", Env::rank, j, j_data[j], c_data[j_data[j]], j == c_data[j_data[j]]);
-                            for(uint32_t k = 0; k < j+2; k++)
-                            {
-                                printf("j=%d k=%d jd=%d cd=%d\n", j, k, j_data[k], c_data[j_data[k]]);
-                            }
+                            printf("r=%d j=%d j_data=%d c_data[jj]=%d ?=%d\n", Env::rank, j, j_data[j], c_data[j_data[j]], j == c_data[j_data[j]]);
+                            exit(0);
+                            //for(uint32_t k = 0; k < j+2; k++)
+                            //{
+                             //   printf("j=%d k=%d jd=%d cd=%d\n", j, k, j_data[k], c_data[j_data[k]]);
+                            //}
                         }
-                        assert(j == c_data[j_data[j]]);
+                        //assert(j == c_data[j_data[j]]);
                         if(x_data[j_data[j]])
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
                         
@@ -760,6 +762,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
     }
     
     */
+    
     // SPMV
     for(uint32_t t: local_tiles_row_order)
     {
@@ -1172,21 +1175,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     Integer_Type v_nitems = v_seg.D->n;
     Integer_Type v_nbytes = v_seg.D->nbytes;
     
-    uint32_t co = accu_segment_col;
-    auto &c_seg = C->segments[co];
-    auto *c_data = (Integer_Type *) c_seg.D->data;
-    Integer_Type c_nitems = c_seg.D->n;
-    Integer_Type c_nbytes = c_seg.D->nbytes;
-    
-    uint32_t jo = accu_segment_col;
-    auto &j_seg = J->segments[jo];
-    auto *j_data = (Integer_Type *) j_seg.D->data;
-    Integer_Type j_nitems = j_seg.D->n;
-    Integer_Type j_nbytes = j_seg.D->nbytes;
+
     
     v_sum_local = 0;  
-if(c_seg.allocated)
-{    
+//if(c_seg.allocated)
+//{    
     for(uint32_t i = 0; i < v_nitems; i++)
     {
        v_sum_local += v_data[i];
@@ -1204,20 +1197,32 @@ if(c_seg.allocated)
             
         //printf("%d %f\n", Env::rank, v_data[i]);
     }
-}
+//}
     //printf("%d %lu\n", Env::rank, v_sum_local);
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum: %lu\n", v_sum_gloabl);
-    /*
+    
+    /*  
     v_sum_local = 0, v_sum_gloabl = 0;
     
+    uint32_t co = accu_segment_col;
+    auto &c_seg = C->segments[co];
+    auto *c_data = (Integer_Type *) c_seg.D->data;
+    Integer_Type c_nitems = c_seg.D->n;
+    Integer_Type c_nbytes = c_seg.D->nbytes;
     
+    uint32_t jo = accu_segment_col;
+    auto &j_seg = J->segments[jo];
+    auto *j_data = (Integer_Type *) j_seg.D->data;
+    Integer_Type j_nitems = j_seg.D->n;
+    Integer_Type j_nbytes = j_seg.D->nbytes;   
 
     
     
     for(uint32_t i = 0; i < c_nitems; i++)
     {
+        
         v_sum_local += v_data[c_data[i]];
         //if(!Env::rank)
         //    printf("%d %d %f\n", i, c_data[i], v_data[c_data[i]]);
@@ -1226,8 +1231,8 @@ if(c_seg.allocated)
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum1: %lu\n", v_sum_gloabl);
-    */
     
+    */
     
     
 }
