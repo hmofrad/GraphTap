@@ -58,7 +58,7 @@ class Vector
     public:
         Vector();
         Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
-        Vector(std::vector<Integer_Type> nelems_, std::vector<int32_t> &local_segments_);
+        Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_);
         ~Vector();
         void del_vec();
         
@@ -94,20 +94,32 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nelems_, std:
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> nelems_, std::vector<int32_t> &local_segments_)
+Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_)
 {
+    //printf("Vector rank=%d nelems=%lu ls=%lu\n", Env::rank, nelems_.size(), local_segments_.size());
+    assert(nelems_.size() == local_segments_.size());
+    
     nelems = -1;
     local_segments = local_segments_;
     vector_length = local_segments.size();
     // Reserve the 1D vector of segments. 
     segments.resize(vector_length);
+    
     for(uint32_t i = 0; i < vector_length; i++)
     {
         if(nelems_[i])
+        {
+            //if(!Env::rank)
+            //    printf(">>>%d\n", nelems_[i]);   
             segments[i].allocated = true;
+            segments[i].allocate(nelems_[i]);
+        }
         else
+        {
             segments[i].allocated = false;
-        segments[i].allocate(nelems_[i]);
+            segments[i].allocate(nelems_[i]);
+        }
+        
         segments[i].g = local_segments[i];
         #ifdef PREFETCH
         madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
@@ -121,10 +133,10 @@ void Vector<Weight, Integer_Type, Fractional_Type>::del_vec()
 {
     for(uint32_t i = 0; i < vector_length; i++)
     {
-        if(segments[i].allocated)
-        {
+        //if(segments[i].allocated)
+        //{
             segments[i].del_seg();
-        }
+        //}
     }
 }
 #endif
