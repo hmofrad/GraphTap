@@ -1202,7 +1202,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
     Env::barrier(); 
-    
+    /*
     if(!Env::rank)
     {
         Integer_Type sum = 0;
@@ -1213,7 +1213,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         }
         printf("/%d\n", sum);
     }
-        
+     */  
     /*
     if(1)
     {
