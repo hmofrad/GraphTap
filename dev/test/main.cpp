@@ -100,22 +100,16 @@ int main(int argc, char **argv)
 
 
     
-    
-    //if(!Env::rank);
-      //  Env::tock("Test");
-    //exit(0);
     //G.free();
     //Env::barrier();
-    //if(!Env::rank)
-    //    Env::tick();
-
+    //Env::finalize();
+    //return(0);  
     
     Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
     
 
-    
     
     
     
