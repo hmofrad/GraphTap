@@ -97,6 +97,16 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
         delete A->I;
     }
     */
+    
+    if(A->R)
+    {
+        A->R->del_vec();
+        delete A->R;
+        
+        A->I->del_vec();
+        delete A->I;
+    }
+    
     if(A->C)
     {
         A->C->del_vec();
