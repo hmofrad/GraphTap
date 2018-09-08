@@ -1254,7 +1254,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     }
 //}
     //printf("%d %lu\n", Env::rank, v_sum_local);
-    MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum: %lu\n", v_sum_gloabl);
     
@@ -1326,7 +1326,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
     }
     
     
-    MPI_Allreduce(&s_local, &s_gloabl, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&s_local, &s_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
     
