@@ -733,10 +733,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                             //y_data[ROW_INDEX[i]] += x;
                             //y_data[ROW_INDEX[i]] += x;
                         //}
-                        if(ii_data[j])
-                        {
+                        //if(ii_data[j])
+                        //{
                             y_data[ROW_INDEX[i]] += x_data[j_data[j]];
-                        }
+                        //}
                         
                         #endif
                     }
