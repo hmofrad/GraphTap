@@ -459,22 +459,29 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     Integer_Type s_nbytes = s_seg.D->nbytes;
     
     uint32_t co = accu_segment_col;
-    auto &c_seg = C->segments[co];
-    auto *c_data = (Integer_Type *) c_seg.D->data;
+    Segment<Weight, Integer_Type, int32_t> &c_seg = C->segments[co];
+    int32_t *c_data = (int32_t *) c_seg.D->data;
     Integer_Type c_nitems = c_seg.D->n;
     Integer_Type c_nbytes = c_seg.D->nbytes;
     
     uint32_t jo = accu_segment_col;
-    auto &j_seg = J->segments[jo];
-    auto *j_data = (Integer_Type *) j_seg.D->data;
+    Segment<Weight, Integer_Type, int32_t> &j_seg = J->segments[jo];
+    int32_t *j_data = (int32_t *) j_seg.D->data;
     Integer_Type j_nitems = j_seg.D->n;
     Integer_Type j_nbytes = j_seg.D->nbytes;
     
-    
+    /*
     for(uint32_t i = 0; i < c_nitems; i++)
     {
         x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
     }
+    */
+    for(uint32_t i = 0; i < v_nitems; i++)
+    {
+        if(j_data[i] != -1)
+            x_data[j_data[i]] = (*f)(0, 0, v_data[i], s_data[i]);
+    }
+    
     
     //printf("%d %d %d %d\n", Env::rank, c_nitems, tile_height, x_nitems );
     
@@ -562,11 +569,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     Integer_Type x_nitems = x_seg.D->n;
     Integer_Type x_nbytes = x_seg.D->nbytes;
     
-    auto *c_data = (Integer_Type *) c_seg.D->data;
+    int32_t *c_data = (int32_t *) c_seg.D->data;
     Integer_Type c_nitems = c_seg.D->n;
     Integer_Type c_nbytes = c_seg.D->nbytes;
     
-    auto *j_data = (Integer_Type *) j_seg.D->data;
+    int32_t *j_data = (int32_t *) j_seg.D->data;
     Integer_Type j_nitems = j_seg.D->n;
     Integer_Type j_nbytes = j_seg.D->nbytes;
     
@@ -780,9 +787,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
 
         auto &x_seg = X->segments[xi];
         
-        auto &c_seg = C->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &c_seg = C->segments[xi];
         
-        auto &j_seg = J->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &j_seg = J->segments[xi];
         
         spmv(y_seg, x_seg, c_seg, j_seg, tile);
 
@@ -829,9 +836,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
 
         auto &x_seg = X->segments[xi];
         
-        auto &c_seg = C->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &c_seg = C->segments[xi];
         
-        auto &j_seg = J->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &j_seg = J->segments[xi];
         
         spmv(y_seg, x_seg, c_seg, j_seg, tile);
         
@@ -967,9 +974,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
 
         auto &x_seg = X->segments[xi];
         
-        auto &c_seg = C->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &c_seg = C->segments[xi];
         
-        auto &j_seg = J->segments[xi];
+        Segment<Weight, Integer_Type, int32_t> &j_seg = J->segments[xi];
         
         spmv(y_seg, x_seg, c_seg, j_seg, tile);
 
@@ -1062,14 +1069,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     
     uint32_t co = accu_segment_col;
-    auto &c_seg = C->segments[co];
-    auto *c_data = (Integer_Type *) c_seg.D->data;
+    Segment<Weight, Integer_Type, int32_t> &c_seg = C->segments[co];
+    int32_t *c_data = (int32_t *) c_seg.D->data;
     Integer_Type c_nitems = c_seg.D->n;
     Integer_Type c_nbytes = c_seg.D->nbytes;
     
     uint32_t jo = accu_segment_col;
-    auto &j_seg = J->segments[jo];
-    auto *j_data = (Integer_Type *) j_seg.D->data;
+    Segment<Weight, Integer_Type, int32_t> &j_seg = J->segments[jo];
+    int32_t *j_data = (int32_t *) j_seg.D->data;
     Integer_Type j_nitems = j_seg.D->n;
     Integer_Type j_nbytes = j_seg.D->nbytes;
     
