@@ -1098,11 +1098,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     //printf("3.####################### %d\n", Env::rank);
     if(nnz_sizes_all[owned_segment])
     {
-        auto &tj_seg = T->segments[accu_segment_row_];
-        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        Segment<Weight, Integer_Type, int32_t> &tj_seg = T->segments[accu_segment_row_];
+        int32_t *tj_data = (int32_t *) tj_seg.D->data;
         
-        auto &kj_seg = K->segments[accu_segment_row_];
-        auto *kj_data = (Integer_Type *) kj_seg.D->data;
+        Segment<Weight, Integer_Type, int32_t> &kj_seg = K->segments[accu_segment_row_];
+        int32_t *kj_data = (int32_t *) kj_seg.D->data;
         
         Integer_Type j = 0;
         for(uint32_t i = 0; i < f_nitems; i++)
@@ -1132,8 +1132,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         this_segment = local_row_segments_[j];
         leader = leader_ranks[this_segment];
         
-        auto &tj_seg = T->segments[j];
-        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        Segment<Weight, Integer_Type, int32_t> &tj_seg = T->segments[j];
+        int32_t *tj_data = (int32_t *) tj_seg.D->data;
         Integer_Type tj_nitems = tj_seg.D->n;
         Integer_Type tj_nbytes = tj_seg.D->nbytes;
         
@@ -1173,8 +1173,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         this_segment = local_row_segments_[j];
         leader = leader_ranks[this_segment];
         
-        auto &kj_seg = K->segments[j];
-        auto *kj_data = (Integer_Type *) kj_seg.D->data;
+        Segment<Weight, Integer_Type, int32_t> &kj_seg = K->segments[j];
+        int32_t *kj_data = (int32_t *) kj_seg.D->data;
         Integer_Type kj_nitems = kj_seg.D->n;
         Integer_Type kj_nbytes = kj_seg.D->nbytes;
         
