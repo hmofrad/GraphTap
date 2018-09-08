@@ -83,6 +83,7 @@ class Matrix
         
         Vector<Weight, Integer_Type, int32_t> *R = nullptr;  // Non-empty rows
         Vector<Weight, Integer_Type, int32_t> *I = nullptr; // Row indices
+        Vector<Weight, Integer_Type, char> *II = nullptr; // Row indices
         
         Vector<Weight, Integer_Type, int32_t> *C = nullptr;  // Non-empty columns
         Vector<Weight, Integer_Type, int32_t> *J = nullptr; // Column indices
@@ -900,8 +901,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     {
         auto pair = tile_of_local_tile(t);
         auto &tile = tiles[pair.row][pair.col];
-        if(Env::rank == 2)
-            printf("tile=%3d, row=%d, col=%d\n", t, pair.row, pair.col);
+        //if(Env::rank == 2)
+        //    printf("tile=%3d, row=%d, col=%d\n", t, pair.row, pair.col);
         
         if(order_type == _ROW_)
         {
@@ -1095,6 +1096,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
     Vector<Weight, Integer_Type, int32_t> *K = new Vector<Weight, Integer_Type, int32_t>(tile_length_sizes,  local_row_segments_);
     
+    II = new Vector<Weight, Integer_Type, char>(tile_length_sizes,  local_row_segments_);
+    
     //printf("3.####################### %d\n", Env::rank);
     if(nnz_sizes_all[owned_segment])
     {
@@ -1104,6 +1107,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
         Segment<Weight, Integer_Type, int32_t> &kj_seg = K->segments[accu_segment_row_];
         int32_t *kj_data = (int32_t *) kj_seg.D->data;
         
+        Segment<Weight, Integer_Type, char> &iij_seg = II->segments[accu_segment_row_];
+        char *iij_data = (char *) iij_seg.D->data;
+        
         Integer_Type j = 0;
         for(uint32_t i = 0; i < f_nitems; i++)
         {
@@ -1111,11 +1117,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
             {
                 tj_data[j] = i;
                 kj_data[i] = j;
+                iij_data[i] = 1;
                 j++;
             }
             else
             {
                 kj_data[i] = -1;
+                iij_data[i] = 0;
             }
         }
         assert(j == nnz_sizes_all[owned_segment]);
@@ -1164,7 +1172,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
-    //Env::barrier();
+    Env::barrier();
     // printf("5.####################### %d\n", Env::rank);
     
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
@@ -1206,6 +1214,49 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Order_type order_type
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
     Env::barrier(); 
+    
+    
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        
+        this_segment = local_row_segments_[j];
+        leader = leader_ranks[this_segment];
+        
+        Segment<Weight, Integer_Type, char> &iij_seg = II->segments[j];
+        char *iij_data = (char *) iij_seg.D->data;
+        Integer_Type iij_nitems = iij_seg.D->n;
+        Integer_Type iij_nbytes = iij_seg.D->nbytes;
+        
+        if(iij_seg.allocated)
+        {
+            if(this_segment == owned_segment)
+            {
+                for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
+                {
+                    follower = follower_rowgrp_ranks_[i];
+                    //printf("send %d --> %d %d %d %d\n", leader, follower, this_segment, j, ej_seg.D->n); 
+
+                    MPI_Isend(iij_data, iij_nbytes, MPI_BYTE, follower, owned_segment, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+            else
+            {
+                //printf("recv %d <-- %d %d %d %d\n", Env::rank, leader, this_segment, j, ej_seg.D->n); 
+                                        
+                MPI_Irecv(iij_data, iij_nbytes, MPI_BYTE, leader, this_segment, Env::MPI_WORLD, &request);
+                in_requests.push_back(request);
+            }
+        }
+    } 
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    Env::barrier(); 
+    
+    
     /*
     if(!Env::rank)
     {
