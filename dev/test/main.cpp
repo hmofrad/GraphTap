@@ -83,8 +83,9 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
-    Order_type OT = _ROW_;
+    Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
+    Filtering_type FT = _SNKS_;
     bool parread = true;
     
 
@@ -93,29 +94,17 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;
     //Graph<> G;
     
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
     
     if(!Env::rank)
         Env::tock("Ingress");
 
-
-    
-    //G.free();
-    //Env::barrier();
-    //Env::finalize();
-    //return(0);  
     
     Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
     
 
-    
-    
-    
-    
-    
-    
     
     Generic_functions f;
     
@@ -161,14 +150,8 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Degree");
 
-    V.free();
     G.free();
-    
-    Env::finalize();
-    return(0);
-    
-    
-    
+
 
     
     //sleep(3);
@@ -178,7 +161,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, parread);
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
 
     if(!Env::rank)
         Env::tock("Ingress transpose");
