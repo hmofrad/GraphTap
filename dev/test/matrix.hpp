@@ -1967,8 +1967,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
       //  printf("%lu\n", tile.triples->size());
     }
     
-    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1,MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1,MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
     if(Env::is_master)
         printf("Sanity check for exchanging %lu edges is done\n", nedges_end_global);
@@ -2050,7 +2050,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
     }    
     del_triples();
     
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI::UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(!Env::rank)
             printf("1. %lu\n", nedges_global);
         
