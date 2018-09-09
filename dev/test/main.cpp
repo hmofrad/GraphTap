@@ -32,7 +32,7 @@ struct Generic_functions
     
     static fp div(fp x, fp y, fp v, fp s)
     {
-        if(s)
+        if(v and s)
         {
             return(v / s);
         }
