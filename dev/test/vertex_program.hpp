@@ -345,15 +345,49 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
     uint32_t vo = 0;
     auto &v_seg = V->segments[vo];
     auto *v_data = (Fractional_Type *) v_seg.D->data;
+    Integer_Type v_nitems = v_seg.D->n;
+    Integer_Type v_nbytes = v_seg.D->nbytes;
     
     uint32_t so = 0;
     auto &s_seg = S->segments[so];
     auto *s_data = (Fractional_Type *) s_seg.D->data;
-    
+    Integer_Type s_nitems = s_seg.D->n;
+    Integer_Type s_nbytes = s_seg.D->nbytes;
+
+    /*
     for(uint32_t i = 0; i < x_nitems; i++)
     {
         x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
     }
+    */
+
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+        }
+        //printf("%d %d %d\n", x_nitems, tile_height, v_nitems);
+    }
+    else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
+    {
+       uint32_t jo = accu_segment_col;
+        auto &j_seg = J->segments[jo];
+        auto *j_data = (char *) j_seg.D->data;
+        Integer_Type j_nitems = j_seg.D->n;
+        Integer_Type j_nbytes = j_seg.D->nbytes;
+        
+        Integer_Type j  = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(j_data[i])
+            {
+                x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
+                j++;
+            }
+        }
+    }
+    
     
     MPI_Request request;
     uint32_t follower, accu;
@@ -468,7 +502,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     
     if(filtering_type == _NONE_)
     {
-        for(uint32_t i = 0; i < x_nitems; i++)
+        for(uint32_t i = 0; i < v_nitems; i++)
         {
             x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
@@ -476,12 +510,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     }
     else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
     {
-        uint32_t co = accu_segment_col;
-        auto &c_seg = C->segments[co];
-        auto *c_data = (char *) c_seg.D->data;
-        Integer_Type c_nitems = c_seg.D->n;
-        Integer_Type c_nbytes = c_seg.D->nbytes;
-        
         uint32_t jo = accu_segment_col;
         auto &j_seg = J->segments[jo];
         auto *j_data = (char *) j_seg.D->data;
@@ -1192,6 +1220,7 @@ struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractio
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 {
+    Env::barrier();
     uint64_t v_sum_local = 0, v_sum_gloabl = 0;
     uint32_t vo = 0;
     auto &v_seg = V->segments[vo];
@@ -1222,7 +1251,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
         //printf("%d %f\n", Env::rank, v_data[i]);
     }
 //}
-    //printf("%d %lu\n", Env::rank, v_sum_local);
+    printf("r=%d r=%lu\n", Env::rank, v_sum_local);
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum: %lu\n", v_sum_gloabl);
