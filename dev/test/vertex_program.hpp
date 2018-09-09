@@ -468,7 +468,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         {
             x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
-        printf("%d %d %d\n", x_nitems, tile_height, v_nitems);
+        //printf("%d %d %d\n", x_nitems, tile_height, v_nitems);
     }
     else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
     {
