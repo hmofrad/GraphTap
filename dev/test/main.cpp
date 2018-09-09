@@ -58,7 +58,7 @@ struct Generic_functions
 
 int main(int argc, char **argv)
 {
-    bool comm_split = true;
+    bool comm_split = false;
     Env::init(comm_split);
     //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
     
