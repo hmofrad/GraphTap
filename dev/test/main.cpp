@@ -99,11 +99,13 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
 
+
     
     Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
     
+
 
     
     Generic_functions f;
@@ -151,13 +153,16 @@ int main(int argc, char **argv)
         Env::tock("Degree");
 
     G.free();
-
-
+    Env::barrier(); 
+    //Env::barrier();
+    //G.free();
+    //Env::finalize();
+    //return(0);
     
     //sleep(3);
     
     transpose = true;
-    Env::barrier(); 
+    
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
