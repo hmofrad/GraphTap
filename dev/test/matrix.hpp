@@ -811,11 +811,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
        if(Env::is_master)
             printf("Vertex filtering: Skipped \n");     
     }
+    else if(filtering_type == _SRCS_)
+    {
+        if(Env::is_master)
+            printf("Vertex filtering: Removing empty sources\n");     
+        
+        filter(_SRCS_);
+    }
     else if(filtering_type == _SNKS_)
     {
        if(Env::is_master)
-            printf("Vertex filtering: Removing sinks  \n");     
+            printf("Vertex filtering: Removing empty sinks\n");     
         
+        filter(_SNKS_);
+    }
+    else if(filtering_type == _BOTH_)
+    {
+        if(Env::is_master)
+            printf("Vertex filtering: Removing both empty sources and sinks\n");     
+        
+        filter(_SRCS_);
         filter(_SNKS_);
     }
 }
@@ -1294,7 +1309,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     } 
     Env::barrier();
 }
-
 
 /* Borrowed from LA3 code @
    https://github.com/cmuq-ccl/LA3/blob/master/src/matrix/dist_matrix2d.hpp
