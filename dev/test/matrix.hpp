@@ -1087,7 +1087,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     nnz_sizes_all.resize(nrowgrps_);
     nnz_sizes_all[owned_segment] = nnz_local;
     
-    //Env::barrier();
+    Env::barrier();
     for (uint32_t j = 0; j < nrowgrps_; j++)
     {
         uint32_t r = leader_ranks[j];
@@ -1097,7 +1097,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    //Env::barrier();  
+    Env::barrier();  
     assert(nnz_local == nnz_sizes_all[owned_segment]);
     //printf("%d %d \n", Env::rank, nnz_sizes_all[owned_segment]);
     
@@ -1343,7 +1343,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             }
         }
     }
-    //Env::barrier();
+    
+    Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -1355,7 +1356,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    //Env::barrier();
+    Env::barrier();
     std::vector<MPI_Request> outreqs;
     std::vector<MPI_Request> inreqs;
     MPI_Request request;
@@ -1412,6 +1413,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 
     
     MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
+    inreqs.clear();
+    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);   
+    outreqs.clear();
 
     //Env::barrier();
     
@@ -1428,7 +1432,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);    
+     
     
 
     Triple<Weight, Integer_Type> pair;
