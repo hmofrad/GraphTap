@@ -1361,24 +1361,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Request request;
     MPI_Status status;
      
-     
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            //if(!Env::rank)
-            //    printf("-->%d %lu\n",r, outboxes[r].size());
-            auto &outbox = outboxes[r];
-            uint32_t outbox_bound = outbox.size() + many_triples_size;
-            outbox.resize(outbox_bound);
-            /* Send the triples with many_triples_size padding. */
-            //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
-            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
-            //MPI_Wait(&request, &status);
-            outreqs.push_back(request);
-        }
-    } 
+
      
      
     for (uint32_t i = 0; i < Env::nranks; i++)
@@ -1400,7 +1383,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
 
+
+
      
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            //if(!Env::rank)
+            //    printf("-->%d %lu\n",r, outboxes[r].size());
+            auto &outbox = outboxes[r];
+            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            outbox.resize(outbox_bound);
+            /* Send the triples with many_triples_size padding. */
+            //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            //MPI_Wait(&request, &status);
+            outreqs.push_back(request);
+        }
+    }     
 
     
     
@@ -1410,7 +1412,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 
     
     MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
-    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
+
     //Env::barrier();
     
     for (uint32_t r = 0; r < Env::nranks; r++)
@@ -1426,7 +1428,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    
+    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);    
     
 
     Triple<Weight, Integer_Type> pair;
