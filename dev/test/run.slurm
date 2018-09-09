@@ -2,13 +2,14 @@
 #SBATCH --job-name=la3
 #SBATCH --output=la3.out
 #SBATCH --error=la3.err
-#SBATCH --ntasks=128
-#SBATCH --nodes=16
-#SBATCH --ntasks-per-node=8
+#SBATCH --ntasks=32
+#SBATCH --nodes=8
+#SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
+#SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
-#SBATCH --time=01:00:00
+#SBATCH --time=00:10:00
 #SBATCH --cluster=mpi
 #SBATCH --partition=opa
 
@@ -27,19 +28,30 @@ echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 echo "************************************************"
 
-MPI="intel"
-#MPI="openmpi"
+#MPI="mpich"
+#MPI="intel"
+MPI="openmpi"
 if [ "${MPI}" = "mpich" ]
 then
-        echo "MPI"=${MPI}
-        module purge
-        module load  gcc/5.4.0
-        module load mpich/3.1
+    echo "MPI"=${MPI}
+    module purge
+    module load  gcc/5.4.0
+    module load mpich/3.1
+elif [ "${MPI}" = "intel" ]
+then
+    echo "MPI"=${MPI}
+    module purge
+    module load gcc/5.4.0
+    module load intel
+    export I_MPI_FABRICS=shm:ofa
+elif [ "${MPI}" = "openmpi" ]
+then
+    echo "MPI"=${MPI}
+    module purge
+    module load gcc/5.4.0
+    module load openmpi/3.1.1
 else
-        echo "MPI"=${MPI}
-        module purge
-        module load gcc/5.4.0
-        module load intel
+    echo "Exiting with MPI"=${MPI}
 fi
 
 #ulimit -s unlimited
@@ -48,7 +60,7 @@ fi
 
 export SLURM_CPU_BIND="none"
 #export I_MPI_FABRICS_LIST="ofi,tmi" # OPA
-export I_MPI_FABRICS=shm:ofa
+#export I_MPI_FABRICS=shm:ofa
 export I_MPI_FALLBACK=0
 export I_MPI_DEBUG=2
 #exort I_MPI_HYDRA_DEBUG=on
@@ -59,16 +71,31 @@ APP=./main
 
 if [ "$SLURM_NNODES" = "4" ]
 then
-        echo "RMAT=26"
-        time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20
+    echo "RMAT=26"
+    if [ "${MPI}" = "openmpi" ]
+    then
+        time srun --mpi=pmi2 -n ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20    
+    else
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 20
+    fi
 elif [ "$SLURM_NNODES" = "8" ]
 then
-        echo "RMAT=27"
+    echo "RMAT=27"
+    if [ "${MPI}" = "openmpi" ]
+    then
+        time srun --mpi=pmi2 -n ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27.bin 134217728 20
+	else
         time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27.bin 134217728 20
+    fi
 elif [ "$SLURM_NNODES" = "16" ]
 then
-        echo "RMAT=28"
-        time mpirun -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28.bin 268435456 20
+    echo "RMAT=28"
+    if [ "${MPI}" = "openmpi" ]
+	then
+        time srun --mpi=pmi2 -n ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28.bin 268435456 20
+    else
+        time mpirun ${DEBUG}  -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28.bin 268435456 20
+    fi
 else
         echo "RMAT=$SLURM_NNODES N/A"
 fi
