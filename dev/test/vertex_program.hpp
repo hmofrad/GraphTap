@@ -287,8 +287,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     }
     else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
     {
-        //printf("%lu %lu\n", A->nnz_col_sizes_loc.size(), local_col_segments.size());
-        X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nnz_col_sizes_loc,  local_col_segments);
+        //X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nnz_col_sizes_loc,  local_col_segments);
+        
+        std::vector<Integer_Type> tile_height_sizes(rank_ncolgrps, tile_height);
+        X = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes,  local_col_segments);
     }
     populate(X, x);
     
@@ -472,6 +474,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     }
     else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
     {
+        uint32_t co = accu_segment_col;
+        auto &c_seg = C->segments[co];
+        auto *c_data = (char *) c_seg.D->data;
+        Integer_Type c_nitems = c_seg.D->n;
+        Integer_Type c_nbytes = c_seg.D->nbytes;
+        
         uint32_t jo = accu_segment_col;
         auto &j_seg = J->segments[jo];
         auto *j_data = (char *) j_seg.D->data;
@@ -484,6 +492,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
             x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
         }
         */
+        /*
         Integer_Type j  = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -491,6 +500,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
             {
                 x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
                 j++;
+            }
+        }
+        */
+        
+        Integer_Type j  = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(j_data[i])
+            {
+                x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
             }
         }
     }
@@ -671,7 +690,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             {
                 if(filtering_type == _SNKS_)
                 {
-                    Integer_Type k =0;
+                    Integer_Type k = 0;
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
                         for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
@@ -681,11 +700,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                                 y_data[ROW_INDEX[i]] += VAL[i] * x_data[k];   
                             #else
                             if(j_data[j])    
-                                y_data[ROW_INDEX[i]] += x_data[k];
+                                //y_data[ROW_INDEX[i]] += x_data[k];
+                                y_data[ROW_INDEX[i]] += x_data[j];
                             #endif
                         }
-                        if(j_data[j])    
-                            k++;
+                        //if(j_data[j])    
+                        //    k++;
                     }
                 }
                 else
