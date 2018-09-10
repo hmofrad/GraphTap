@@ -1109,11 +1109,51 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         if (j != owned_segment)
         {
             MPI_Sendrecv(&nnz_sizes_all[owned_segment], 1, MPI_UNSIGNED, r, 0, &nnz_sizes_all[j], 1, MPI_UNSIGNED, 
-                                                        r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+                                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
+        
     }
-    Env::barrier();  
+    Env::barrier();     
     assert(nnz_local == nnz_sizes_all[owned_segment]);
+    
+    /*
+   // MPI_Status status;
+    for (uint32_t j = 0; j < nrowgrps_; j++)
+    {
+        uint32_t r = leader_ranks[j];
+        //if(!Env::rank)
+        //printf("%d %d %d %d\n", Env::rank, j, r, owned_segment);
+        //if (j == owned_segment)
+          //  MPI_Bcast(&nnz_sizes_all[j], 1, MPI_UNSIGNED, r, Env::MPI_WORLD);
+        //
+        if (r == Env::rank)
+        {
+            for (uint32_t i = 0; i < nrowgrps_; i++)
+            {
+                uint32_t k = leader_ranks[i];
+                if (k != Env::rank)
+                {
+                    MPI_Isend(&nnz_sizes_all[owned_segment], 1, MPI_UNSIGNED, k, owned_segment, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+            //  MPI_recv(&nnz_sizes_all[j], 1, MPI_UNSIGNED, r, j, Env::MPI_WORLD, &status);
+        }
+        else
+        {
+            
+            MPI_Irecv(&nnz_sizes_all[j], 1, MPI_UNSIGNED, r, j, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
+       
+    }
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    */
+    
     //printf("%d %d \n", Env::rank, nnz_sizes_all[owned_segment]);
     
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
@@ -1471,20 +1511,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
     Env::barrier();
-    
-        /*
-        1121410
-        1130954
-        975723
-        977375
-    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
-        uint64_t nedges_local = 0;
-    uint64_t nedges_global = 0;
+    //uint64_t nedges_local = 0;
+    //uint64_t nedges_global = 0;
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
     struct Triple<Weight, Integer_Type> pair;
@@ -1518,7 +1551,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
             IA[0] = 0;
             for (auto& triple : *(tile.triples))
             {
-                nedges_local++;
+                //nedges_local++;
                 pair = rebase(triple);
                 while((j - 1) != pair.row)
                 {
@@ -1545,10 +1578,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
     }    
     del_triples();
     
-    MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-        if(!Env::rank)
-            printf("1. %lu\n", nedges_global);
-        
+    //MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    //    if(!Env::rank)
+    //        printf("1. %lu\n", nedges_global);
+    Env::barrier();    
                   
         
     
@@ -1612,6 +1645,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
     //printf("DONE compression %d\n",Env::rank);
     del_triples();
     //printf("DONE deletion %d\n",Env::rank);
+    Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
