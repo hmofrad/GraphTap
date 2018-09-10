@@ -420,7 +420,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
-    Env::barrier();   
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1220,7 +1219,7 @@ struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractio
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 {
-    Env::barrier();
+    //Env::barrier();
     uint64_t v_sum_local = 0, v_sum_gloabl = 0;
     uint32_t vo = 0;
     auto &v_seg = V->segments[vo];
@@ -1251,7 +1250,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
         //printf("%d %f\n", Env::rank, v_data[i]);
     }
 //}
-    printf("r=%d r=%lu\n", Env::rank, v_sum_local);
+   // printf("r=%d r=%lu\n", Env::rank, v_sum_local);
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Degree checksum: %lu\n", v_sum_gloabl);
