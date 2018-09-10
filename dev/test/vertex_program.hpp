@@ -63,7 +63,9 @@ class Vertex_Program
                        struct Triple<Weight, Integer_Type> &pair);
         
         struct Triple<Weight, Integer_Type> leader_info( 
-                       const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);        
+                       const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);  
+
+        MPI_Datatype get_data_type();
         
         Ordering_type ordering_type;
         Tiling_type tiling_type;
@@ -203,6 +205,49 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
     {
         delete Y[i];
     }
+}
+
+/* Borrowed from https://github.com/thu-pacman/GeminiGraph/blob/master/core/mpi.hpp */
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+MPI_Datatype Vertex_Program<Weight, Integer_Type, Fractional_Type>::get_data_type()
+{
+    if (std::is_same<Fractional_Type, char>::value)
+    {
+        return MPI_CHAR;
+    }
+    else if (std::is_same<Fractional_Type, unsigned char>::value)
+    {
+        return MPI_UNSIGNED_CHAR;
+    }
+    else if (std::is_same<Fractional_Type, int>::value)
+    {
+        return MPI_INT;
+    }
+    else if (std::is_same<Fractional_Type, unsigned int>::value)
+    {
+        return MPI_UNSIGNED;
+    }
+    else if (std::is_same<Fractional_Type, long>::value)
+    {
+        return MPI_UNSIGNED_LONG;
+    }
+    else if (std::is_same<Fractional_Type, unsigned long>::value)
+    {
+        return MPI_UNSIGNED_LONG;
+    }
+    else if (std::is_same<Fractional_Type, float>::value)
+    {
+        return MPI_FLOAT;
+    }
+    else if (std::is_same<Fractional_Type, double>::value)
+    {
+        return MPI_DOUBLE;
+    }
+    else 
+    {
+        fprintf(stderr, "Type not supported\n");
+        Env::exit(1);
+    }   
 }
 
 
@@ -480,6 +525,8 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    MPI_Datatype T = get_data_type();
+    
     uint32_t leader;
     uint32_t xo = accu_segment_col;
     auto &x_seg = X->segments[xo];
@@ -550,13 +597,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     {
         for(uint32_t i = 0; i < rank_ncolgrps; i++)
         {
-            
             leader = leader_ranks_cg[local_col_segments[i]];
             auto &xj_seg = X->segments[i];
             auto *xj_data = (Fractional_Type *) xj_seg.D->data;
+            Integer_Type xj_nitems = xj_seg.D->n;
             Integer_Type xj_nbytes = xj_seg.D->nbytes;
             if(Env::comm_split)
-                MPI_Bcast(xj_data, xj_nbytes, MPI_BYTE, leader, colgrps_communicator);
+            {
+                MPI_Bcast(xj_data, xj_nitems, T, leader, colgrps_communicator);
+                //MPI_Bcast(xj_data, xj_nbytes, MPI_BYTE, leader, colgrps_communicator);
+            }
             else
             {
                 fprintf(stderr, "Invalid communicator\n");
@@ -969,6 +1019,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
 {
+    MPI_Datatype T = get_data_type();
     //struct Triple<Weight, Integer_Type> pair, pair1;
     //MPI_Comm communicator;
     MPI_Request request;
@@ -1065,14 +1116,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     auto *yj_data = (Fractional_Type *) yj_seg.D->data;
                     Integer_Type yj_nitems = yj_seg.D->n;
                     Integer_Type yj_nbytes = yj_seg.D->nbytes;
-                    MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, follower, pair_idx, communicator, &request);
+                    MPI_Irecv(yj_data, yj_nitems, T, follower, pair_idx, communicator, &request);
                     in_requests.push_back(request);
                 }
                 //yk = yi;
             }
             else
             {
-                MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair_idx, communicator, &request);
+                MPI_Isend(y_data, y_nitems, T, leader, pair_idx, communicator, &request);
                 out_requests.push_back(request);
             }
             xi = 0;
