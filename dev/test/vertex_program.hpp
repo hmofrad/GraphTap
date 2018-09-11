@@ -1027,8 +1027,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     uint32_t leader, follower, my_rank, accu;
     bool vec_owner, communication;
     uint32_t xi= 0, yi = 0, yo = 0;
-    //double t1, t2;
-    //t1 = Env::clock();
+    double t1, t2;
+    t1 = Env::clock();
     for(uint32_t t: local_tiles_row_order)
     {
         auto pair = A->tile_of_local_tile(t);
@@ -1110,7 +1110,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     {
                         follower = follower_rowgrp_ranks[j];
                         accu = follower_rowgrp_ranks_accu_seg[j];
-                    }                
+                    }
+                //if(!Env::rank)
+                //    printf("Recv me=%d leader=%d <-- follower=%d\n", my_rank, leader, follower);                    
                     
                     auto &yj_seg = Yp->segments[accu];
                     auto *yj_data = (Fractional_Type *) yj_seg.D->data;
@@ -1123,6 +1125,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
             }
             else
             {
+                //if(!Env::rank)
+                //    printf("Send me=%d --> leader=%d\n", my_rank, leader);
                 MPI_Isend(y_data, y_nitems, T, leader, pair_idx, communicator, &request);
                 out_requests.push_back(request);
             }
@@ -1130,7 +1134,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
             yi++;
         }
     }
+     
+    t2 = Env::clock();
+    if(!Env::rank)
+        printf("combine spmv: %f\n", t2 - t1);
+    
+    t1 = Env::clock();
     wait_for_all();
+    t2 = Env::clock();
+    if(!Env::rank)
+        printf("combine wait: %f\n", t2 - t1);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
