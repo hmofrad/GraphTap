@@ -14,7 +14,8 @@ enum Tiling_type
 {
   _1D_ROW,
   _1D_COL,
-  _2D_
+  _2D_,
+  _NUMA_
 };
 
 class Tiling
