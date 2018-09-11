@@ -597,7 +597,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Want some debug info?
     //Env::barrier();
     debug(-1);
-    //Env::barrier();
+    Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
