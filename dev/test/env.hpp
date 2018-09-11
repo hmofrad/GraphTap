@@ -12,6 +12,19 @@
 #include <iostream>
 #include <vector>
 
+#include <sched.h>
+#include <unordered_set>
+#include <set>
+#include <cstring>
+#include <numeric>
+#include <algorithm>
+
+
+
+#define NUM_SOCKETS 2
+#define NUM_CORES_PER_SOCKET 14
+#define NUM_CORES_PER_MACHINE (NUM_SOCKETS * NUM_CORES_PER_SOCKET)
+
 class Env
 {
     public:
@@ -47,6 +60,22 @@ class Env
     static double clock();
     static void   tick();
     static void   tock(std::string preamble);
+
+
+    static char core_name[]; // Core name = hostname
+    static int core_id; // Core id
+    static int nmachines; // Number of allocated machines
+    static std::vector<std::string> machines; // Number of machines
+    static std::vector<int> machines_nranks; // Number of ranks per machine
+    static std::vector<std::vector<int>> machines_ranks;
+    static std::vector<std::vector<int>> machines_cores;
+    static std::vector<std::unordered_set<int>> machines_cores_uniq;
+    static std::vector<int> machines_ncores; // Number of cores per machine
+    static std::vector<int> machines_nsockets; // Number of sockets available per machine
+
+    private:
+        static void affinity(); // Affinity
+    
 };
 
 MPI_Comm Env::MPI_WORLD;
@@ -67,10 +96,20 @@ MPI_Comm Env::colgrps_comm;
 int  Env::rank_cg = -1;
 int  Env::nranks_cg = -1;
 
-
-
 double Env::start = 0;
 double Env::finish = 0;
+
+char Env::core_name[MPI_MAX_PROCESSOR_NAME];
+int Env::core_id;
+int Env::nmachines;
+std::vector<std::string> Env::machines;
+std::vector<int> Env::machines_nranks;
+std::vector<std::vector<int>> Env::machines_ranks;
+std::vector<std::vector<int>> Env::machines_cores;
+std::vector<std::unordered_set<int>> Env::machines_cores_uniq;
+std::vector<int> Env::machines_ncores;
+std::vector<int> Env::machines_nsockets;
+
  
 void Env::init(bool comm_split_)
 {
@@ -89,6 +128,9 @@ void Env::init(bool comm_split_)
     is_master = rank == 0;
     
     MPI_WORLD = MPI_COMM_WORLD;
+    
+    // Affinity 
+    affinity();
 }
 
 void Env::grps_init(std::vector<int32_t> &grps_ranks, int grps_nranks, int &grps_rank_, int &grps_nranks_,
@@ -158,7 +200,119 @@ void Env::exit(int code)
 
 void Env::barrier()
 {
-    MPI_Barrier(MPI_WORLD); 
+    MPI_Barrier(MPI_WORLD);
+    
 }
+
+void Env::affinity()
+{
+    int cpu_name_len;
+    MPI_Get_processor_name(core_name, &cpu_name_len);
+    core_id = sched_getcpu();
+
+    std::vector<int> core_ids = std::vector<int>(nranks);
+    MPI_Gather(&core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+  
+    int core_name_len = strlen(Env::core_name);
+    std::vector<int> recvcounts(Env::nranks);
+  
+    int max_length = 0;
+    MPI_Allreduce(&core_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  
+    char *str_padded[max_length + 1]; // + 1 for '\n'
+    memset(str_padded, '\0', max_length + 1);
+    memcpy(str_padded, &Env::core_name, max_length + 1);
+  
+    int total_length = (max_length + 1) * Env::nranks; 
+    std::string total_string (total_length, '\0');
+    MPI_Allgather(str_padded, max_length + 1, MPI_CHAR, (void *) total_string.data(), max_length + 1, MPI_CHAR, MPI_COMM_WORLD);
+  
+    // Tokenizing the string!
+    int offset = 0;
+    std::vector<std::string> machines_all;
+    machines_all.clear();
+    for(int i = 0; i < Env::nranks; i++) 
+    {
+        machines_all.push_back(total_string.substr(offset, max_length + 1));
+        offset += max_length + 1;
+    }
+  
+    if(is_master)
+    {
+        for(int i = 0; i < Env::nranks; i++)
+	        printf("rank=%d, core_id=%d, cpu_name=%s\n", i, core_ids[i] , machines_all[i].c_str());
+    }
+    
+    nmachines = std::set<std::string>(machines_all.begin(), machines_all.end()).size();
+    machines = machines_all; 
+    std::vector<std::string>::iterator it;
+    it = std::unique(machines.begin(), machines.end());
+    machines.resize(std::distance(machines.begin(),it));
+    machines_nranks.resize(nmachines, 0);
+    machines_ranks.resize(nmachines);
+    machines_cores.resize(nmachines);
+    std::vector<std::unordered_set<int>> machines_cores_uniq(nmachines);
+  
+    for (it=machines_all.begin(); it!=machines_all.end(); it++)
+    {
+        int idx = distance(machines.begin(), find(machines.begin(), machines.end(), *it));
+        assert((idx >= 0) && (idx < machines.size()));
+	  
+        machines_nranks[idx]++;
+        int idx1 = it - machines_all.begin();
+
+        machines_ranks[idx].push_back(idx1);
+        assert((core_ids[idx1] >= 0) && (core_ids[idx1] < NUM_CORES_PER_MACHINE));
+        machines_cores[idx].push_back(core_ids[idx1]);
+        machines_cores_uniq[idx].insert(core_ids[idx1]);
+    }  
+    
+    machines_ncores.resize(nmachines, 0);
+    machines_nsockets.resize(nmachines, 0);
+    std::vector<int> sockets_per_machine(NUM_SOCKETS, 0);
+    for(int i = 0; i < nmachines; i++)
+    {
+        std::unordered_set<int>::iterator it1;
+		for(it1=machines_cores_uniq[i].begin(); it1!=machines_cores_uniq[i].end();it1++)
+		{
+			int socket_id = *it1 / NUM_CORES_PER_SOCKET;
+			sockets_per_machine[socket_id] = 1;
+			//if(!rank)
+			//    std::cout << i << " " << *it1 << " " << socket_id << ", ";
+		}
+		//if(!rank)
+		// std::cout << "\n";
+		machines_ncores[i] = machines_cores_uniq[i].size();
+		machines_nsockets[i] = std::accumulate(sockets_per_machine.begin(), sockets_per_machine.end(), 0);
+    }
+    
+    Env::barrier();
+    if(is_master) 
+    {
+        std::vector<int>::iterator it1;
+        std::vector<int>::iterator it2;
+        for(int i = 0; i < nmachines; i++)
+        {
+            std::cout << "Machine " << i << "=[" << machines[i] << "]";
+            std::cout << "| machine_nranks=" << machines_nranks[i];
+            std::cout << "| machine_ncores=" << machines_ncores[i];
+            std::cout << "| machine_nsockets=" << machines_nsockets[i] << "\n";
+            std::cout << "Machine " << i << "=[rank,core]: " ;
+            for(int j= 0; j < machines_ranks[i].size(); j++) 
+            {
+                std::cout << "[" << machines_ranks[i][j] <<  "," << machines_cores[i][j] << "]";
+            }
+            std::cout << "\nMachine " << i << "=unique_core(s)[core]:";
+            std::unordered_set<int>::iterator iter;
+            for(iter=machines_cores_uniq[i].begin(); iter!=machines_cores_uniq[i].end();++iter)
+            {
+                std::cout << "[" << *iter << "]";
+            }
+            std::cout << "\n";
+        }
+    }
+    Env::barrier();
+}
+
 
 #endif
