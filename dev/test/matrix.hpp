@@ -1102,7 +1102,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     nnz_sizes_all.resize(nrowgrps_);
     nnz_sizes_all[owned_segment] = nnz_local;
     
-    Env::barrier();
+    //Env::barrier();
     for (uint32_t j = 0; j < nrowgrps_; j++)
     {
         uint32_t r = leader_ranks[j];
@@ -1398,7 +1398,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    Env::barrier();
+    //Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -1417,6 +1417,23 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Status status;
      
 
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            //if(!Env::rank)
+            //    printf("-->%d %lu\n",r, outboxes[r].size());
+            auto &outbox = outboxes[r];
+            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            outbox.resize(outbox_bound);
+            /* Send the triples with many_triples_size padding. */
+            //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            //MPI_Wait(&request, &status);
+            outreqs.push_back(request);
+        }
+    }     
      
      
     for (uint32_t i = 0; i < Env::nranks; i++)
@@ -1441,23 +1458,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 
 
      
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            //if(!Env::rank)
-            //    printf("-->%d %lu\n",r, outboxes[r].size());
-            auto &outbox = outboxes[r];
-            uint32_t outbox_bound = outbox.size() + many_triples_size;
-            outbox.resize(outbox_bound);
-            /* Send the triples with many_triples_size padding. */
-            //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
-            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
-            //MPI_Wait(&request, &status);
-            outreqs.push_back(request);
-        }
-    }     
+
 
     
     
@@ -1468,8 +1469,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
     MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
     inreqs.clear();
-    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);   
-    outreqs.clear();
+
 
     //Env::barrier();
     
@@ -1486,7 +1486,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-     
+     MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);   
+    outreqs.clear();
+        Env::barrier();    
     
 
     Triple<Weight, Integer_Type> pair;
@@ -1510,7 +1512,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
-    Env::barrier();
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1581,7 +1583,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
     //MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     //    if(!Env::rank)
     //        printf("1. %lu\n", nedges_global);
-    Env::barrier();    
+    //Env::barrier();    
                   
         
     
@@ -1645,7 +1647,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
     //printf("DONE compression %d\n",Env::rank);
     del_triples();
     //printf("DONE deletion %d\n",Env::rank);
-    Env::barrier();
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
