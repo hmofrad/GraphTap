@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _SNKS_;
+    Filtering_type FT = _NONE_;
     bool parread = true;
     
 
@@ -100,6 +100,11 @@ int main(int argc, char **argv)
         Env::tock("Ingress");
 
 
+    //Env::barrier();
+    //G.free();
+    //Env::finalize();
+    //return(0);
+    
     
     Vertex_Program<wp, ip, fp> V(G, OT);
     fp x = 0, y = 0, v = 0, s = 0;
@@ -230,9 +235,14 @@ int main(int argc, char **argv)
         if(!Env::rank)
             Env::tick();
         VR.combine();        
-        VR.apply(f.rank);
         if(!Env::rank)
             Env::tock("Combine"); 
+        
+        if(!Env::rank)
+                Env::tick();
+        VR.apply(f.rank);
+        if(!Env::rank)
+            Env::tock("Apply"); 
         
         if(!Env::rank)
             printf("Pagerank,iter=%d\n", iter);
