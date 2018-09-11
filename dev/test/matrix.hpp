@@ -338,10 +338,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             }
             else if(tiling->tiling_type == Tiling_type::_2D_)
             {
+                /*
                 tile.rank = ((j % tiling->rowgrp_nranks) * tiling->colgrp_nranks) +
                                    (i % tiling->colgrp_nranks);
                 tile.ith = tile.rg   / tiling->colgrp_nranks;
                 tile.jth = tile.cg   / tiling->rowgrp_nranks;
+                
+                tile.rank_rg = j % tiling->rowgrp_nranks;
+                tile.rank_cg = i % tiling->colgrp_nranks;
+                
+                tile.leader_rank_rg = i;
+                tile.leader_rank_cg = j;
+                
+                tile.leader_rank_rg_rg = i;
+                tile.leader_rank_cg_cg = j;
+                */
+                
+                tile.rank = (i % tiling->colgrp_nranks) * tiling->rowgrp_nranks + (j % tiling->rowgrp_nranks);// * tiling->rowgrp_nranks + (i / tiling->rowgrp_nranks);
+                
+                tile.ith = tile.rg / tiling->colgrp_nranks; 
+                tile.jth = tile.cg / tiling->rowgrp_nranks;
                 
                 tile.rank_rg = j % tiling->rowgrp_nranks;
                 tile.rank_cg = i % tiling->colgrp_nranks;
@@ -358,7 +374,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             tile.allocated = false;
         }
     }
+    //print("rank");
     
+    //print("rank_cg");
+    
+    //Env::barrier();
+    //Env::exit(1);
     /*
     * Reorganize the tiles so that each rank is placed in
     * at least one diagonal tile then calculate 
@@ -596,8 +617,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     print("rank");
     // Want some debug info?
     //Env::barrier();
-    debug(-1);
-    Env::barrier();
+    //debug(-1);
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -736,6 +757,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
                 auto& tile = tiles[i][j];
                 if(element.compare("rank") == 0) 
                     printf("%02d ", tile.rank);
+                else if(element.compare("ith") == 0) 
+                    printf("%2d ", tile.ith);
+                else if(element.compare("jth") == 0) 
+                    printf("%2d ", tile.jth);
+                else if(element.compare("rank_rg") == 0) 
+                    printf("%2d ", tile.rank_rg);
+                else if(element.compare("rank_cg") == 0) 
+                    printf("%2d ", tile.rank_cg);
+                else if(element.compare("leader_rank_rg") == 0) 
+                    printf("%2d ", tile.leader_rank_rg);
+                else if(element.compare("leader_rank_cg") == 0) 
+                    printf("%2d ", tile.leader_rank_cg);
                 else if(element.compare("nedges") == 0) 
                     printf("%lu ", tile.nedges);
                 if(j > skip)
