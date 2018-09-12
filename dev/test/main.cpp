@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
     bool transpose = false;
-    Tiling_type TT = _NUMA_;
+    Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SRCS_;
