@@ -82,10 +82,10 @@ int main(int argc, char **argv)
     //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
     bool transpose = false;
-    Tiling_type TT = _2D_;
+    Tiling_type TT = _NUMA_;
     Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _SRCS_;
     bool parread = true;
     
 
@@ -100,18 +100,26 @@ int main(int argc, char **argv)
         Env::tock("Ingress");
 
 
-    //Env::barrier();
-    //G.free();
-    //Env::finalize();
-    //return(0);
-    
+
     
     Vertex_Program<wp, ip, fp> V(G, OT);
+    
+    
+        
+    
+    
+    
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
     
-
-
+    /*
+    Env::barrier();
+    
+    V.free();
+    G.free();
+    Env::finalize();
+    return(0);    
+*/
     
     Generic_functions f;
     
@@ -134,15 +142,22 @@ int main(int argc, char **argv)
     
 
     
+    
     if(!Env::rank)
         printf("combine\n");
     V.combine();
+
+/*    
+    G.free();
+    Env::barrier(); 
+    //Env::barrier();
+    V.free();
+    
+    Env::finalize();
+    return(0);
+*/
     if(!Env::rank)
         printf("apply\n");
-    
-
-
-    
     V.apply(f.assign);
 
     
@@ -156,16 +171,19 @@ int main(int argc, char **argv)
 
     if(!Env::rank)
         Env::tock("Degree");
-
+    
+    /*
     G.free();
     Env::barrier(); 
     //Env::barrier();
-    //G.free();
-    //Env::finalize();
-    //return(0);
+    V.free();
     
+    Env::finalize();
+    return(0);
+    */
     //sleep(3);
-    
+    G.free();
+    Env::barrier(); 
     transpose = true;
     
     if(!Env::rank)
