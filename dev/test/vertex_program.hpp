@@ -8,7 +8,7 @@
 #define VERTEX_PROGRAM_HPP
  
 #include "vector.hpp"
- 
+#include "types.hpp" 
 
 enum Ordering_type
 {
@@ -42,11 +42,25 @@ class Vertex_Program
         void spmv(Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
                   Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
+                  
         void spmv(Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
                   Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
+                  Segment<Weight, Integer_Type, Integer_Type> &t_seg,
+                  Segment<Weight, Integer_Type, char> &k_seg,
+                  Segment<Weight, Integer_Type, Integer_Type> &kv_seg);
+                  
+        void spmv(Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
+                  Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
+                  struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
+                  Segment<Weight, Integer_Type, Integer_Type> &r_seg,
+                  Segment<Weight, Integer_Type, char> &i_seg,
+                  Segment<Weight, Integer_Type, Integer_Type> &iv_seg,
                   Segment<Weight, Integer_Type, Integer_Type> &c_seg,
-                  Segment<Weight, Integer_Type, char> &j_seg);
+                  Segment<Weight, Integer_Type, char> &j_seg,
+                  Segment<Weight, Integer_Type, Integer_Type> &jv_seg);
+        
+
                   
         void print(Segment<Weight, Integer_Type, Fractional_Type> &segment);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
@@ -65,7 +79,7 @@ class Vertex_Program
         struct Triple<Weight, Integer_Type> leader_info( 
                        const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);  
 
-        MPI_Datatype get_data_type();
+        //MPI_Datatype get_data_type();
         
         Ordering_type ordering_type;
         Tiling_type tiling_type;
@@ -103,10 +117,12 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *V;
         Vector<Weight, Integer_Type, Fractional_Type> *S;
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y;
-        Vector<Weight, Integer_Type, Integer_Type> *C;
-        Vector<Weight, Integer_Type, char> *J;
         Vector<Weight, Integer_Type, Integer_Type> *R;
         Vector<Weight, Integer_Type, char> *I;
+        Vector<Weight, Integer_Type, Integer_Type> *IV;
+        Vector<Weight, Integer_Type, Integer_Type> *C;
+        Vector<Weight, Integer_Type, char> *J;
+        Vector<Weight, Integer_Type, Integer_Type> *JV;
         
 };
 
@@ -121,11 +137,12 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
-    //E = static_cast<Vector<Weight, Integer_Type, Integer_Type> *> (Graph.A->E);
     R = Graph.A->R;
     I = Graph.A->I;
+    IV= Graph.A->IV;
     C = Graph.A->C;
     J = Graph.A->J;
+    JV= Graph.A->JV;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
@@ -208,6 +225,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
 }
 
 /* Borrowed from https://github.com/thu-pacman/GeminiGraph/blob/master/core/mpi.hpp */
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 MPI_Datatype Vertex_Program<Weight, Integer_Type, Fractional_Type>::get_data_type()
 {
@@ -249,7 +267,7 @@ MPI_Datatype Vertex_Program<Weight, Integer_Type, Fractional_Type>::get_data_typ
         Env::exit(1);
     }   
 }
-
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
@@ -326,27 +344,27 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
      Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
-    //printf("init %d\n", Env::rank);
-    if(filtering_type == _NONE_)
+    //printf("X %d\n", Env::rank);
+    std::vector<Integer_Type> x_sizes;
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
-        std::vector<Integer_Type> tile_height_sizes(rank_ncolgrps, tile_height);
-        X = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes,  local_col_segments);
+        x_sizes.resize(rank_ncolgrps, tile_height);
     }
     else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
     {
-        X = new Vector<Weight, Integer_Type, Fractional_Type>(A->nnz_col_sizes_loc,  local_col_segments);
-        
-        //std::vector<Integer_Type> tile_height_sizes(rank_ncolgrps, tile_height);
-        //X = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes,  local_col_segments);
+        x_sizes = A->nnz_col_sizes_loc;
     }
+    X = new Vector<Weight, Integer_Type, Fractional_Type>(x_sizes,  local_col_segments);
     populate(X, x);
     
-    std::vector<Integer_Type> tile_height_sizes(1, tile_height);
-    V = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes, accu_segment_col_vec);
+    if(!Env::rank)
+        printf("X: %lu %lu\n", x_sizes.size(), local_col_segments.size());
+    std::vector<Integer_Type> v_s_size(1, tile_height);     
+    
+    V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_col_vec);
     populate(V, v);
-    
-    S = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes, accu_segment_col_vec);
-    
+    //printf("S %d\n", Env::rank);
+    S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_col_vec);
     if(VProgram)
     {
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
@@ -358,21 +376,42 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         populate(S, s);
     }
     
+    if(!Env::rank)
+        printf("V: %lu %lu\n", v_s_size.size(), accu_segment_col_vec.size());
+    
+    //printf("Y %d\n", Env::rank);
+    std::vector<Integer_Type> y_size;
+    std::vector<Integer_Type> y_sizes;
+
     Vector<Weight, Integer_Type, Fractional_Type> *Y_;
     for(uint32_t j = 0; j < rank_nrowgrps; j++)
     {
+        y_size.clear();
+        y_sizes.clear();
+        if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
+        {
+            y_size.resize(1, tile_height);
+            y_sizes.resize(rowgrp_nranks, tile_height);
+        }
+        else if((filtering_type == _SRCS_) or (filtering_type == _BOTH_))
+        {
+            y_size.resize(1, A->nnz_row_sizes_loc[j]);
+            y_sizes.resize(rowgrp_nranks, A->nnz_row_sizes_loc[j]);    
+        }
         if(local_row_segments[j] == owned_segment)
         {
-            std::vector<Integer_Type> tile_height_sizes(rowgrp_nranks, tile_height);
-            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes, all_rowgrp_ranks_accu_seg);
+            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
         }
         else
         {
-            std::vector<Integer_Type> tile_height_sizes(1, tile_height);
-            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(tile_height_sizes, accu_segment_row_vec);
+            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
         }
         Y.push_back(Y_);
+        if(!Env::rank)
+            printf("Y: %d %lu %lu %lu %lu\n", local_row_segments[j] == owned_segment, y_size.size(), accu_segment_row_vec.size(), y_sizes.size(), all_rowgrp_ranks_accu_seg.size());
     }
+    
+    
     
 }
 
@@ -436,7 +475,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
     
     MPI_Request request;
     uint32_t follower, accu;
-    if((tiling_type == Tiling_type::_2D_)
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -472,7 +511,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
 {   
     uint32_t leader;
     MPI_Request request;
-    if((tiling_type == Tiling_type::_2D_)
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {    
@@ -525,7 +564,9 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
-    MPI_Datatype T = get_data_type();
+    //MPI_Datatype T;
+    //MPI_Datatype T = get_data_type();
+    MPI_Datatype T = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
     
     uint32_t leader;
     uint32_t xo = accu_segment_col;
@@ -591,7 +632,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         */
     }
     
-    if((tiling_type == Tiling_type::_2D_)
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW) 
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -729,14 +770,29 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     }    
 }
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
+            Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
+            Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
+            struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
+            Segment<Weight, Integer_Type, Integer_Type> &r_seg,
+            Segment<Weight, Integer_Type, char> &i_seg,
+            Segment<Weight, Integer_Type, Integer_Type> &iv_seg,
+            Segment<Weight, Integer_Type, Integer_Type> &c_seg,
+            Segment<Weight, Integer_Type, char> &j_seg,
+            Segment<Weight, Integer_Type, Integer_Type> &jv_seg)
+{
+    ;
+}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
             Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
-            Segment<Weight, Integer_Type, Integer_Type> &c_seg,
-            Segment<Weight, Integer_Type, char> &j_seg)
+            Segment<Weight, Integer_Type, Integer_Type> &t_seg,
+            Segment<Weight, Integer_Type, char> &k_seg,
+            Segment<Weight, Integer_Type, Integer_Type> &kv_seg)
 {
     auto *y_data = (Fractional_Type *) y_seg.D->data;
     Integer_Type y_nitems = y_seg.D->n;
@@ -746,9 +802,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     Integer_Type x_nitems = x_seg.D->n;
     Integer_Type x_nbytes = x_seg.D->nbytes;
     
-    auto *j_data = (char *) j_seg.D->data;
-    Integer_Type j_nitems = j_seg.D->n;
-    Integer_Type j_nbytes = j_seg.D->nbytes;
+    auto *k_data = (char *) k_seg.D->data;
+    Integer_Type k_nitems = k_seg.D->n;
+    Integer_Type k_nbytes = k_seg.D->nbytes;
+    
+    Integer_Type *kv_data = (Integer_Type *) kv_seg.D->data;
+    Integer_Type kv_nitems = kv_seg.D->n;
+    Integer_Type kv_nbytes = kv_seg.D->nbytes;
   
 
     if(tile.allocated)
@@ -776,22 +836,40 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
                         {
                             #ifdef HAS_WEIGHT
-                            if(j_data[j] and VAL[i])
+                            if(k_data[j] and VAL[i])
                                 y_data[ROW_INDEX[i]] += VAL[i] * x_data[k];   
                             #else
-                            if(j_data[j])    
+                            if(k_data[j])    
                                 y_data[ROW_INDEX[i]] += x_data[k];
                                 //y_data[ROW_INDEX[i]] += x_data[j];
                             #endif
                         }
-                        if(j_data[j])    
+                        if(k_data[j])    
                             k++;
                     }
                 }
-                else
+                else if(filtering_type == _SRCS_)
                 {
-                    fprintf(stderr, "Invalid filtering type\n");
-                    Env::exit(1);
+                    
+                    printf("RANK %d %d %d %d %d\n", Env::rank, k_nitems, k_nbytes, kv_nitems, kv_nbytes);
+                    /*
+                    Integer_Type k = 0;
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                    {
+                        for(uint32_t i = COL_PTR[j]; i < COL_PTR[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                            if(x_data[j] and VAL[i])
+                                y_data[k] += VAL[i] * x_data[j];   
+                            #else
+                            if(x_data[j])    
+                                y_data[k] += x_data[j];
+                            #endif
+                            if(j_data[ROW_INDEX[i]])
+                                k++;
+                        }
+                    }
+                    */
                 }
             }
             else if(ordering_type == _COL_)
@@ -828,7 +906,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
             optimized_1d_row();    
         }
     }
-    else if(tiling_type == Tiling_type::_2D_)
+    else if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
     {
         optimized_2d();    
     }
@@ -868,7 +946,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
             
             auto &j_seg = J->segments[xi];
             
-            spmv(y_seg, x_seg, tile, c_seg, j_seg);
+            auto &jv_seg = JV->segments[xi];
+            
+            spmv(y_seg, x_seg, tile, c_seg, j_seg, jv_seg);
         }
         
 
@@ -925,7 +1005,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
             
             auto &j_seg = J->segments[xi];
             
-            spmv(y_seg, x_seg, tile, c_seg, j_seg);
+            auto &jv_seg = JV->segments[xi];
+            
+            spmv(y_seg, x_seg, tile, c_seg, j_seg, jv_seg);
         }
         
         yi++;
@@ -1019,7 +1101,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
 {
-    MPI_Datatype T = get_data_type();
+    //MPI_Datatype T;// = get_data_type();
+    MPI_Datatype T = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
     //struct Triple<Weight, Integer_Type> pair, pair1;
     //MPI_Comm communicator;
     MPI_Request request;
@@ -1066,14 +1149,42 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         {
             spmv(y_seg, x_seg, tile);
         }
-        else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
+        else if(filtering_type == _SRCS_)
+        {
+            auto &r_seg = R->segments[yi];
+            
+            auto &i_seg = I->segments[yi];
+            
+            auto &iv_seg = IV->segments[yi];
+            
+            spmv(y_seg, x_seg, tile, r_seg, i_seg, iv_seg);
+        }
+        else if(filtering_type == _SNKS_)
         {
             auto &c_seg = C->segments[xi];
             
             auto &j_seg = J->segments[xi];
             
-            spmv(y_seg, x_seg, tile, c_seg, j_seg);
-        } 
+            auto &jv_seg = JV->segments[xi];
+            
+            spmv(y_seg, x_seg, tile, c_seg, j_seg, jv_seg);
+        }
+        else if(filtering_type == _BOTH_)
+        {
+            auto &r_seg = R->segments[yi];
+            
+            auto &i_seg = I->segments[yi];
+            
+            auto &iv_seg = IV->segments[yi];
+            
+            auto &c_seg = C->segments[xi];
+            
+            auto &j_seg = J->segments[xi];
+            
+            auto &jv_seg = JV->segments[xi];
+            
+            spmv(y_seg, x_seg, tile, r_seg, i_seg, iv_seg, c_seg, j_seg, jv_seg);
+        }
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
