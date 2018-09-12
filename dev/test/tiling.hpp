@@ -81,6 +81,14 @@ Tiling::Tiling(uint32_t nranks_, uint32_t ntiles_,
         rank_ncolgrps = ncolgrps / rowgrp_nranks;        
         assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
     }
+    else if (tiling_type == Tiling_type::_NUMA_)
+    {
+        integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
+        assert(rowgrp_nranks * colgrp_nranks == nranks);
+        rank_nrowgrps = nrowgrps / colgrp_nranks;
+        rank_ncolgrps = ncolgrps / rowgrp_nranks;        
+        assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
+    }
 };
 
 Tiling::~Tiling() {};
