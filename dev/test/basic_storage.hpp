@@ -31,7 +31,7 @@ Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
     nbytes = n_ * sizeof(Weight);
     assert(nbytes == (n * sizeof(Weight)));
     
-    if(nbytes > ((1L << 31) - 1))
+    if(n > ((1L << 31) - 1))
     {
         fprintf(stderr, "Error mapping large region memory\n");
         Env::exit(1);
