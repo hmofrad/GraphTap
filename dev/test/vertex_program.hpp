@@ -815,8 +815,47 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     {
         if(compression_type == Compression_type::_CSR_)
         {
-            fprintf(stderr, "Invalid filtering type\n");
-            Env::exit(1);
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csr->A->data;
+            #endif
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
+            Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
+            
+            if(ordering_type == _ROW_)
+            {
+                if(filtering_type == _SRCS_)
+                {
+                    Integer_Type k = 0;
+                    for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
+                    {
+                        for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                        {       
+                            #ifdef HAS_WEIGHT
+                            if(x_data[JA[j]] and A[j])
+                                y_data[i] += A[j] * x_data[JA[j]];
+                            #else
+                            if(x_data[JA[j]])
+                                y_data[k_data[i]] += x_data[JA[j]];
+                            #endif                               
+                        }
+                        if(k_data[i])    
+                            k++;
+                    }
+                    
+                }
+                else if (filtering_type == _SNKS_)
+                {
+                    fprintf(stderr, "Invalid filtering type\n");
+                    Env::exit(1);
+                }
+                
+            }
+            else if(ordering_type == _COL_)
+            {
+                fprintf(stderr, "Invalid filtering type\n");
+                Env::exit(1);
+            }
         }
         else if(compression_type == Compression_type::_CSC_)    
         {
