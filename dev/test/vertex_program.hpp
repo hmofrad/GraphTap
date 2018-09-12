@@ -827,16 +827,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                 if(filtering_type == _SRCS_)
                 {
                     Integer_Type k = 0;
+                    //#pragma omp parallel for schedule(dynamic)
                     for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                     {
                         for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                         {       
                             #ifdef HAS_WEIGHT
                             if(x_data[JA[j]] and A[j])
-                                y_data[i] += A[j] * x_data[JA[j]];
+                                y_data[k] += A[j] * x_data[JA[j]];
                             #else
                             if(x_data[JA[j]])
-                                y_data[k_data[i]] += x_data[JA[j]];
+                                y_data[k] += x_data[JA[j]];
                             #endif                               
                         }
                         if(k_data[i])    
