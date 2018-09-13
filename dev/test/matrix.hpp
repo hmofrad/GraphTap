@@ -250,7 +250,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::test(const struct Triple<Wei
     {
         fprintf(stderr, "Local tiles[r=%d]: ", Env::rank);
         for(uint32_t i : local_tiles)
-            fprintf(stderr, " %d, ", i);
+            fprintf(stderr, " %d ", i);
         fprintf(stderr, "\n");
         fprintf(stderr, "Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", t, pair.row, pair.col, triple.row, triple.col);
         Env::exit(1);
@@ -1478,7 +1478,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
    https://github.com/cmuq-ccl/LA3/blob/master/src/matrix/dist_matrix2d.hpp
 */
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
+void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
 {
     /* Sanity check on # of edges */
     uint64_t nedges_start_local = 0, nedges_end_local = 0,
@@ -1526,7 +1526,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     std::vector<MPI_Request> inreqs;
     MPI_Request request;
     MPI_Status status;
-    
+    /*
     //Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -1540,8 +1540,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     }
     
     Env::barrier();
+    */
     
-    /*
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         //uint32_t r = leader_ranks[j];
@@ -1552,32 +1552,32 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         //
         if (r == Env::rank)
         {
-            for (uint32_t i = 0; i < nrowgrps_; i++)
+            for (uint32_t i = 0; i < Env::nranks; i++)
             {
                 //uint32_t k = leader_ranks[i];
-                if (k != Env::rank)
+                if (i != Env::rank)
                 {
-                    auto &outbox = outboxes[k];
+                    auto &outbox = outboxes[i];
                     uint32_t outbox_size = outbox.size();   
-                    MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, k, Env:;rank, Env::MPI_WORLD, &request);
-                    out_requests.push_back(request);
+                    MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, i, Env::rank, Env::MPI_WORLD, &request);
+                    outreqs.push_back(request);
                 }
             }
         }
         else
         {
             
-            MPI_Irecv(&&inbox_sizes[r], 1, MPI_UNSIGNED, r, r, Env::MPI_WORLD, &request);
-            in_requests.push_back(request);
+            MPI_Irecv(&inbox_sizes[r], 1, MPI_UNSIGNED, r, r, Env::MPI_WORLD, &request);
+            inreqs.push_back(request);
         }
        
     }
     
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
-    */
+    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
+    inreqs.clear();
+    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
+    outreqs.clear();
+    
     
     
 
