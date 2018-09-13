@@ -1430,10 +1430,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         delete F_;
     } 
     
-    int retval = MPI_Type_free(&type);
-    assert(retval == MPI_SUCCESS);   
-    retval = MPI_Type_free(&type1);
-    assert(retval == MPI_SUCCESS);   
+    //int retval = 0;
+    //retval = MPI_Type_commit(&type);
+    //assert(retval == MPI_SUCCESS);
+    //retval = MPI_Type_free(&type);
+    //assert(retval == MPI_SUCCESS);
+    //assert(retval == MPI_SUCCESS);   
+    //retval = MPI_Type_free(&type1);
+    //assert(retval == MPI_SUCCESS);   
     
 
     Env::barrier();
