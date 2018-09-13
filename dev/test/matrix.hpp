@@ -163,6 +163,8 @@ class Matrix
         
         struct Triple<Weight, Integer_Type> tile_of_local_tile(const uint32_t local_tile);
         struct Triple<Weight, Integer_Type> tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
+        uint32_t local_tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
+        
         uint32_t segment_of_tile(const struct Triple<Weight, Integer_Type> &pair);
         struct Triple<Weight, Integer_Type> base(const struct Triple<Weight, Integer_Type> &pair, Integer_Type rowgrp, Integer_Type colgrp);
         struct Triple<Weight, Integer_Type> rebase(const struct Triple<Weight, Integer_Type> &pair);
@@ -246,13 +248,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::test(const struct Triple<Wei
     uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
     if(not (std::find(local_tiles.begin(), local_tiles.end(), t) != local_tiles.end()))
     {
-        fprintf(stderr, "Local tiles[%d]: ", Env::rank);
+        fprintf(stderr, "Local tiles[r=%d]: ", Env::rank);
         for(uint32_t i : local_tiles)
             fprintf(stderr, " %d, ", i);
         fprintf(stderr, "\n");
         fprintf(stderr, "Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", t, pair.row, pair.col, triple.row, triple.col);
         Env::exit(1);
     }
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+uint32_t Matrix<Weight, Integer_Type, Fractional_Type>::local_tile_of_triple(const struct Triple<Weight, Integer_Type> &triple)
+{
+    struct Triple<Weight, Integer_Type> pair = tile_of_triple(triple);
+    uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
+    return(t);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -666,6 +676,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("Tiling Info: %d x %d [rank_nrowgrps x rank_ncolgrps]\n", tiling->rank_nrowgrps, tiling->rank_ncolgrps);
     }
     print("rank");
+    print("kth");
     // Want some debug info?
     //Env::barrier();
     //debug(-1);
@@ -808,6 +819,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
                 auto& tile = tiles[i][j];
                 if(element.compare("rank") == 0) 
                     printf("%02d ", tile.rank);
+                else if(element.compare("kth") == 0) 
+                    printf("%3d ", tile.kth);
                 else if(element.compare("ith") == 0) 
                     printf("%2d ", tile.ith);
                 else if(element.compare("jth") == 0) 
