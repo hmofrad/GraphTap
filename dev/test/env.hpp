@@ -40,7 +40,7 @@ class Env
     static void exit(int code);
     
     
-    static bool comm_split; // Splitting the world communicator
+    static bool comm_split, comm_created; // Splitting the world communicator
     static MPI_Group rowgrps_group_, rowgrps_group;
     static MPI_Comm rowgrps_comm;         
     static int rank_rg;
@@ -60,6 +60,9 @@ class Env
     static double clock();
     static void   tick();
     static void   tock(std::string preamble);
+    static void   set_comm_split();
+    static bool   get_comm_split();
+    
 
 
     static char core_name[]; // Core name = hostname
@@ -84,6 +87,8 @@ int  Env::nranks = -1;
 bool Env::is_master = false;
 
 bool Env::comm_split = false;
+bool Env::comm_created = false;
+
 MPI_Group Env::rowgrps_group_;
 MPI_Group Env::rowgrps_group;
 MPI_Comm Env::rowgrps_comm;
@@ -131,6 +136,17 @@ void Env::init(bool comm_split_)
     
     // Affinity 
     affinity();
+}
+
+bool Env::get_comm_split()
+{
+    return(comm_created);
+}
+
+void Env::set_comm_split()
+{
+    if(comm_split)
+        comm_created = true;
 }
 
 void Env::grps_init(std::vector<int32_t> &grps_ranks, int grps_nranks, int &grps_rank_, int &grps_nranks_,
@@ -196,6 +212,7 @@ void Env::exit(int code)
 {    
     Env::finalize();
     std::exit(code);
+    //return(code);
 }
 
 void Env::barrier()
