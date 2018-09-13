@@ -246,7 +246,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::test(const struct Triple<Wei
     uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
     if(not (std::find(local_tiles.begin(), local_tiles.end(), t) != local_tiles.end()))
     {
-        fprintf(stderr, "R[%d]-Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", Env::rank, t, pair.row, pair.col, triple.row, triple.col);
+        fprintf(stderr, "Local tiles[%d]: ", Env::rank);
+        for(uint32_t i : local_tiles)
+            fprintf(stderr, " %d, ", i);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", t, pair.row, pair.col, triple.row, triple.col);
         Env::exit(1);
     }
 }
@@ -1525,9 +1529,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     Env::barrier();
     
     /*
-    for (uint32_t j = 0; j < nrowgrps_; j++)
+    for (uint32_t r = 0; r < Env::nranks; r++)
     {
-        uint32_t r = leader_ranks[j];
+        //uint32_t r = leader_ranks[j];
         //if(!Env::rank)
         //printf("%d %d %d %d\n", Env::rank, j, r, owned_segment);
         //if (j == owned_segment)
@@ -1537,12 +1541,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         {
             for (uint32_t i = 0; i < nrowgrps_; i++)
             {
-                uint32_t k = leader_ranks[i];
+                //uint32_t k = leader_ranks[i];
                 if (k != Env::rank)
                 {
-                    auto &outbox = outboxes[r];
+                    auto &outbox = outboxes[k];
                     uint32_t outbox_size = outbox.size();   
-                    MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, k, j, Env::MPI_WORLD, &request);
+                    MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, k, Env:;rank, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
                 }
             }
@@ -1550,7 +1554,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         else
         {
             
-            MPI_Irecv(&&inbox_sizes[r], 1, MPI_UNSIGNED, r, j, Env::MPI_WORLD, &request);
+            MPI_Irecv(&&inbox_sizes[r], 1, MPI_UNSIGNED, r, r, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
        
