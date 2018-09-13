@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
     Compression_type CT = _CSR_;
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _SRCS_;
     bool parread = true;
     
 
