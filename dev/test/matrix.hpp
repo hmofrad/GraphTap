@@ -1429,6 +1429,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         F_->del_vec();
         delete F_;
     } 
+    
+    int retval = MPI_Type_free(&type);
+    assert(retval == MPI_SUCCESS);   
+    retval = MPI_Type_free(&type1);
+    assert(retval == MPI_SUCCESS);   
+    
+
     Env::barrier();
 }
 
@@ -1592,7 +1599,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     if(Env::is_master)
         printf("Sanity check for exchanging %lu edges is done\n", nedges_end_global);
     
-    auto retval = MPI_Type_free(&MANY_TRIPLES);
+    int retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
     //Env::barrier();
 }
