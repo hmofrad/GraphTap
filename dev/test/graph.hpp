@@ -85,6 +85,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
     //if(!Env::rank)
       //  printf("free_tiling\n");
     A->free_tiling();
+    
+    //A->del_triples();
     //if(!Env::rank)
       //  printf("A khodam\n");
   /*
@@ -215,10 +217,17 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
         read_text();
     }
     
-    // Compress the graph
-    A->init_compression();
+    // Initialize tiles
+    A->init_tiles();
+    
     // Filter the graph
     A->init_filtering();
+    
+    // Compress the graph
+    A->init_compression();
+    
+    // Delete triples
+    A->del_triples();
 }
 
 
@@ -244,10 +253,17 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
         read_binary();
     }
     
-    // Compress the graph
-    A->init_compression();
+    // Initialize tiles
+    A->init_tiles();
+    
     // Filter the graph
     A->init_filtering();
+    
+    // Compress the graph
+    A->init_compression();
+    
+    // Delete triples
+    A->del_triples();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
