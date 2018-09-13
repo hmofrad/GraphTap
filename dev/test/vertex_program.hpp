@@ -854,8 +854,21 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                 }
                 else if (filtering_type == _SNKS_)
                 {
-                    fprintf(stderr, "Invalid filtering type\n");
-                    Env::exit(1);
+                    Integer_Type k = 0;
+                    //#pragma omp parallel for schedule(dynamic)
+                    for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
+                    {
+                        for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                        {       
+                            #ifdef HAS_WEIGHT
+                            if(x_data[kv_data[JA[j]]] and A[j])
+                                y_data[i] += A[j] * x_data[kv_data[JA[j]]];
+                            #else
+                            if(x_data[kv_data[JA[j]]])
+                                y_data[i] += x_data[kv_data[JA[j]]];
+                            #endif                               
+                        }   
+                    }
                 }
                 
             }
