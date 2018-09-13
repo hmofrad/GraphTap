@@ -167,6 +167,7 @@ class Matrix
         struct Triple<Weight, Integer_Type> base(const struct Triple<Weight, Integer_Type> &pair, Integer_Type rowgrp, Integer_Type colgrp);
         struct Triple<Weight, Integer_Type> rebase(const struct Triple<Weight, Integer_Type> &pair);
         void insert(const struct Triple<Weight, Integer_Type> &triple);
+        void test(const struct Triple<Weight, Integer_Type> &triple);
         
         std::vector<int32_t> sort_indices(const std::vector<int32_t> &v);
         void indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2);        
@@ -239,6 +240,18 @@ struct Triple<Weight, Integer_Type> Matrix<Weight, Integer_Type, Fractional_Type
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::test(const struct Triple<Weight, Integer_Type> &triple)
+{        
+    struct Triple<Weight, Integer_Type> pair = tile_of_triple(triple);
+    uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
+    if(not (std::find(local_tiles.begin(), local_tiles.end(), t) != local_tiles.end()))
+    {
+        fprintf(stderr, "R[%d]-Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", Env::rank, t, pair.row, pair.col, triple.row, triple.col);
+        Env::exit(1);
+    }
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<Weight, Integer_Type> &triple)
 {
     /*
@@ -271,6 +284,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<W
     */
     
     struct Triple<Weight, Integer_Type> pair = tile_of_triple(triple);
+    /*
     if(!parread)
     {
         uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
@@ -280,7 +294,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<W
             Env::exit(1);
         }
     }
-    
+    */
     tiles[pair.row][pair.col].triples->push_back(triple);
 }
 
@@ -1572,7 +1586,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         {
             auto &inbox = inboxes[r];
             for (uint32_t i = 0; i < inbox_sizes[r]; i++)
+            {
+                test(inbox[i]);
                 insert(inbox[i]);
+            }
 
             inbox.clear();
             inbox.shrink_to_fit();
@@ -1581,7 +1598,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
      MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);   
     outreqs.clear();
-        Env::barrier();    
+    Env::barrier();    
     
 
     Triple<Weight, Integer_Type> pair;
