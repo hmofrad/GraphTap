@@ -288,10 +288,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::clear(
     for(uint32_t i = 0; i < vec->vector_length; i++)
     {
         auto &seg = vec->segments[i];
-        auto *data = (Fractional_Type *) seg.D->data;
-        Integer_Type nitems = seg.D->n;
-        Integer_Type nbytes = seg.D->nbytes;
-        memset(data, 0, nbytes);
+        if(seg.allocated)
+        {
+            auto *data = (Fractional_Type *) seg.D->data;
+            Integer_Type nitems = seg.D->n;
+            Integer_Type nbytes = seg.D->nbytes;
+            memset(data, 0, nbytes);
+        }
     }
 }
 
@@ -302,20 +305,23 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(
     for(uint32_t i = 0; i < vec->vector_length; i++)
     {
         auto &seg = vec->segments[i];
-        auto *data = (Fractional_Type *) seg.D->data;
-        Integer_Type nitems = seg.D->n;
-        Integer_Type nbytes = seg.D->nbytes;
+        if(seg.allocated)
+        {
+            auto *data = (Fractional_Type *) seg.D->data;
+            Integer_Type nitems = seg.D->n;
+            Integer_Type nbytes = seg.D->nbytes;
 
-        if(value)
-        {
-            for(uint32_t i = 0; i < nitems; i++)
+            if(value)
             {
-                data[i] = value;
+                for(uint32_t i = 0; i < nitems; i++)
+                {
+                    data[i] = value;
+                }
+            } 
+            else
+            {
+                memset(data, 0, nbytes);
             }
-        } 
-        else
-        {
-            memset(data, 0, nbytes);
         }
     }
 }         
@@ -376,8 +382,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         populate(S, s);
     }
     
-    if(!Env::rank)
-        printf("V: %lu %lu\n", v_s_size.size(), accu_segment_col_vec.size());
+    //if(!Env::rank)
+    //    printf("V: %lu %lu\n", v_s_size.size(), accu_segment_col_vec.size());
     
     //printf("Y %d\n", Env::rank);
     std::vector<Integer_Type> y_size;
@@ -420,6 +426,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    
     uint32_t xo = accu_segment_col;
     auto &x_seg = X->segments[xo];
     auto *x_data = (Fractional_Type *) x_seg.D->data;
@@ -445,7 +452,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
     }
     */
 
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -703,7 +710,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         if(x_data[JA[j]])
                             y_data[i] += x_data[JA[j]];
-                    
                         #endif                        
                     }
                 }
@@ -882,8 +888,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                             if(x_data[j] and VAL[i])
                                 y_data[kv_data[ROW_INDEX[i]]] += VAL[i] * x_data[j];   
                             #else
-                            if(x_data[j])    
+                            if(x_data[j])   
+                            {    
+                                //printf("r=%d i=%d ri=%d kv_i=%d ta=%d ya=%d kva=%d yn=%d ", Env::rank, i, ROW_INDEX[i], kv_data[ROW_INDEX[i]], tile.allocated, y_seg.allocated, kv_seg.allocated, y_nitems);
+                                //printf("r=%d y_kv_ri=%f\n", Env::rank, y_data[kv_data[ROW_INDEX[i]]]);
                                 y_data[kv_data[ROW_INDEX[i]]] += x_data[j];
+                            }
                             #endif
                             //if(j_data[ROW_INDEX[i]])
                             //    k++;
@@ -1300,6 +1310,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    //printf("Apply %d\n", Env::rank);
     uint32_t accu;
     uint32_t yi = accu_segment_row;
     auto *Yp = Y[yi];
@@ -1346,7 +1357,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     Integer_Type v_nitems = v_seg.D->n;
     Integer_Type v_nbytes = v_seg.D->nbytes;
     
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -1373,7 +1384,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             }
         }
     }
-    //printf("%d %d %d\n", Env::rank, v_nitems, e_nitems);
+    //printf("%d %d %d\n", Env::rank, v_nitems, i_nitems);
     
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
         clear(Y[i]);
