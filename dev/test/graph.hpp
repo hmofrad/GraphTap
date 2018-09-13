@@ -335,6 +335,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         // A better but expensive way is to determine the file size beforehand
         if(A->tiles[pair.row][pair.col].rank == Env::rank)    
         {
+            A->test(triple);
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset = fin.tellg();
@@ -414,6 +415,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         // A better but expensive way is to determine the file size beforehand
         if(A->tiles[pair.row][pair.col].rank == Env::rank)    
         {
+            A->test(triple);
             A->tiles[pair.row][pair.col].triples->push_back(triple);
         }
         offset += sizeof(Triple<Weight, Integer_Type>);
