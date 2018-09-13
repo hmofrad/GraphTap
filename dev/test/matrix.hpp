@@ -1158,8 +1158,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         uint32_t r = leader_ranks[j];
         if (j != owned_segment)
         {
-            MPI_Sendrecv(&nnz_sizes_all[owned_segment], 1, MPI_UNSIGNED, r, 0, &nnz_sizes_all[j], 1, MPI_UNSIGNED, 
-                                                                         r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+            MPI_Sendrecv(&nnz_sizes_all[owned_segment], 1, MPI_UNSIGNED, r, Env::rank, &nnz_sizes_all[j], 1, MPI_UNSIGNED, 
+                                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
         
     }
@@ -1505,6 +1505,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
+    std::vector<MPI_Request> outreqs;
+    std::vector<MPI_Request> inreqs;
+    MPI_Request request;
+    MPI_Status status;
+    
     //Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -1512,16 +1517,53 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         {
             auto &outbox = outboxes[r];
             uint32_t outbox_size = outbox.size();
-            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, 0, &inbox_sizes[r], 1, MPI_UNSIGNED, 
-                                                        r, 0, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
+                                                        r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
     
     Env::barrier();
-    std::vector<MPI_Request> outreqs;
-    std::vector<MPI_Request> inreqs;
-    MPI_Request request;
-    MPI_Status status;
+    
+    /*
+    for (uint32_t j = 0; j < nrowgrps_; j++)
+    {
+        uint32_t r = leader_ranks[j];
+        //if(!Env::rank)
+        //printf("%d %d %d %d\n", Env::rank, j, r, owned_segment);
+        //if (j == owned_segment)
+          //  MPI_Bcast(&nnz_sizes_all[j], 1, MPI_UNSIGNED, r, Env::MPI_WORLD);
+        //
+        if (r == Env::rank)
+        {
+            for (uint32_t i = 0; i < nrowgrps_; i++)
+            {
+                uint32_t k = leader_ranks[i];
+                if (k != Env::rank)
+                {
+                    auto &outbox = outboxes[r];
+                    uint32_t outbox_size = outbox.size();   
+                    MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, k, j, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+        }
+        else
+        {
+            
+            MPI_Irecv(&&inbox_sizes[r], 1, MPI_UNSIGNED, r, j, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
+       
+    }
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    */
+    
+    
+
      
 
     for (uint32_t i = 0; i < Env::nranks; i++)
