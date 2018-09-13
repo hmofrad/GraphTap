@@ -1531,7 +1531,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
     std::vector<MPI_Request> in_requests;
     MPI_Request request;
     MPI_Status status;
-    /*
+    
     //Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -1543,10 +1543,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    
     Env::barrier();
-    */
     
+    /*
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         //uint32_t r = leader_ranks[j];
@@ -1582,7 +1581,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
-    
+    */
     
     
 
