@@ -1603,7 +1603,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     if(Env::is_master)
         printf("Sanity check for exchanging %lu edges is done\n", nedges_end_global);
     
-    int retval = MPI_Type_free(&MANY_TRIPLES);
+    auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
     //Env::barrier();
 }
