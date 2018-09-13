@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSR_;
     Filtering_type FT = _SRCS_;
     bool parread = true;
     
@@ -181,6 +181,7 @@ int main(int argc, char **argv)
     Env::finalize();
     return(0);
     */
+    
     //sleep(3);
     G.free();
     Env::barrier(); 
