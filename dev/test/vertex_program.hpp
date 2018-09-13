@@ -672,6 +672,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         Env::exit(1);
     }
     //printf("bcast %d\n", Env::rank);
+    int retval = MPI_Type_free(&T);
 }                   
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1304,6 +1305,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     t2 = Env::clock();
     if(!Env::rank)
         printf("combine wait: %f\n", t2 - t1);
+    int retval = MPI_Type_free(&T);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
