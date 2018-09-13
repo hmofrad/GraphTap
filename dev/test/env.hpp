@@ -188,8 +188,8 @@ void Env::finalize()
         MPI_Group_free(&colgrps_group);
         MPI_Comm_free(&colgrps_comm);
     }
-    
-    MPI_Finalize();
+    int ret = MPI_Finalize();
+    assert(ret == MPI_SUCCESS);
 }
 
 void Env::exit(int code)
@@ -201,7 +201,6 @@ void Env::exit(int code)
 void Env::barrier()
 {
     MPI_Barrier(MPI_WORLD);
-    
 }
 
 void Env::affinity()
@@ -214,7 +213,7 @@ void Env::affinity()
     MPI_Gather(&core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
   
     int core_name_len = strlen(Env::core_name);
-    std::vector<int> recvcounts(Env::nranks);
+    //std::vector<int> recvcounts(Env::nranks);
   
     int max_length = 0;
     MPI_Allreduce(&core_name_len, &max_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
