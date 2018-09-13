@@ -586,28 +586,33 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
             /* We do not keep iterating as the ranks in row/col groups are the same */
         }
     }
+    
 
-    // Optimization: Spilitting communicator among row/col groups   
-    if(Env::comm_split)
+    // Optimization: Spilitting communicator among row/col groups       
+    indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
+    indexed_sort(all_rowgrp_ranks_rg, all_rowgrp_ranks_accu_seg_rg);
+    // Make sure there is at least one follower
+    if(follower_rowgrp_ranks.size() > 1)
     {
-        indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
-        indexed_sort(all_rowgrp_ranks_rg, all_rowgrp_ranks_accu_seg_rg);
+        indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
+        indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
+    }
+    indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
+    indexed_sort(all_colgrp_ranks_cg, all_colgrp_ranks_accu_seg_cg);
+    // Make sure there is at least one follower
+    if(follower_colgrp_ranks.size() > 1)
+    {
+        indexed_sort(follower_colgrp_ranks, follower_colgrp_ranks_accu_seg);
+        indexed_sort(follower_colgrp_ranks_cg, follower_colgrp_ranks_accu_seg_cg);
+    }
+
+    if(Env::comm_split and not Env::get_comm_split())
+    {
+        //if(!Env::rank)
+            //printf("+++++++++++++++++++++++==comm_split+++++++++++++++++++++++++++\n");
         Env::rowgrps_init(all_rowgrp_ranks, tiling->rowgrp_nranks);
-        // Make sure there is at least one follower
-        if(follower_rowgrp_ranks.size() > 1)
-        {
-            indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
-            indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
-        }
-        
-        indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
-        indexed_sort(all_colgrp_ranks_cg, all_colgrp_ranks_accu_seg_cg);
         Env::colgrps_init(all_colgrp_ranks, tiling->colgrp_nranks);
-        if(follower_colgrp_ranks.size() > 1)
-        {
-            indexed_sort(follower_colgrp_ranks, follower_colgrp_ranks_accu_seg);
-            indexed_sort(follower_colgrp_ranks_cg, follower_colgrp_ranks_accu_seg_cg);
-        }
+        Env::set_comm_split();
     }
  
     // Calculate accumulator segments for X and Y
@@ -1522,8 +1527,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
         }
     }
     
-    std::vector<MPI_Request> outreqs;
-    std::vector<MPI_Request> inreqs;
+    std::vector<MPI_Request> out_requests;
+    std::vector<MPI_Request> in_requests;
     MPI_Request request;
     MPI_Status status;
     /*
@@ -1560,7 +1565,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
                     auto &outbox = outboxes[i];
                     uint32_t outbox_size = outbox.size();   
                     MPI_Isend(&outbox_size, 1, MPI_UNSIGNED, i, Env::rank, Env::MPI_WORLD, &request);
-                    outreqs.push_back(request);
+                    out_requests.push_back(request);
                 }
             }
         }
@@ -1568,15 +1573,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
         {
             
             MPI_Irecv(&inbox_sizes[r], 1, MPI_UNSIGNED, r, r, Env::MPI_WORLD, &request);
-            inreqs.push_back(request);
+            in_requests.push_back(request);
         }
        
     }
     
-    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
-    inreqs.clear();
-    MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);
-    outreqs.clear();
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
     
     
     
@@ -1597,7 +1602,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
             //MPI_Send(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD);
             MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
             //MPI_Wait(&request, &status);
-            outreqs.push_back(request);
+            out_requests.push_back(request);
         }
     }     
      
@@ -1617,7 +1622,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
             MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
             //MPI_Wait(&request, &status);
 
-            inreqs.push_back(request);
+            in_requests.push_back(request);
         }
     }
 
@@ -1633,8 +1638,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
 
 
     
-    MPI_Waitall(inreqs.size(), inreqs.data(), MPI_STATUSES_IGNORE);
-    inreqs.clear();
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
 
 
     //Env::barrier();
@@ -1655,8 +1660,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute  ()
         }
     }
     
-     MPI_Waitall(outreqs.size(), outreqs.data(), MPI_STATUSES_IGNORE);   
-    outreqs.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    out_requests.clear();
     Env::barrier();    
     
 
