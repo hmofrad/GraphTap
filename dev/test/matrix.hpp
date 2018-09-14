@@ -248,11 +248,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::test(const struct Triple<Wei
     uint32_t t = (pair.row * tiling->ncolgrps) + pair.col;
     if(not (std::find(local_tiles.begin(), local_tiles.end(), t) != local_tiles.end()))
     {
-        fprintf(stderr, "Local tiles[r=%d]: ", Env::rank);
-        for(uint32_t i : local_tiles)
-            fprintf(stderr, " %d ", i);
-        fprintf(stderr, "\n");
-        fprintf(stderr, "Invalid[t=%d]: Tile[%d][%d] [%d %d]\n", t, pair.row, pair.col, triple.row, triple.col);
+        //fprintf(stderr, "Local tiles[r=%d]: ", Env::rank);
+        //for(uint32_t i : local_tiles)
+        //    fprintf(stderr, " %d ", i);
+        //fprintf(stderr, "\n");
+        printf("Invalid[r=%d,t=%d]: Tile[%d][%d] [%d %d]\n", Env::rank, t, pair.row, pair.col, triple.row, triple.col);
+        fprintf(stderr, "Invalid[r=%d,t=%d]: Tile[%d][%d] [%d %d]\n", Env::rank, t, pair.row, pair.col, triple.row, triple.col);
         Env::exit(1);
     }
 }
