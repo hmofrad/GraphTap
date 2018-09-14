@@ -352,11 +352,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
 {
     //printf("X %d\n", Env::rank);
     std::vector<Integer_Type> x_sizes;
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
+    if(filtering_type == _NONE_)
     {
         x_sizes.resize(rank_ncolgrps, tile_height);
     }
-    else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
+    else if(filtering_type == _SOME_)
     {
         x_sizes = A->nnz_col_sizes_loc;
     }
@@ -365,7 +365,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     
     //if(!Env::rank)
     //    printf("X: %lu %lu\n", x_sizes.size(), local_col_segments.size());
-    std::vector<Integer_Type> v_s_size(1, tile_height);     
+    std::vector<Integer_Type> v_s_size;
+    if(filtering_type == _NONE_)
+    {
+        v_s_size.resize(1, tile_height);     
+    }
+    else if(filtering_type == _SOME_)
+    {
+        v_s_size.resize(1, A->nnz_col_sizes_loc[accu_segment_col]);
+    }
     
     V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_col_vec);
     populate(V, v);
@@ -394,12 +402,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     {
         y_size.clear();
         y_sizes.clear();
-        if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
+        if(filtering_type == _NONE_)
         {
             y_size.resize(1, tile_height);
             y_sizes.resize(rowgrp_nranks, tile_height);
         }
-        else if((filtering_type == _SRCS_) or (filtering_type == _BOTH_))
+        else if(filtering_type == _SOME_)
         {
             y_size.resize(1, A->nnz_row_sizes_loc[j]);
             y_sizes.resize(rowgrp_nranks, A->nnz_row_sizes_loc[j]);    
@@ -416,9 +424,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         //if(!Env::rank)
         //    printf("Y: %d %lu %lu %lu %lu\n", local_row_segments[j] == owned_segment, y_size.size(), accu_segment_row_vec.size(), y_sizes.size(), all_rowgrp_ranks_accu_seg.size());
     }
-    
-    
-    
 }
 
 
@@ -445,13 +450,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
     Integer_Type s_nitems = s_seg.D->n;
     Integer_Type s_nbytes = s_seg.D->nbytes;
 
-    /*
+    
     for(uint32_t i = 0; i < x_nitems; i++)
     {
         x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
     }
-    */
-
+    
+    /*
     if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -478,7 +483,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
             }
         }
     }
-    
+    */
     
     MPI_Request request;
     uint32_t follower, accu;
@@ -594,29 +599,36 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     Integer_Type s_nitems = s_seg.D->n;
     Integer_Type s_nbytes = s_seg.D->nbytes;
     
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
+    for(uint32_t i = 0; i < v_nitems; i++)
     {
+        x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+    }
+    
+    /*
+    if(filtering_type == _NONE_)
+    {
+        
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
         //printf("%d %d %d\n", x_nitems, tile_height, v_nitems);
     }
-    else if((filtering_type == _SNKS_) or (filtering_type == _BOTH_))
+    else if(filtering_type == _SOME_)
     {
         uint32_t jo = accu_segment_col;
         auto &j_seg = J->segments[jo];
         auto *j_data = (char *) j_seg.D->data;
         Integer_Type j_nitems = j_seg.D->n;
         Integer_Type j_nbytes = j_seg.D->nbytes;
-        
+        */
         /*
         for(uint32_t i = 0; i < c_nitems; i++)
         {
             x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
         }
         */
-        
+        /*
         Integer_Type j  = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -626,7 +638,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
                 j++;
             }
         }
-        
+        */
         /*
         Integer_Type j  = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -637,7 +649,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
             }
         }
         */
-    }
+    //}
     
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW) 
@@ -1207,7 +1219,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         //printf("x_seg %d\n", Env::rank);
         auto &x_seg = X->segments[xi];
         //printf("x_seg %d\n", Env::rank);
-        
+        spmv(y_seg, x_seg, tile);
+        /*
         if(filtering_type == _NONE_)
         {
             spmv(y_seg, x_seg, tile);
@@ -1248,7 +1261,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
             
             spmv(y_seg, x_seg, tile, r_seg, i_seg, iv_seg, c_seg, j_seg, jv_seg);
         }
-        
+        */
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
