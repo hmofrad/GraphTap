@@ -11,8 +11,10 @@
  
 enum Compression_type
 {
-  _CSR_,
-  _CSC_
+  _CSR_, // Compressed Sparse Row
+  _CSC_, // Compressed Sparse Col
+  _TCSR_,// Triply Compressed Sparse Row
+  _TCSC_ // triply Compressed Sparse Col
 };
  
 #include "basic_storage.hpp"
