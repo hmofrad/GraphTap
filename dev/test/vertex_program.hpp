@@ -68,6 +68,8 @@ class Vertex_Program
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
         void clear(Vector<Weight, Integer_Type, Fractional_Type> *vec);
         void wait_for_all();
+        void wait_for_sends();
+        void wait_for_recvs();
         void optimized_1d_row();
         void optimized_1d_col();
         void optimized_2d();
@@ -330,19 +332,27 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src)
 {
-    for(uint32_t i = 0; i < vec_src->vector_length; i++)
-    {
-        auto &seg_src = vec_src->segments[i];
-        auto *data_src = (Fractional_Type *) seg_src.D->data;
-        Integer_Type nitems_src = seg_src.D->n;
-        Integer_Type nbytes_src = seg_src.D->nbytes;
+    //if(filtering_type == _NONE_)
+    //{
+        for(uint32_t i = 0; i < vec_src->vector_length; i++)
+        {
+            auto &seg_src = vec_src->segments[i];
+            auto *data_src = (Fractional_Type *) seg_src.D->data;
+            Integer_Type nitems_src = seg_src.D->n;
+            Integer_Type nbytes_src = seg_src.D->nbytes;
+            
+            auto &seg_dst = vec_dst->segments[i];
+            auto *data_dst = (Fractional_Type *) seg_dst.D->data;
+            Integer_Type nitems_dst = seg_dst.D->n;
+            Integer_Type nbytes_dst = seg_dst.D->nbytes;
+            memcpy(data_dst, data_src, nbytes_src);
+        }
+    //}
+    //else if(filtering_type == _SOME_)
+    //{
         
-        auto &seg_dst = vec_dst->segments[i];
-        auto *data_dst = (Fractional_Type *) seg_dst.D->data;
-        Integer_Type nitems_dst = seg_dst.D->n;
-        Integer_Type nbytes_dst = seg_dst.D->nbytes;
-        memcpy(data_dst, data_src, nbytes_src);
-    }
+        
+    //}
 }
 
 
@@ -350,7 +360,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
      Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
-    //printf("X %d\n", Env::rank);
+    //printf("X %d\n", Env::rank);//
     std::vector<Integer_Type> x_sizes;
     if(filtering_type == _NONE_)
     {
@@ -365,6 +375,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     
     //if(!Env::rank)
     //    printf("X: %lu %lu\n", x_sizes.size(), local_col_segments.size());
+
+    std::vector<Integer_Type> v_s_size = {tile_height};
+    /*
     std::vector<Integer_Type> v_s_size;
     if(filtering_type == _NONE_)
     {
@@ -372,18 +385,84 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     }
     else if(filtering_type == _SOME_)
     {
-        v_s_size.resize(1, A->nnz_col_sizes_loc[accu_segment_col]);
+        v_s_size.resize(1, A->nnz_row_sizes_loc[accu_segment_row]);
     }
+    */
     
-    V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_col_vec);
+    V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
     populate(V, v);
     //printf("S %d\n", Env::rank);
-    S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_col_vec);
+    S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
     if(VProgram)
     {
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
         Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
         populate(S, V_);
+        /*
+        uint32_t so = 0;
+        auto &s_seg = S->segments[so];
+        auto *s_data = (Fractional_Type *) s_seg.D->data;
+        Integer_Type s_nitems = s_seg.D->n;
+        
+        uint32_t vo = 0;
+        auto &v_seg = VP->V->segments[so];
+        auto *v_data = (Fractional_Type *) v_seg.D->data;
+        Integer_Type v_nitems = v_seg.D->n;
+        
+        uint32_t yo = accu_segment_row;
+        
+        auto &r_seg = R->segments[yo];
+        auto *r_data = (Integer_Type *) r_seg.D->data;
+        Integer_Type r_nitems = r_seg.D->n;
+        
+        auto &i_seg = I->segments[yo];
+        auto *i_data = (char *) i_seg.D->data;
+        Integer_Type i_nitems = i_seg.D->n;
+        
+        auto &iv_seg = IV->segments[yo];
+        auto *iv_data = (Integer_Type *) iv_seg.D->data;
+        Integer_Type iv_nitems = iv_seg.D->n;
+        
+        uint32_t xo = accu_segment_col;
+        
+        auto &c_seg = C->segments[xo];
+        auto *c_data = (Integer_Type *) c_seg.D->data;
+        Integer_Type c_nitems = c_seg.D->n;
+        
+        auto &j_seg = J->segments[xo];
+        auto *j_data = (char *) j_seg.D->data;
+        Integer_Type j_nitems = j_seg.D->n;
+        
+        auto &jv_seg = JV->segments[xo];
+        auto *jv_data = (Integer_Type *) jv_seg.D->data;
+        Integer_Type jv_nitems = jv_seg.D->n;
+        
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            printf("%f ", v_data[i]);
+        }
+        printf(" %d %d\n", v_nitems, r_nitems);
+        
+        Integer_Type k = 0;
+        for(uint32_t i = 0; i < s_nitems; i++)
+        {
+            //printf("[%d %d %d %d]", i, c_data[i], i_data[c_data[i]], iv_data[c_data[i]]);//, j_data[r_data[i]]);
+            printf("[%d %d %d %d]", i, r_data[i], i_data[r_data[i]], j_data[r_data[i]]);//, j_data[c_data[i]], jv_data[c_data[i]]);//, j_data[r_data[i]]);
+            
+            if(j_data[r_data[i]])
+            {
+               // printf("????\n");
+                k = jv_data[r_data[i]];
+                    
+                s_data[i] = v_data[k];
+            }
+            else
+               s_data[i] = s;
+           
+            //x_data[i] = 1;
+        }
+        */
+        
     }
     else
     {
@@ -599,9 +678,70 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     Integer_Type s_nitems = s_seg.D->n;
     Integer_Type s_nbytes = s_seg.D->nbytes;
     
-    for(uint32_t i = 0; i < v_nitems; i++)
+    
+    if(filtering_type == _NONE_)
     {
-        x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+        for(uint32_t i = 0; i < x_nitems; i++)
+        {
+            x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+        }
+    }
+    else if(filtering_type == _SOME_)
+    {
+        uint32_t yo = accu_segment_row;
+                        
+        //auto &r_seg = R->segments[yo];
+        //auto *r_data = (Integer_Type *) r_seg.D->data;
+        //Integer_Type r_nitems = r_seg.D->n;
+        
+        auto &i_seg = I->segments[yo];
+        auto *i_data = (char *) i_seg.D->data;
+        Integer_Type i_nitems = i_seg.D->n;
+
+        auto &iv_seg = IV->segments[yo];
+        auto *iv_data = (Integer_Type *) iv_seg.D->data;
+        Integer_Type iv_nitems = iv_seg.D->n;
+        
+        auto &c_seg = C->segments[xo];
+        auto *c_data = (Integer_Type *) c_seg.D->data;
+        Integer_Type c_nitems = c_seg.D->n;
+        
+        //uint32_t xo = accu_segment_col;
+        //auto &j_seg = J->segments[xo];
+        //char *j_data = (char *) j_seg.D->data;
+        //Integer_Type j_nitems = j_seg.D->n;
+
+        //auto &jv_seg = JV->segments[xo];
+        //auto *jv_data = (Integer_Type *) jv_seg.D->data;
+        //Integer_Type jv_nitems = jv_seg.D->n;
+        
+        Integer_Type k = 0;
+        //Integer_Type k1 = 0;
+        
+        for(uint32_t i = 0; i < x_nitems; i++)
+        {
+            //printf("[%d %d %d %d]", i, c_data[i], i_data[c_data[i]], iv_data[c_data[i]]);//, j_data[r_data[i]]);
+            //if(i_data[c_data[i]])
+            //{
+                //if(i_data[r_data[i]])
+                //{
+                    //k = iv_data[c_data[i]];
+                    
+                    x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
+                //}
+            //}
+            //else
+              //  x_data[i] = (*f)(0, 0, 0, 0);
+            //x_data[i] = 1;
+        }
+        //printf("\n");
+        
+        /*
+        for(uint32_t i = 0; i < x_nitems; i++)
+        {
+            x_data[i] = 1;
+        }
+        */
     }
     
     /*
@@ -711,10 +851,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
             Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
             Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
+            //uint32_t n = 0;
             if(ordering_type == _ROW_)
             {
                 for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                 {
+                    //printf("%d: ", i);
                     for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                     {       
                         #ifdef HAS_WEIGHT
@@ -723,9 +865,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         if(x_data[JA[j]])
                             y_data[i] += x_data[JA[j]];
-                        #endif                        
+                        #endif   
+                        //n++;
+                        //if(!x_data[JA[j]])
+                        //{
+                            //printf("[%d %d %f]", j, JA[j], x_data[JA[j]]);
+                          //  Env::exit(1);
+                        //}
+                    
                     }
+                    //printf("\n");                        
                 }
+                //printf("%d %d %d\n", Env::rank, tile.kth, n);  
             }
             else if(ordering_type == _COL_)
             {
@@ -1327,10 +1478,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         printf("combine spmv: %f\n", t2 - t1);
     
     t1 = Env::clock();
-    wait_for_all();
+    //wait_for_all();
+    wait_for_recvs();
     t2 = Env::clock();
     if(!Env::rank)
-        printf("combine wait: %f\n", t2 - t1);
+        printf("combine recv wait: %f\n", t2 - t1);
     //int retval = MPI_Type_free(&T);
 }
 
@@ -1385,6 +1537,39 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     Integer_Type v_nitems = v_seg.D->n;
     Integer_Type v_nbytes = v_seg.D->nbytes;
     
+    
+    
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            v_data[i] = (*f)(0, y_data[i], 0, 0); 
+        }
+    }
+    else if(filtering_type == _SOME_)
+    {
+        yo = accu_segment_row;
+        auto &r_seg = R->segments[yo];
+        auto *r_data = (Integer_Type *) r_seg.D->data;
+        Integer_Type r_nitems = r_seg.D->n;
+        
+        auto &i_seg = I->segments[yo];
+        auto *i_data = (char *) i_seg.D->data;
+        Integer_Type i_nitems = i_seg.D->n;
+
+        auto &iv_seg = IV->segments[yo];
+        auto *iv_data = (Integer_Type *) iv_seg.D->data;
+        Integer_Type iv_nitems = iv_seg.D->n;
+
+        
+        for(uint32_t i = 0; i < y_nitems; i++)
+        {
+            
+            v_data[r_data[i]] = (*f)(0, y_data[i], 0, 0);
+        }
+    }
+        
+    /*
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -1413,7 +1598,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         }
     }
     //printf("%d %d %d\n", Env::rank, v_nitems, i_nitems);
-    
+    */
+    wait_for_sends();
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
         clear(Y[i]);
     
@@ -1426,6 +1612,21 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
+    Env::barrier();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_recvs()
+{
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_sends()
+{
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
     Env::barrier();
 }
 
@@ -1605,19 +1806,61 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
         printf("Score checksum: %lu\n", s_gloabl);
     
     
-    uint32_t NUM = 31;
-    uint32_t count = v_nitems < NUM ? v_nitems : NUM;
-    if(!Env::rank)
-    {
-        Triple<Weight, Integer_Type> pair, pair1;
-        for(uint32_t i = 0; i < count; i++)
+    //if(filtering_type == _NONE_)
+    //{
+        uint32_t NUM = 31;
+        uint32_t count = v_nitems < NUM ? v_nitems : NUM;
+        if(!Env::rank)
         {
-            pair.row = i;
-            pair.col = 0;
-            pair1 = A->base(pair, owned_segment, owned_segment);
-            printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
-        }  
+            Triple<Weight, Integer_Type> pair, pair1;
+            for(uint32_t i = 0; i < count; i++)
+            {
+                pair.row = i;
+                pair.col = 0;
+                pair1 = A->base(pair, owned_segment, owned_segment);
+                printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+            }  
+        }
+    //}
+    /*
+    else if(filtering_type == _SOME_)
+    {
+        
+        uint32_t yo = accu_segment_row;
+        auto &r_seg = R->segments[yo];
+        auto *r_data = (Integer_Type *) r_seg.D->data;
+        Integer_Type r_nitems = r_seg.D->n;
+        
+        auto &i_seg = I->segments[yo];
+        char *i_data = (char *) i_seg.D->data;
+        Integer_Type i_nitems = i_seg.D->n;
+
+        auto &iv_seg = IV->segments[yo];
+        auto *iv_data = (Integer_Type *) iv_seg.D->data;
+        Integer_Type iv_nitems = iv_seg.D->n;
+        
+        uint32_t NUM = 31;
+        uint32_t count = i_nitems < NUM ? i_nitems : NUM;
+        if(!Env::rank)
+        {
+            Triple<Weight, Integer_Type> pair, pair1;
+            for(uint32_t i = 0; i < count; i++)
+            {
+                //printf("%d %d\n", i, i_data[i]);
+                pair.row = i;
+                pair.col = 0;
+                pair1 = A->base(pair, owned_segment, owned_segment);
+                if(i_data[i])
+                    printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, pair1.row, v_data[iv_data[i]], pair1.row, s_data[iv_data[i]]);
+                else
+                    printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, pair1.row, .0, pair1.row, .0);
+            }  
+        }
     }
+    */
+    
+    
+    
 }
 
 
