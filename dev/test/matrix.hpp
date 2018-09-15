@@ -161,6 +161,7 @@ class Matrix
         void del_csc();
         void del_dcsr();
         void del_compression();
+        void del_filtering();
         void print(std::string element);
         void distribute();
         void filter(Filtering_type filtering_type_);
@@ -903,6 +904,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
        if(Env::is_master)
             printf("Vertex filtering: Skipped filtering\n");
     }
+    /*
     else if(filtering_type == _SRCS_)
     {
         if(Env::is_master)
@@ -926,6 +928,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         filter(_SRCS_);
         filter(_SNKS_);
     }
+    */
     else if(filtering_type == _SOME_)
     {
         if(Env::is_master)
@@ -2319,6 +2322,31 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_csc()
 }
 */
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
+{
+    if(filtering_type == _SOME_)
+    {
+        R->del_vec();
+        delete R;
+        
+        I->del_vec();
+        delete I;
+        
+        IV->del_vec();
+        delete IV;
+        
+        C->del_vec();
+        delete C;
+        
+        J->del_vec();
+        delete J;
+        
+        JV->del_vec();
+        delete JV;   
+    }
+    
+}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
