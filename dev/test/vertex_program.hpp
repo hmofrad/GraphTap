@@ -1478,8 +1478,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         printf("combine spmv: %f\n", t2 - t1);
     
     t1 = Env::clock();
-    //wait_for_all();
-    wait_for_recvs();
+    wait_for_all();
+    //wait_for_recvs();
     t2 = Env::clock();
     if(!Env::rank)
         printf("combine recv wait: %f\n", t2 - t1);
@@ -1548,16 +1548,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     else if(filtering_type == _SOME_)
     {
-        yo = accu_segment_row;
-        auto &r_seg = R->segments[yo];
+        yi = accu_segment_row;
+        auto &r_seg = R->segments[yi];
         auto *r_data = (Integer_Type *) r_seg.D->data;
         Integer_Type r_nitems = r_seg.D->n;
         
-        auto &i_seg = I->segments[yo];
+        auto &i_seg = I->segments[yi];
         auto *i_data = (char *) i_seg.D->data;
         Integer_Type i_nitems = i_seg.D->n;
 
-        auto &iv_seg = IV->segments[yo];
+        auto &iv_seg = IV->segments[yi];
         auto *iv_data = (Integer_Type *) iv_seg.D->data;
         Integer_Type iv_nitems = iv_seg.D->n;
 
@@ -1567,6 +1567,21 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             
             v_data[r_data[i]] = (*f)(0, y_data[i], 0, 0);
         }
+       
+        /*
+        Integer_Type j = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(i_data[i])
+            {
+                v_data[i] = (*f)(0, y_data[j], 0, 0);
+                j++;
+            }
+            else
+                v_data[i] = (*f)(0, 0, 0, 0);
+        }
+        */
+        
     }
         
     /*
@@ -1599,10 +1614,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     //printf("%d %d %d\n", Env::rank, v_nitems, i_nitems);
     */
-    wait_for_sends();
+    //wait_for_sends();
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
         clear(Y[i]);
-    
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1627,7 +1642,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_sends()
 {
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
-    Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
