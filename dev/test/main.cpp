@@ -99,27 +99,28 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
 
-
+    
 
     
     Vertex_Program<wp, ip, fp> V(G, OT);
     
     
-        
+    
     
     
     
     fp x = 0, y = 0, v = 0, s = 0;
     V.init(x, y, v, s);
-    
-    /*
+/*    
     Env::barrier();
-    
     V.free();
     G.free();
     Env::finalize();
-    return(0);    
-*/
+    return(0);   
+*/    
+    
+   
+
     
     Generic_functions f;
     
@@ -140,27 +141,34 @@ int main(int argc, char **argv)
         V.gather();
     }
     
-
+    /*
+    Env::barrier();
     
+    V.free();
+    G.free();
+    Env::finalize();
+    return(0); 
+    */
     
     if(!Env::rank)
         printf("combine\n");
     V.combine();
 
-/*    
-    G.free();
-    Env::barrier(); 
-    //Env::barrier();
-    V.free();
+   /*
+
+    */
     
-    Env::finalize();
-    return(0);
-*/
     if(!Env::rank)
         printf("apply\n");
     V.apply(f.assign);
 
-    
+    /*
+    V.free();
+    G.free();
+    Env::barrier(); 
+    Env::finalize();
+    return(0);
+    */
     //V.checksumPR();
     
 
@@ -173,11 +181,10 @@ int main(int argc, char **argv)
         Env::tock("Degree");
     
     /*
+    V.free();
     G.free();
     Env::barrier(); 
     //Env::barrier();
-    V.free();
-    
     Env::finalize();
     return(0);
     */
@@ -210,6 +217,16 @@ int main(int argc, char **argv)
         Env::tock("Init"); 
     
     V.free();
+    //G.free();
+    
+    /*
+    G.free();
+    Env::barrier(); 
+    //Env::barrier();
+    V.free();
+    Env::finalize();
+    return(0);
+    */
     
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
@@ -280,7 +297,6 @@ int main(int argc, char **argv)
     Env::barrier();
     VR.free();
     GR.free();
-    //G.free();
     Env::finalize();
     return(0);
 }
