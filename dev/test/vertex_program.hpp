@@ -691,13 +691,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
     
     if(filtering_type == _NONE_)
     {
-        for(uint32_t i = 0; i < x_nitems; i++)
+        for(uint32_t i = 0; i < v_nitems; i++)
         {
             x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
     else if(filtering_type == _SOME_)
     {
+        uint32_t xo = accu_segment_col;
         uint32_t yo = accu_segment_row;
                         
         //auto &r_seg = R->segments[yo];
@@ -716,18 +717,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         auto *c_data = (Integer_Type *) c_seg.D->data;
         Integer_Type c_nitems = c_seg.D->n;
         
-        //uint32_t xo = accu_segment_col;
-        //auto &j_seg = J->segments[xo];
-        //char *j_data = (char *) j_seg.D->data;
-        //Integer_Type j_nitems = j_seg.D->n;
+        //
+        auto &j_seg = J->segments[xo];
+        char *j_data = (char *) j_seg.D->data;
+        Integer_Type j_nitems = j_seg.D->n;
 
-        //auto &jv_seg = JV->segments[xo];
-        //auto *jv_data = (Integer_Type *) jv_seg.D->data;
-        //Integer_Type jv_nitems = jv_seg.D->n;
+        auto &jv_seg = JV->segments[xo];
+        auto *jv_data = (Integer_Type *) jv_seg.D->data;
+        Integer_Type jv_nitems = jv_seg.D->n;
         
+        /*
         Integer_Type j = 0;
-        //Integer_Type k1 = 0;
-        
         for(uint32_t i = 0; i < x_nitems; i++)
         {
             //printf("[%d %d %d %d]", i, c_data[i], i_data[c_data[i]], iv_data[c_data[i]]);//, j_data[r_data[i]]);
@@ -737,6 +737,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
                 //{
                     //k = iv_data[c_data[i]];
                     //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+                    //assert(jv_data[c_data[i]] != NA);
                     x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
                     //assert(iv_data[i] == c_data[i]);
                     //j++;
@@ -746,18 +747,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
               //  x_data[i] = (*f)(0, 0, 0, 0);
             //x_data[i] = 1;
         }
+        */
         
-        /*
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            if(i_data[i])
+            if(j_data[i])
             {
+                assert(jv_data[i] == j);
                 x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
                 j++;
             }               
         }
-        */
+        
         
         //printf("\n");
         
@@ -1586,30 +1588,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         auto *iv_data = (Integer_Type *) iv_seg.D->data;
         Integer_Type iv_nitems = iv_seg.D->n;
 
-        
+        /*
         for(uint32_t i = 0; i < y_nitems; i++)
         {
                                 
             //v_data[i] = (*f)(0, y_data[i], 0, 0);
+            assert(iv_data[i] != NA);
             v_data[r_data[i]] = (*f)(0, y_data[i], 0, 0);
+            
             //if(!Env::rank)
             //    printf("%d %d %d %d %f %f\n", i, r_data[i], tile_height, y_nitems, y_data[i], v_data[r_data[i]]);
         }
+        */
        
-        /*
+        
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             if(i_data[i])
             {
-                v_data[i] = (*f)(0, y_data[j], 0, 0);
                 assert(iv_data[i] == j);
+                v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
             }
             else
                 v_data[i] = (*f)(0, 0, 0, 0);
         }
-        */
+        
         
     }
         
