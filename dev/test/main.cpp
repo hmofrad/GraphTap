@@ -84,8 +84,8 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
-    Compression_type CT = _CSR_;
-    Filtering_type FT = _NONE_;
+    Compression_type CT = _CSC_;
+    Filtering_type FT = _SOME_;
     bool parread = true;
     
 
