@@ -362,6 +362,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
 {
     //printf("X %d\n", Env::rank);//
     std::vector<Integer_Type> x_sizes;
+    //x_sizes.resize(rank_ncolgrps, tile_height);
+    
     if(filtering_type == _NONE_)
     {
         x_sizes.resize(rank_ncolgrps, tile_height);
@@ -370,6 +372,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     {
         x_sizes = A->nnz_col_sizes_loc;
     }
+    
     X = new Vector<Weight, Integer_Type, Fractional_Type>(x_sizes,  local_col_segments);
     populate(X, x);
     
@@ -377,6 +380,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     //    printf("X: %lu %lu\n", x_sizes.size(), local_col_segments.size());
 
     std::vector<Integer_Type> v_s_size = {tile_height};
+    //std::vector<Integer_Type> v_s_size(1,tile_height);
     /*
     std::vector<Integer_Type> v_s_size;
     if(filtering_type == _NONE_)
@@ -481,16 +485,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     {
         y_size.clear();
         y_sizes.clear();
+        //y_size = {tile_height};
+        //y_sizes.resize(rowgrp_nranks, tile_height);
+        
         if(filtering_type == _NONE_)
         {
             y_size.resize(1, tile_height);
+            //y_size = {tile_height};
             y_sizes.resize(rowgrp_nranks, tile_height);
         }
         else if(filtering_type == _SOME_)
         {
             y_size.resize(1, A->nnz_row_sizes_loc[j]);
+            //y_size = {A->nnz_row_sizes_loc[j]};
             y_sizes.resize(rowgrp_nranks, A->nnz_row_sizes_loc[j]);    
         }
+        
         if(local_row_segments[j] == owned_segment)
         {
             Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
@@ -726,7 +736,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
                 //if(i_data[r_data[i]])
                 //{
                     //k = iv_data[c_data[i]];
-                    
+                    //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
                     x_data[i] = (*f)(0, 0, v_data[c_data[i]], s_data[c_data[i]]);
                     //assert(iv_data[i] == c_data[i]);
                     //j++;
@@ -1576,14 +1586,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         auto *iv_data = (Integer_Type *) iv_seg.D->data;
         Integer_Type iv_nitems = iv_seg.D->n;
 
-        /*
+        
         for(uint32_t i = 0; i < y_nitems; i++)
         {
-            
+                                
+            //v_data[i] = (*f)(0, y_data[i], 0, 0);
             v_data[r_data[i]] = (*f)(0, y_data[i], 0, 0);
+            //if(!Env::rank)
+            //    printf("%d %d %d %d %f %f\n", i, r_data[i], tile_height, y_nitems, y_data[i], v_data[r_data[i]]);
         }
-       */
-        
+       
+        /*
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -1596,7 +1609,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             else
                 v_data[i] = (*f)(0, 0, 0, 0);
         }
-        
+        */
         
     }
         
@@ -1728,7 +1741,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 {
     //Env::barrier();
-    uint64_t v_sum_local = 0, v_sum_gloabl = 0;
+    double v_sum_local = 0, v_sum_gloabl = 0;
     uint32_t vo = 0;
     auto &v_seg = V->segments[vo];
     auto *v_data = (Fractional_Type *) v_seg.D->data;
@@ -1759,10 +1772,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     }
 //}
    // printf("r=%d r=%lu\n", Env::rank, v_sum_local);
-    MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+   
+    MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
-        printf("Degree checksum: %lu\n", v_sum_gloabl);
-    
+        printf("Degree checksum: %f\n", v_sum_gloabl);
+    //Env::barrier();
     /*  
     v_sum_local = 0, v_sum_gloabl = 0;
     
@@ -1831,7 +1845,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
     }
     
     
-    MPI_Allreduce(&s_local, &s_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&s_local, &s_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
     
