@@ -1955,6 +1955,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 i++;
                 //n++;
             }
+            //printf("1.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
+            while(j < r_nitems + 1)
+            {
+                j++;
+                IA[j] = IA[j - 1];
+            }
+            //printf("2.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
             
             //if(!Env::rank)
             //{
@@ -2126,6 +2133,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 ROW_INDEX[i] = iv_data[pair.row];
                 i++;
             }
+            while(j < c_nitems + 1)
+            {
+                j++;
+                COL_PTR[j] = COL_PTR[j - 1];
+            }
             /*
             if(Env::rank == 0)
             {
@@ -2213,7 +2225,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 i++;
             }
             
-            while(j < tile_height)
+            while(j < tile_height + 1)
             {
                 j++;
                 IA[j] = IA[j - 1];
@@ -2313,7 +2325,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 i++;
             }
             
-            while(j < tile_width)
+            while(j < tile_width + 1)
             {
                 j++;
                 COL_PTR[j] = COL_PTR[j - 1];
