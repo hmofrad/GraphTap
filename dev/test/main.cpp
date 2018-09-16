@@ -175,7 +175,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         printf("Checksum\n");        
     V.checksum();
-    //V.checksumPR();
+    V.checksumPR();
 
     if(!Env::rank)
         Env::tock("Degree");
