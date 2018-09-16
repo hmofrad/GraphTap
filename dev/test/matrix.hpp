@@ -1850,7 +1850,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         
-        uint32_t n = 0;
+        //printf(">>>%d %d\n", xi, C->vector_length);
+        
+        //uint32_t n = 0;
         if(tile.allocated)
         {
 
@@ -1858,7 +1860,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), r_nitems + 1);
             uint32_t i = 0; // CSR Index
             uint32_t j = 1; // Row index
-            uint32_t k = 0; // Row indirected index
+            auto &triple = tile.triples->at(0);
+            pair = rebase(triple);
+            //printf("%d %d %d %d %d %d\n", t, triple.row, triple.col, pair.row, pair.col, tile_width);
+            //exit(0);
+            //pair = rebase(triple);
+            uint32_t k = pair.row; // Row indirected index
             /* A hack over partial specialization because 
                we didn't want to duplicate the code for 
                Empty weights though! */
@@ -1869,7 +1876,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             Integer_Type *IA = (Integer_Type *) tile.csr->IA->data; // Rows
             Integer_Type *JA = (Integer_Type *) tile.csr->JA->data; // Cols
             IA[0] = 0;
-            for (auto& triple : *(tile.triples))
+            for (auto &triple : *(tile.triples))
             {
                 pair = rebase(triple);
                 //printf("r=%d c=%d r_i=%d c_i=%d\n", pair.row, pair.col, iv_data[pair.row], jv_data[pair.col]);
@@ -1892,11 +1899,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     j++;
                 }
                 */
-                
+                /*
                 if(iv_data[pair.row] > k)
                 {
                     IA[iv_data[pair.row] + 1] = IA[iv_data[pair.row]];
                     k = iv_data[pair.row];
+                    j++;
                     
                     //if(iv_data[pair.row] != k)
                     //{
@@ -1904,6 +1912,34 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     //    assert(iv_data[pair.row] == k);
                     //}
                 }
+                */
+                //if(Env::rank)
+                   // printf("1.rank = %d tile = %d row=%d row_iv=%d j=%d %d\n", Env::rank, t, pair.row, iv_data[pair.row], j, r_nitems); 
+                //while((j - 1) != pair.row)
+                while((j - 1) != iv_data[pair.row])
+                {
+                    //j = iv_data[pair.row];
+                    //k = iv_data[pair.row];
+                    j++;
+                    assert(j <= (r_nitems + 1));
+                    IA[j] = IA[j - 1];
+                    //assert(iv_data[pair.row] == (j - 1));
+                }  
+                //assert(iv_data[pair.row] == (j - 1));
+                
+                //if(Env::rank)
+                   // printf("2.rank = %d tile = %d row=%d row_iv=%d j=%d\n", Env::rank, t, pair.row, iv_data[pair.row], j); 
+                
+                
+               //if(!Env::rank and t == 0)
+                 //  printf("rank = %d tile = %d row=%d k = %d j=%d row_iv=%d\n", Env::rank, t, pair.row, k, j, iv_data[pair.row]); 
+                //    printf("tile = %d row=%d col=%d iv=%d jv=%d j=%d iv=%d k = %d %d\n", t, pair.row, pair.col, iv_data[pair.row], jv_data[pair.col], j, iv_data[pair.col] + 1, k, r_nitems);
+                
+                
+                
+                
+
+                
                 
                 // In case weights are there
                 #ifdef HAS_WEIGHT
@@ -1912,10 +1948,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 
                 //IA[k]++;
                 //k = iv_data[pair.row];
-                IA[iv_data[pair.row] + 1]++;
+                //IA[iv_data[pair.row] + 1]++;
+                IA[j]++;
+                //JA[i] = pair.col;    
                 JA[i] = jv_data[pair.col];    
                 i++;
-                n++;
+                //n++;
             }
             
             //if(!Env::rank)
@@ -1924,9 +1962,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 //Env::barrier();
                 //if(!Env::rank)
                    // printf("Edge compression: TCSR\n");
-                //if(Env::rank == 0)
-                //{
-                /*    
+               /*
+                if(Env::rank == 0)
+                {
+                  
                 printf("rank=%d tile=%d\n", Env::rank, t);
                 for(uint32_t i = 0; i < r_nitems; i++)
                 {
@@ -1937,8 +1976,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     }
                     printf("\n");
                 }
+                
+                }
                 */
-                //}
                 //Env::barrier();
                 
                 /*
@@ -1966,8 +2006,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             xi = 0;
             yi++;
         }  
+        
 //printf("%d %d %d\n", Env::rank, t, n);        
     }
+    printf("XXXXXXXXXXXX %d\n", Env::rank);
     
     //del_dcsr();
     //R, I, IV
@@ -2041,32 +2083,53 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             for (auto& triple : *(tile.triples))
             {
                 pair = rebase(triple);
+
                 /*
                 while((j - 1) != pair.col)
                 {
                     j++;
                     COL_PTR[j] = COL_PTR[j - 1];
                 }  
-                */     
-                if(jv_data[pair.col] > k)                
+                */
+                /*
+                if(pair.col > k)
+                //if(jv_data[pair.col] > k)                    
                 //if((k - 1) != jv_data[pair.col])
                 {
                     COL_PTR[jv_data[pair.col] + 1] = COL_PTR[jv_data[pair.col]];
-                    k = jv_data[pair.col];
+                    k = pair.col;
+                    //k = jv_data[pair.col];
                     //k++;
                 }
+                */
+                
+                while((j -1) != jv_data[pair.col])
+                {
+                    //k = pair.col;
+                    j++;
+                    COL_PTR[j] = COL_PTR[j - 1];
+                    
+                }  
+                
+      
+                
+                //if(!Env::rank)
+                //    printf("row=%d col=%d j=%d v=%d\n", pair.row, pair.col, j, jv_data[pair.col] + 1);
                 
                 // In case weights are there
                 #ifdef HAS_WEIGHT
                 VAL[i] = triple.weight;
                 #endif
                 
-                COL_PTR[jv_data[pair.col] + 1]++;
+                COL_PTR[j]++;
+                //COL_PTR[jv_data[pair.col] + 1]++;
                 ROW_INDEX[i] = iv_data[pair.row];
                 i++;
             }
             /*
-            printf("rank=%d tile=%d\n", Env::rank, t);
+            if(Env::rank == 0)
+            {
+            printf("rank=%d tile=%d j=%d cn=%d\n", Env::rank, t, j, c_nitems);
             for(uint32_t i = 0; i < c_nitems; i++)
             {
                 printf("%d: ", i);
@@ -2076,7 +2139,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 }
                 printf("\n");
             }
+            
+            }
             */
+            
             
         }
         
