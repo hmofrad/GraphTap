@@ -524,7 +524,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         if((std::count(line.cbegin(), line.cend(), ' ') + 1) != 2)
         #endif
         {
-            fprintf(stderr, "read() failure\n");
+            fprintf(stderr, "read() failure \"%s\"\n", line.c_str());
             Env::exit(1);
         }
         
