@@ -14,6 +14,8 @@
 #include "vector.hpp" 
 #include "types.hpp" 
 
+#define NA 0x7FFFFFFF
+
 enum Filtering_type
 {
   _SRCS_, // Rows
@@ -58,7 +60,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Tile2D<Weight, Integer_Type, Fractional_Type>::free_triples()
 {
     triples->clear();
-    triples->shrink_to_fit();
+    //triples->shrink_to_fit();
     delete triples;
     triples = nullptr;
 }
@@ -1287,7 +1289,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             else
             {
                 kj_data[i] = 0;
-                kvj_data[i] = 0; // Don't put -1 because Integer_Type might be unsigned int
+                kvj_data[i] = NA; // Don't put -1 because Integer_Type might be unsigned int
             }
         }
         assert(j == nnz_sizes_all[owned_segment]);
@@ -1818,7 +1820,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
     //if(!Env::rank)
         //printf("We are testing this\n");
     uint32_t yi = 0, xi = 0, next_row = 0;
-    
+    //uint32_t n = 0, m = 0;
     struct Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles_row_order)
     {        
@@ -1953,6 +1955,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 //JA[i] = pair.col;    
                 JA[i] = jv_data[pair.col];    
                 i++;
+                //if(jv_data[pair.col] == 0)
+                  //  n++;
+                
+                //if(iv_data[pair.row] == 0)
+                //    m++;
+                
                 //n++;
             }
             //printf("1.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
@@ -1961,6 +1969,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 j++;
                 IA[j] = IA[j - 1];
             }
+            //n = 0;
+            //m = 0;
+            //printf("r=%d t=%d n=%d m=%d\n", Env::rank, t, n, m);
             //printf("2.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
             
             //if(!Env::rank)
@@ -2016,7 +2027,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         
 //printf("%d %d %d\n", Env::rank, t, n);        
     }
-    printf("XXXXXXXXXXXX %d\n", Env::rank);
+    //printf("/XXXXXXXXXXXX %d\n", Env::rank);
     
     //del_dcsr();
     //R, I, IV
@@ -2132,6 +2143,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 //COL_PTR[jv_data[pair.col] + 1]++;
                 ROW_INDEX[i] = iv_data[pair.row];
                 i++;
+                assert(iv_data[pair.row] != NA);
+                assert(jv_data[pair.col] != NA);
             }
             while(j < c_nitems + 1)
             {
@@ -2223,6 +2236,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 IA[j]++;
                 JA[i] = pair.col;    
                 i++;
+                assert(iv_data[pair.row] != NA);
+                assert(jv_data[pair.col] != NA);
             }
             
             while(j < tile_height + 1)
