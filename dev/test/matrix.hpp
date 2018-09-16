@@ -1921,7 +1921,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     //j = iv_data[pair.row];
                     //k = iv_data[pair.row];
                     j++;
-                    assert(j <= (r_nitems + 1));
+                    //assert(j <= (r_nitems + 1));
                     IA[j] = IA[j - 1];
                     //assert(iv_data[pair.row] == (j - 1));
                 }  
