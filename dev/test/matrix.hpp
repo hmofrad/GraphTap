@@ -1860,12 +1860,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), r_nitems + 1);
             uint32_t i = 0; // CSR Index
             uint32_t j = 1; // Row index
-            auto &triple = tile.triples->at(0);
-            pair = rebase(triple);
+            //auto &triple = tile.triples->at(0);
+            //pair = rebase(triple);
             //printf("%d %d %d %d %d %d\n", t, triple.row, triple.col, pair.row, pair.col, tile_width);
             //exit(0);
             //pair = rebase(triple);
-            uint32_t k = pair.row; // Row indirected index
+            //uint32_t k = pair.row; // Row indirected index
             /* A hack over partial specialization because 
                we didn't want to duplicate the code for 
                Empty weights though! */
