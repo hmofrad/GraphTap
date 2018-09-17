@@ -46,6 +46,7 @@ void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n)
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::del_seg()
 {
+    D->del_storage();
     delete D;
 }
 
