@@ -942,11 +942,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         nedges_end_local += tile.triples->size();
     }
     
+    
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
     if(Env::is_master)
+    {
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
+        printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
+    }
+    
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);
@@ -1354,13 +1359,25 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         J = K;
         JV = KV;
     }
-    
+    /*
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         F_ = F[i];
         F_->del_vec();
         delete F_;
     }
+    */
+    for (uint32_t i = 0; i < rank_nrowgrps_; i++)
+    {
+        F[i]->del_vec();
+    }
+    for (uint32_t i = 0; i < rank_nrowgrps_; i++)
+    {
+        delete F[i];
+    }
+    
+    
+    
     Env::barrier();
 }
 
@@ -1400,6 +1417,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
 {
     uint32_t yi = 0, xi = 0, next_row = 0;
     struct Triple<Weight, Integer_Type> pair;
+    uint32_t n = 0;
     for(uint32_t t: local_tiles_row_order)
     {        
         auto &r_seg = R->segments[yi];
@@ -1447,6 +1465,36 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             {
                 test(triple);
                 pair = rebase(triple);
+                
+                
+                if(i_data[pair.row] == 0)
+                {
+                    printf("\nr=%d t=%d j-1=%d n=%d tw=%d rn=%d\n", Env::rank, t, j-1, n, tile_width, r_nitems);
+                    printf("row=%d i=%d iv=%d r=%d\n", pair.row, i_data[pair.row], iv_data[pair.row], r_data[0]);
+                    printf("col=%d j=%d jv=%d c=%d\n", pair.col, j_data[pair.col], jv_data[pair.col], c_data[0]);
+                    
+
+                    
+                    /*
+                    for(uint32_t i = 0; i < r_nitems; i++)
+                    {
+                        if(r_data[i] == pair.row)
+                            printf("<<<%d %d %d %d %d>>>\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
+                    }
+                    */
+                    
+                    for (uint32_t i = 0; i < r_nitems; i++) {
+                        for (uint32_t j = i + 1; j < r_nitems; j++) {
+                            if (r_data[i] == r_data[j])
+                                printf("Duplicate: %d %d %d %d %d\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
+                        }
+                    }
+                    
+                    exit(1);
+                }
+                
+                
+                
                 assert(i_data[pair.row] != 0);
                 assert(j_data[pair.col] != 0);
                 //printf("r=%d c=%d r_i=%d c_i=%d\n", pair.row, pair.col, iv_data[pair.row], jv_data[pair.col]);
@@ -1495,6 +1543,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     IA[j] = IA[j - 1];
                     //assert(iv_data[pair.row] == (j - 1));
                 }  
+                n = 0;
                 //assert(iv_data[pair.row] == (j - 1));
                 
                 //if(Env::rank)
