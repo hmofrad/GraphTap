@@ -493,7 +493,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
     
     if(!Env::rank)
     {
-        printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
 }
