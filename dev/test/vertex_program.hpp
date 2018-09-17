@@ -216,6 +216,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
 {
+    /*
     delete X;
     delete V;
     delete S;   
@@ -224,6 +225,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program()
     {
         delete Y[i];
     }
+    */
 }
 
 /* Borrowed from https://github.com/thu-pacman/GeminiGraph/blob/master/core/mpi.hpp */
@@ -281,6 +283,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     {
         Y[i]->del_vec();
     }
+    
+    delete X;
+    delete V;
+    delete S;   
+    
+    for (uint32_t i = 0; i < rank_nrowgrps; i++)
+    {
+        delete Y[i];
+    }
+    
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1502,14 +1515,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
      
     t2 = Env::clock();
     if(!Env::rank)
-        printf("combine spmv: %f\n", t2 - t1);
+        printf("Combine spmv: %f seconds\n", t2 - t1);
     
     t1 = Env::clock();
     wait_for_all();
     //wait_for_recvs();
     t2 = Env::clock();
     if(!Env::rank)
-        printf("combine recv wait: %f\n", t2 - t1);
+        printf("Combine recv: %f seconds\n", t2 - t1);
     //int retval = MPI_Type_free(&T);
 }
 
@@ -1867,7 +1880,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksumPR()
                 pair.row = i;
                 pair.col = 0;
                 pair1 = A->base(pair, owned_segment, owned_segment);
-                printf("Rank[%d],Value[%d]=%f,Score[%d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+                printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
             }  
         }
     //}
