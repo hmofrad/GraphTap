@@ -57,6 +57,7 @@ Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
 template <typename Weight, typename Integer_Type>
 Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
 {
+    /*
     if(n)
     {
         if(munmap(data, nbytes) == -1)
@@ -65,6 +66,7 @@ Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
             Env::exit(1);
         }
     }
+    */
 }
 
 template <typename Weight, typename Integer_Type>
