@@ -40,10 +40,15 @@ CSR<Weight, Integer_Type>::CSR(Integer_Type nnz_, Integer_Type nrows_plus_one_)
 {
     nnz = nnz_;
     nrows_plus_one = nrows_plus_one_;
+    #ifdef HAS_WEIGHT
     A = new struct Basic_Storage<Weight, Integer_Type>(nnz);
+    #endif
     #ifdef PREFETCH
+    #ifdef HAS_WEIGHT
     madvise(A->data, A->nbytes, MADV_SEQUENTIAL);
     #endif
+    #endif
+    
     
     IA = new struct Basic_Storage<Integer_Type, Integer_Type>(nrows_plus_one);
     #ifdef PREFETCH
@@ -107,7 +112,10 @@ CSR<Weight, Integer_Type>::~CSR()
 template<typename Weight, typename Integer_Type>
 void CSR<Weight, Integer_Type>::del_csr()
 {
+    //A->del_storage();
+    #ifdef HAS_WEIGHT
     delete A;
+    #endif
     delete IA;
     delete JA;
 }
@@ -134,9 +142,13 @@ CSC<Weight, Integer_Type>::CSC(Integer_Type nnz_, Integer_Type ncols_plus_one_)
 {
     nnz = nnz_;
     ncols_plus_one = ncols_plus_one_;
+    #ifdef HAS_WEIGHT
     VAL = new struct Basic_Storage<Weight, Integer_Type>(nnz);
+    #endif
     #ifdef PREFETCH
+    #ifdef HAS_WEIGHT
     madvise(VAL->data, VAL->nbytes, MADV_SEQUENTIAL);
+    #endif
     #endif
     
     ROW_INDEX = new struct Basic_Storage<Integer_Type, Integer_Type>(nnz);
@@ -167,7 +179,9 @@ CSC<Weight, Integer_Type>::~CSC()
 template<typename Weight, typename Integer_Type>
 void CSC<Weight, Integer_Type>::del_csc()
 {
+    #ifdef HAS_WEIGHT
     delete VAL;
+    #endif
     delete ROW_INDEX;
     delete COL_PTR;
 }
