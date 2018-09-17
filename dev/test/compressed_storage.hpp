@@ -32,6 +32,7 @@ struct CSR
     struct Basic_Storage<Integer_Type, Integer_Type> *JA;
     
     void populate();
+    void del_csr();
 };
 
 template<typename Weight, typename Integer_Type>
@@ -98,6 +99,14 @@ void CSR<Weight, Integer_Type>::populate()
 template<typename Weight, typename Integer_Type>
 CSR<Weight, Integer_Type>::~CSR()
 {
+    //delete A;
+    //delete IA;
+    //delete JA;
+}
+
+template<typename Weight, typename Integer_Type>
+void CSR<Weight, Integer_Type>::del_csr()
+{
     delete A;
     delete IA;
     delete JA;
@@ -117,6 +126,7 @@ struct CSC
     struct Basic_Storage<Integer_Type, Integer_Type> *COL_PTR;
     
     void populate();
+    void del_csc();
 };
 
 template<typename Weight, typename Integer_Type>
@@ -148,6 +158,14 @@ void CSC<Weight, Integer_Type>::populate()
 
 template<typename Weight, typename Integer_Type>
 CSC<Weight, Integer_Type>::~CSC()
+{
+    //delete VAL;
+    //delete ROW_INDEX;
+    //delete COL_PTR;
+}
+
+template<typename Weight, typename Integer_Type>
+void CSC<Weight, Integer_Type>::del_csc()
 {
     delete VAL;
     delete ROW_INDEX;
