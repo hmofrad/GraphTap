@@ -80,8 +80,12 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
+    double time1 = 0;
+    double time2 = 0;
 
     /* Degree execution */
+    if(!Env::rank)
+        printf("Computing Degree ...\n");
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> G;    
@@ -89,44 +93,70 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
     
+    if(!Env::rank)
+        Env::tick();
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
     Vertex_Program<wp, ip, fp> V(G, OT);
     V.init(x, y, v, s);
+    if(!Env::rank)
+        Env::tock("Init");
+    
+    if(!Env::rank)
+    {
+        printf("Degree execution\n");
+        time1 = Env::clock();
+    }
     if(comm_split)
     {
         if(!Env::rank)
-            printf("bcast\n");
+            Env::tick();
         V.bcast(f.ones);
+        if(!Env::rank)
+            Env::tock("Bcast"); 
     }
     else
     {
         if(!Env::rank)
-            printf("scatter\n");
+            Env::tick();
         V.scatter(f.ones);    
         if(!Env::rank)
-            printf("gather\n");
+            Env::tock("Scatter"); 
+        
+        if(!Env::rank)
+            Env::tick();
         V.gather();
+        if(!Env::rank)
+            Env::tock("Gather"); 
     }
 
     if(!Env::rank)
-        printf("combine\n");
+        Env::tick();
     V.combine();
+    if(!Env::rank)
+        Env::tock("Combine stacked"); 
     
     if(!Env::rank)
-        printf("apply\n");
+        Env::tick();
     V.apply(f.assign);
-
     if(!Env::rank)
-        printf("Checksum\n");        
+        Env::tock("Apply"); 
+    
+    if(!Env::rank)
+    {
+        time2 = Env::clock();
+        printf("Degree time: %fseconds\n", time2 - time1);
+    }
+
     V.checksum();
     V.checksumPR();
     G.free();
     Env::barrier(); 
     if(!Env::rank)
-        Env::tock("Degree");
-    
+        printf("\n");
     /* Vertex execution */
+    if(!Env::rank)
+        printf("Computing PageRank ...\n");
     transpose = true;
     
     if(!Env::rank)
@@ -151,8 +181,6 @@ int main(int argc, char **argv)
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     
-    double time1 = 0;
-    double time2 = 0;
     if(!Env::rank)
         time1 = Env::clock();
     while(iter < niters)
@@ -194,13 +222,13 @@ int main(int argc, char **argv)
             Env::tock("Apply"); 
         
         if(!Env::rank)
-            printf("Pagerank,iter=%d\n", iter);
+            printf("Pagerank, iter: %d\n", iter);
     }
     
     if(!Env::rank)
     {
         time2 = Env::clock();
-        printf("Pagerank time=%f\n", time2 - time1);
+        printf("Pagerank time: %f seconds\n", time2 - time1);
     }
     
     VR.checksumPR();
