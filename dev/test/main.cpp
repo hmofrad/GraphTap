@@ -9,6 +9,7 @@
 #include "vertex_program.hpp"
 #include <iostream>
 #include <unistd.h>
+
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
    make WEIGHT="-DHASWEIGHT"         */
@@ -59,13 +60,8 @@ struct Generic_functions
 int main(int argc, char **argv)
 {
     bool comm_split = true;
-    Env::init(comm_split);
-    //printf("rank=%d,nranks=%d,is_master=%d\n", Env::rank, Env::nranks, Env::is_master);
+    Env::init(comm_split);    
     
-    
-    
-    // Print usage
-    // Should be moved later
     if(argc != 4)  {
         if(Env::is_master) {
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations>]\""
@@ -74,12 +70,9 @@ int main(int argc, char **argv)
         Env::exit(1);
     }
     
-
-    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-    //std::cout << file_path.c_str() << " " << num_vertices << " " << num_iterations << std::endl;
     bool directed = true;
     bool transpose = false;
     Tiling_type TT = _2D_;
@@ -87,43 +80,19 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
-    
 
+    /* Degree execution */
     if(!Env::rank)
         Env::tick();
-    Graph<wp, ip, fp> G;
-    //Graph<> G;
-    
+    Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
-    
     if(!Env::rank)
         Env::tock("Ingress");
-
-    
-
-    
-    Vertex_Program<wp, ip, fp> V(G, OT);
-    
-    
-    
-    
-    
     
     fp x = 0, y = 0, v = 0, s = 0;
-    V.init(x, y, v, s);
-/*    
-    Env::barrier();
-    V.free();
-    G.free();
-    Env::finalize();
-    return(0);   
-*/    
-    
-   
-
-    
     Generic_functions f;
-    
+    Vertex_Program<wp, ip, fp> V(G, OT);
+    V.init(x, y, v, s);
     if(comm_split)
     {
         if(!Env::rank)
@@ -132,7 +101,6 @@ int main(int argc, char **argv)
     }
     else
     {
-    
         if(!Env::rank)
             printf("scatter\n");
         V.scatter(f.ones);    
@@ -140,93 +108,45 @@ int main(int argc, char **argv)
             printf("gather\n");
         V.gather();
     }
-    
-    /*
-    Env::barrier();
-    
-    V.free();
-    G.free();
-    Env::finalize();
-    return(0); 
-    */
-    
+
     if(!Env::rank)
         printf("combine\n");
     V.combine();
-
-   /*
-
-    */
     
     if(!Env::rank)
         printf("apply\n");
     V.apply(f.assign);
 
-    /*
-    V.free();
-    G.free();
-    Env::barrier(); 
-    Env::finalize();
-    return(0);
-    */
-    //V.checksumPR();
-    
-
     if(!Env::rank)
         printf("Checksum\n");        
     V.checksum();
     V.checksumPR();
-
+    G.free();
+    Env::barrier(); 
     if(!Env::rank)
         Env::tock("Degree");
     
-    /*
-    V.free();
-    G.free();
-    Env::barrier(); 
-    //Env::barrier();
-    Env::finalize();
-    return(0);
-    */
-    
-    //sleep(3);
-    G.free();
-    Env::barrier(); 
+    /* Vertex execution */
     transpose = true;
     
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
-
+    Env::barrier();
     if(!Env::rank)
         Env::tock("Ingress transpose");
-    
-    Env::barrier();
     
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
-    //OT = _COL_;
-    //Vertex_Program<wp, ip, fp> VR(G, OT);
     
     if(!Env::rank)
         Env::tick();
     VR.init(x, y, v, s, &V);
+    V.free();
     if(!Env::rank)
-        Env::tock("Init"); 
-    
-    V.free();
-    //G.free();
-    
-    /*
-    G.free();
-    Env::barrier(); 
-    //Env::barrier();
-    V.free();
-    Env::finalize();
-    return(0);
-    */
+        Env::tock("Init");
     
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
@@ -238,14 +158,11 @@ int main(int argc, char **argv)
     while(iter < niters)
     {
         iter++;
-    
         if(comm_split)
         {
             if(!Env::rank)
                 Env::tick();
-
             VR.bcast(f.div);
-            
             if(!Env::rank)
                 Env::tock("Bcast"); 
         }
@@ -253,17 +170,13 @@ int main(int argc, char **argv)
         {        
             if(!Env::rank)
                 Env::tick();
-
             VR.scatter(f.div);
-            
             if(!Env::rank)
                 Env::tock("Scatter"); 
             
             if(!Env::rank)
                 Env::tick();
-            
             VR.gather();
-            
             if(!Env::rank)
                 Env::tock("Gather"); 
         }
@@ -289,15 +202,10 @@ int main(int argc, char **argv)
         time2 = Env::clock();
         printf("Pagerank time=%f\n", time2 - time1);
     }
-    Env::barrier();
+    
     VR.checksumPR();
-    
-    
-    
-    Env::barrier();
     VR.free();
     GR.free();
     Env::finalize();
     return(0);
 }
-
