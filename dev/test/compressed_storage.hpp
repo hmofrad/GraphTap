@@ -114,9 +114,12 @@ void CSR<Weight, Integer_Type>::del_csr()
 {
     //A->del_storage();
     #ifdef HAS_WEIGHT
+    A->del_storage();
     delete A;
     #endif
+    IA->del_storage();
     delete IA;
+    JA->del_storage();
     delete JA;
 }
 
@@ -180,9 +183,12 @@ template<typename Weight, typename Integer_Type>
 void CSC<Weight, Integer_Type>::del_csc()
 {
     #ifdef HAS_WEIGHT
+    VAL->del_storage();
     delete VAL;
     #endif
+    ROW_INDEX->del_storage();
     delete ROW_INDEX;
+    COL_PTR->del_storage();
     delete COL_PTR;
 }
 
