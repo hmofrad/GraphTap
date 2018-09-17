@@ -19,6 +19,7 @@ struct Basic_Storage
     Integer_Type n;
     uint64_t nbytes;
     void *data;
+    void del_storage();
     //void allocate(Integer_Type n_);
     //void free();
 };
@@ -65,6 +66,21 @@ Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
         }
     }
 }
+
+template <typename Weight, typename Integer_Type>
+void Basic_Storage<Weight, Integer_Type>::del_storage()
+{
+    if(n)
+    {
+        if(munmap(data, nbytes) == -1)
+        {
+            fprintf(stderr, "Error unmapping memory\n");
+            Env::exit(1);
+        }
+    }
+}
+
+
 /*
 template <typename Integer_Type>
 struct Basic_Storage <Empty, Integer_Type>
