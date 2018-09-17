@@ -942,7 +942,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         nedges_end_local += tile.triples->size();
     }
     
-    
+    /*
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
@@ -951,7 +951,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
     }
-    
+    */ 
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);
@@ -1329,6 +1329,43 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
+    Env::barrier();
+    
+    for (uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        auto &tj_seg = T->segments[j];
+        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        Integer_Type tj_nitems = tj_seg.D->n;
+        Integer_Type tj_nbytes = tj_seg.D->nbytes;
+      
+        auto &kj_seg = K->segments[j];
+        auto *kj_data = (char *) kj_seg.D->data;
+        Integer_Type kj_nitems = kj_seg.D->n;
+        Integer_Type kj_nbytes = kj_seg.D->nbytes;
+        
+        auto &kvj_seg = KV->segments[j];
+        auto *kvj_data = (Integer_Type *) kvj_seg.D->data;
+        Integer_Type kvj_nitems = kvj_seg.D->n;
+        Integer_Type kvj_nbytes = kvj_seg.D->nbytes;
+        Integer_Type k = 0;
+        for(uint32_t i = 0; i < kj_nitems; i++)
+        {
+            if(kj_data[i])
+            {
+                assert(k == kvj_data[i]);
+                assert(i == tj_data[k]);
+                k++;
+            }
+            else
+            {
+                assert(kvj_data[i] == 0);
+            }
+        }
+    }
+    
+    
+    
+    
 
     if(!Env::rank)
     {
@@ -1359,14 +1396,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         J = K;
         JV = KV;
     }
-    /*
-    for (uint32_t i = 0; i < rank_nrowgrps_; i++)
-    {
-        F_ = F[i];
-        F_->del_vec();
-        delete F_;
-    }
-    */
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         F[i]->del_vec();
