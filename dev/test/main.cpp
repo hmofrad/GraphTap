@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSR_;
     Filtering_type FT = _SOME_;
     bool parread = true;
     double time1 = 0;
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     /* Vertex execution */
     if(!Env::rank)
         printf("Computing PageRank ...\n");
-    transpose = true;
+    transpose = false;
     
     if(!Env::rank)
         Env::tick();
