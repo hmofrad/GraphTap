@@ -2108,6 +2108,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             {
                 test(triple);
                 pair = rebase(triple);
+                if(i_data[pair.row] == 0)
+                {
+                    printf("row=%d col=%d i=%d iv=%d j=%d jv=%d j-1=%d\n", pair.row, pair.col, i_data[pair.row], iv_data[pair.row], j_data[pair.col], jv_data[pair.col], j-1);
+                    exit(1);
+                }
                 assert(i_data[pair.row] != 0);
                 assert(j_data[pair.col] != 0);
 
@@ -2461,9 +2466,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
         if(tile.allocated)
         {
             if(compression_type == Compression_type::_CSR_)
+            {
+                tile.csr->del_csr();
                 delete tile.csr;
+            }
             else if(compression_type == Compression_type::_CSC_)
+            {
+                tile.csc->del_csc();
                 delete tile.csc;
+            }
             else if(compression_type == Compression_type::_TCSR_)
                 delete tile.tcsr;
             else if(compression_type == Compression_type::_TCSC_)
