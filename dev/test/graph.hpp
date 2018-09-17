@@ -79,52 +79,12 @@ Graph<Weight, Integer_Type, Fractional_Type>::~Graph(){};
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::free()
 {
-   // if(!Env::rank)
-     //   printf("del_compression\n");
     A->del_compression();
-    //if(!Env::rank)
-      //  printf("free_tiling\n");
+ 
     A->free_tiling();
-    
-    //A->del_triples();
-    //if(!Env::rank)
-      //  printf("A khodam\n");
-  /*
-    if(A->E)
-    {
-        A->E->del_vec();
-        delete A->E;
-        
-        A->I->del_vec();
-        delete A->I;
-    }
-    */
-    /*
-    if(A->R)
-    {
-        A->R->del_vec();
-        delete A->R;
-        
-        A->I->del_vec();
-        delete A->I;
-        
-        A->IV->del_vec();
-        delete A->IV;
-    }
-    
-    if(A->C)
-    {
-        A->C->del_vec();
-        delete A->C;
-        
-        A->J->del_vec();
-        delete A->J;
-        
-        A->JV->del_vec();
-        delete A->JV;
-    }
-    */
+
     A->del_filtering();
+    
     delete A;
 }
 
@@ -331,8 +291,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         nedges++;
     
         pair = A->tile_of_triple(triple);
-        assert((triple.row <= nrows) and (triple.col <= ncols));
-        // A better but expensive way is to determine the file size beforehand
         if(A->tiles[pair.row][pair.col].rank == Env::rank)    
         {
             A->test(triple);
@@ -362,8 +320,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
 {
-    
-    //std::vector<uint32_t> deg(30, 0);
     // Open graph file.
     std::ifstream fin(filepath.c_str(), std::ios_base::binary);
     if(!fin.is_open())
@@ -395,24 +351,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
             std::swap(triple.row, triple.col);
         }
         nedges++;
-           
-        /*    
-        if(!Env::rank)
-        {
-        //if(triple.row == 0)
-        if((triple.row >= 0) and (triple.row < 30))
-        {
-            printf("%d %d\n", triple.row, triple.col);
-            deg[triple.row]++;
-            
-        }
-        }
-        
-        */
         
         pair = A->tile_of_triple(triple);
-        assert((triple.row <= nrows) and (triple.col <= ncols));
-        // A better but expensive way is to determine the file size beforehand
         if(A->tiles[pair.row][pair.col].rank == Env::rank)    
         {
             A->test(triple);
@@ -435,17 +375,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         printf("\n");
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
-    /*
-    if(!Env::rank)
-    {
-    for(uint32_t i = 0; i < 30; i++)
-        printf("%d %d\n", i, deg[i]);
-    }
-    */
-    
-    //Env::barrier();
-    //Env::finalize();
-    //exit(0);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -641,5 +570,4 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
     }
 }
-
 #endif
