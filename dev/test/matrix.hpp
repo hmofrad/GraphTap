@@ -1883,9 +1883,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             for (auto &triple : *(tile.triples))
             {
                 test(triple);
+                pair = rebase(triple);
                 assert(i_data[pair.row] != 0);
                 assert(j_data[pair.col] != 0);
-                pair = rebase(triple);
                 //printf("r=%d c=%d r_i=%d c_i=%d\n", pair.row, pair.col, iv_data[pair.row], jv_data[pair.col]);
                 /*
                 if((j - 1) != pair.row)
@@ -2107,9 +2107,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             for (auto& triple : *(tile.triples))
             {
                 test(triple);
+                pair = rebase(triple);
                 assert(i_data[pair.row] != 0);
                 assert(j_data[pair.col] != 0);
-                pair = rebase(triple);
 
                 /*
                 while((j - 1) != pair.col)
@@ -2245,8 +2245,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 IA[j]++;
                 JA[i] = pair.col;    
                 i++;
-                assert(iv_data[pair.row] != NA);
-                assert(jv_data[pair.col] != NA);
+                //assert(iv_data[pair.row] != NA);
+                //assert(jv_data[pair.col] != NA);
             }
             
             while(j < tile_height + 1)
