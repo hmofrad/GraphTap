@@ -14,7 +14,7 @@
 #include "vector.hpp" 
 #include "types.hpp" 
 
-#define NA 0x7FFFFFFF
+#define NA 0
 
 enum Filtering_type
 {
@@ -1055,6 +1055,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             {
                 for (auto& triple : *(tile.triples))
                 {
+                    test(triple);
                     auto pair1 = rebase(triple);
                     f_data[pair1.row]++;
                     //printf("%d %d\n", Env::rank, f_data[pair.row] );
@@ -1064,6 +1065,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             {
                 for (auto& triple : *(tile.triples))
                 {
+                    test(triple);
                     auto pair1 = rebase(triple);
                     f_data[pair1.col]++;
                     //printf("%d %d\n", Env::rank, f_data[pair.row] );
@@ -1880,6 +1882,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             IA[0] = 0;
             for (auto &triple : *(tile.triples))
             {
+                test(triple);
+                assert(i_data[pair.row] != 0);
+                assert(j_data[pair.col] != 0);
                 pair = rebase(triple);
                 //printf("r=%d c=%d r_i=%d c_i=%d\n", pair.row, pair.col, iv_data[pair.row], jv_data[pair.col]);
                 /*
@@ -1962,6 +1967,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 //    m++;
                 
                 //n++;
+
             }
             //printf("1.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
             while(j < r_nitems + 1)
@@ -2100,6 +2106,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             COL_PTR[0] = 0;
             for (auto& triple : *(tile.triples))
             {
+                test(triple);
+                assert(i_data[pair.row] != 0);
+                assert(j_data[pair.col] != 0);
                 pair = rebase(triple);
 
                 /*
@@ -2143,8 +2152,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 //COL_PTR[jv_data[pair.col] + 1]++;
                 ROW_INDEX[i] = iv_data[pair.row];
                 i++;
-                assert(iv_data[pair.row] != NA);
-                assert(jv_data[pair.col] != NA);
+                //assert(iv_data[pair.row] != NA);
+                //assert(jv_data[pair.col] != NA);
             }
             while(j < c_nitems + 1)
             {
