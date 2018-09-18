@@ -1034,6 +1034,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     std::vector<MPI_Request> in_requests;
     std::vector<MPI_Status> out_statuses;
     std::vector<MPI_Status> in_statuses;
+    //std::vector<uint32_t> in_count;
     MPI_Request request;
     MPI_Status status;
     
@@ -1145,7 +1146,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
     uint32_t i = 0;
-    for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
+    for(uint32_t j = 0; j < in_requests.size() ; j++)
     {   
         
         uint32_t fi = accu_segment_row_;
@@ -1380,6 +1381,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         {
             int count = 0;
             MPI_Get_count(&in_statuses[i], type, &count);
+            printf("r=%d j=%d c=%d tn=%d s=%d t=%d\n", Env::rank, j, count, tj_nitems, in_statuses[i].MPI_SOURCE, in_statuses[i].MPI_TAG);
             assert(count == tj_nitems);
             i++;
         }
@@ -1526,6 +1528,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         Integer_Type kvj_nitems = kvj_seg.D->n;
         Integer_Type kvj_nbytes = kvj_seg.D->nbytes;
         Integer_Type k = 0;
+        
+        
         for(uint32_t i = 0; i < kj_nitems; i++)
         {
             if(kj_data[i])
