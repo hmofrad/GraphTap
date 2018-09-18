@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
     V.checksum();
     V.checksumPR();
-    G.free();
+    //G.free();
     Env::barrier(); 
     if(!Env::rank)
         printf("\n");
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tick();
     VR.init(x, y, v, s, &V);
-    V.free();
+    //V.free();
     if(!Env::rank)
         Env::tock("Init");
     
@@ -232,6 +232,8 @@ int main(int argc, char **argv)
     }
     
     VR.checksumPR();
+    R.free();
+    R.free();
     VR.free();
     GR.free();
     Env::finalize();
