@@ -1032,7 +1032,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     
     std::vector<MPI_Request> out_requests;
     std::vector<MPI_Request> in_requests;
+    std::vector<MPI_Status> out_statuses;
+    std::vector<MPI_Status> in_statuses;
     MPI_Request request;
+    MPI_Status status;
+    
     uint32_t leader, follower, my_rank, accu, this_segment;
     uint32_t tile_th, pair_idx;
     bool vec_owner, communication;
@@ -1191,6 +1195,20 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         nnz_sizes_loc.push_back(nnz_sizes_all[this_segment]);
     }
     
+    if(!Env::rank)
+    {
+        printf("nnz_sizes_all[%d]: ", filtering_type_);
+        for(uint32_t i = 0 ; i < nrowgrps_; i++)
+            printf("%d ", nnz_sizes_all[i]);
+        printf("\n");
+        
+        printf("nnz_sizes_loc[%d]: ", filtering_type_);
+        for(uint32_t i = 0 ; i < rank_nrowgrps_; i++)
+            printf("%d ", nnz_sizes_loc[i]);
+        printf("\n"); 
+    }
+    Env::barrier();     
+    
     Vector<Weight, Integer_Type, Integer_Type> *T = new Vector<Weight, Integer_Type, Integer_Type>(nnz_sizes_loc,  local_row_segments_);
     std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
     Vector<Weight, Integer_Type, char> *K = new Vector<Weight, Integer_Type, char>(tile_length_sizes,  local_row_segments_);
@@ -1227,17 +1245,52 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         assert(j == nnz_sizes_all[owned_segment]);
     }
     
+    
+    
+/*
+  in_requests.clear();
+    out_requests.clear();
+  
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
-        
+        MPI_Request req;
         this_segment = local_row_segments_[j];
         leader = leader_ranks[this_segment];
         
         auto &tj_seg = T->segments[j];
-        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        Integer_Type *tj_data = (Integer_Type *) tj_seg.D->data;
         Integer_Type tj_nitems = tj_seg.D->n;
         Integer_Type tj_nbytes = tj_seg.D->nbytes;
+        //printf("r=%d s=%d l=%d\n", Env::rank, this_segment, leader);
+        //tj_data[0] = 10;
+        if(tj_seg.allocated)
+        {
+            if(this_segment != owned_segment)
+            {
+ 
+                MPI_Irecv(tj_data, tj_nitems, type, leader, this_segment, Env::MPI_WORLD, &req);
+                //MPI_Recv(tj_data, tj_nbytes, MPI_BYTE, leader, this_segment, MPI_COMM_WORLD, &status);
+                in_requests.push_back(req);
+                in_statuses.push_back(status);
+                //if(!Env::rank)
+                printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
+            }
+        }
+    }     
+    */
+    
+    
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        this_segment = local_row_segments_[j];
+        leader = leader_ranks[this_segment];
         
+        auto &tj_seg = T->segments[j];
+        Integer_Type *tj_data = (Integer_Type *) tj_seg.D->data;
+        Integer_Type tj_nitems = tj_seg.D->n;
+        Integer_Type tj_nbytes = tj_seg.D->nbytes;
+        //printf("r=%d s=%d l=%d\n", Env::rank, this_segment, leader);
+        //tj_data[0] = 10;
         if(tj_seg.allocated)
         {
             if(this_segment == owned_segment)
@@ -1247,23 +1300,58 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     follower = follower_rowgrp_ranks_[i];
                     MPI_Isend(tj_data, tj_nitems, type, follower, owned_segment, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
+                    out_statuses.push_back(status);
+                    //MPI_Send(tj_data, tj_nitems, MPI_UNSIGNED, follower, owned_segment, Env::MPI_WORLD);
+                    
+                    //if(!Env::rank)
+                   // printf("%d --> %d %d %d <%d><%d> %d %d\n", leader, follower, owned_segment, this_segment, tj_data[0], tj_data[1], tj_nitems, tj_nbytes);
                 }
             }
             else
             {
                 MPI_Irecv(tj_data, tj_nitems, type, leader, this_segment, Env::MPI_WORLD, &request);
+                //MPI_Recv(tj_data, tj_nbytes, MPI_BYTE, leader, this_segment, MPI_COMM_WORLD, &status);
                 in_requests.push_back(request);
+                in_statuses.push_back(status);
+                //if(!Env::rank)
+                //printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
+                
             }
         }
-    } 
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
+    }
     
+
+    MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
+    //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    //MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    
+    
+    uint32_t i = 0;
+    for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
+    {    
+        auto &tj_seg = T->segments[j];
+        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        Integer_Type tj_nitems = tj_seg.D->n;
+        Integer_Type tj_nbytes = tj_seg.D->nbytes;
+        
+        this_segment = local_row_segments_[j];
+        if(this_segment != owned_segment)
+        {
+            int count = 0;
+            MPI_Get_count(&in_statuses[i], type, &count);
+            assert(count == tj_nitems);
+            i++;
+        }
+    }
+    in_requests.clear();
+    in_statuses.clear();
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
+    out_requests.clear();
+    out_statuses.clear();
+    //MPI_Barrier(MPI_COMM_WORLD);
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
-        
         this_segment = local_row_segments_[j];
         leader = leader_ranks[this_segment];
         
@@ -1281,20 +1369,47 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     follower = follower_rowgrp_ranks_[i];
                     MPI_Isend(kj_data, kj_nitems, type1, follower, owned_segment, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
+                    out_statuses.push_back(status);
+                    //printf("%d --> %d %d %d %d\n", leader, follower, owned_segment, this_segment, kj_nitems);
                 }
             }
             else
             {
                 MPI_Irecv(kj_data, kj_nitems, type1, leader, this_segment, Env::MPI_WORLD, &request);
                 in_requests.push_back(request);
+                in_statuses.push_back(status);
+                //printf("%d <-- %d %d %d\n", Env::rank, leader, this_segment, kj_nitems);
             }
         }
     } 
+    Env::barrier();
+    MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
     
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    i = 0;
+    for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
+    {    
+        auto &kj_seg = K->segments[j];
+        auto *kj_data = (char *) kj_seg.D->data;
+        Integer_Type kj_nitems = kj_seg.D->n;
+        Integer_Type kj_nbytes = kj_seg.D->nbytes;
+        
+        this_segment = local_row_segments_[j];
+        if(this_segment != owned_segment)
+        {
+            int count = 0;
+            MPI_Get_count(&in_statuses[i], type1, &count);
+            //printf("r=%d j=%d c=%d s=%d t=%d\n", Env::rank, j, count, in_statuses[i].MPI_SOURCE, in_statuses[i].MPI_TAG);
+            assert(count == kj_nitems);
+            i++;
+        }
+    }
     in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    in_statuses.clear();
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
     out_requests.clear();
+    out_statuses.clear();
+    
     
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
@@ -1315,22 +1430,43 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     follower = follower_rowgrp_ranks_[i];
                     MPI_Isend(kvj_data, kvj_nitems, type, follower, owned_segment, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
+                    out_statuses.push_back(status);
                 }
             }
             else
             {
                 MPI_Irecv(kvj_data, kvj_nitems, type, leader, this_segment, Env::MPI_WORLD, &request);
                 in_requests.push_back(request);
+                in_statuses.push_back(status);
             }
         }
     } 
-    
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
+    i = 0;
+    for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
+    {    
+        auto &kvj_seg = KV->segments[j];
+        auto *kvj_data = (Integer_Type *) kvj_seg.D->data;
+        Integer_Type kvj_nitems = kvj_seg.D->n;
+        Integer_Type kvj_nbytes = kvj_seg.D->nbytes;
+        
+        this_segment = local_row_segments_[j];
+        if(this_segment != owned_segment)
+        {
+            int count = 0;
+            MPI_Get_count(&in_statuses[i], type, &count);
+            assert(count == kvj_nitems);
+            i++;
+        }
+    }
     in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
-    Env::barrier();
+    in_statuses.clear();
     
+    MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
+    out_requests.clear();
+    out_statuses.clear();
+    Env::barrier();
+    //MPI_Barrier(MPI_COMM_WORLD);
     for (uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         auto &tj_seg = T->segments[j];
@@ -1360,26 +1496,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             {
                 assert(kvj_data[i] == 0);
             }
+            
+            
         }
+        //printf("r=%d k=%d tj=%d kj=%d\n", Env::rank, k, tj_nitems, kj_nitems);
+        assert(k == tj_nitems);
     }
-    
-    
-    
-    
-
-    if(!Env::rank)
-    {
-        printf("nnz_sizes_all[%d]: ", filtering_type_);
-        for(uint32_t i = 0 ; i < nrowgrps_; i++)
-            printf("%d ", nnz_sizes_all[i]);
-        printf("\n");
-        
-        printf("nnz_sizes_loc[%d]: ", filtering_type_);
-        for(uint32_t i = 0 ; i < rank_nrowgrps_; i++)
-            printf("%d ", nnz_sizes_loc[i]);
-        printf("\n"); 
-    }
-    
+     
     if(filtering_type_ == _SRCS_)
     {
         nnz_row_sizes_all = nnz_sizes_all;
