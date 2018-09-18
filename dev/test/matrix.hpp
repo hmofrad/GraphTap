@@ -1129,20 +1129,61 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     Integer_Type fj_nbytes = fj_seg.D->nbytes;
                     MPI_Irecv(fj_data, fj_nitems, type, follower, pair_idx, Env::MPI_WORLD, &request);
                     in_requests.push_back(request);
+                    in_statuses.push_back(status);
                 }
             }   
             else
             {
                 MPI_Isend(f_data, f_nitems, type, leader, pair_idx, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
+                out_statuses.push_back(status);
             }
             fi++;
         }
     }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
+    uint32_t i = 0;
+    for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
+    {   
+        
+        uint32_t fi = accu_segment_row_;
+        uint32_t fo = accu_segment_rg_;
+        auto *Fp = F[fi];
+        auto &f_seg = Fp->segments[fo];
+        auto *f_data = (Integer_Type *) f_seg.D->data;
+        Integer_Type f_nitems = f_seg.D->n;
+        Integer_Type f_nbytes = f_seg.D->nbytes;   
+        
+        this_segment = local_row_segments_[j];
+        if(this_segment != owned_segment)
+        {
+            int count = 0;
+            MPI_Get_count(&in_statuses[i], type, &count);
+            //printf("r=%d j=%d c=%d fn=%d\n", Env::rank, j, count, f_nitems);
+            assert(count == f_nitems);
+            i++;
+            
+        }
+    }
     in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();    
+    in_statuses.clear();
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
+    out_requests.clear();
+    out_statuses.clear();
+    //printf("r=%d DONE\n", Env::rank);
+    
+    
+    
+    
+    
+    
+    //MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    //in_requests.clear();
+    //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    //out_requests.clear();    
     
     fi = accu_segment_row_;
     auto *Fp = F[fi];
@@ -1326,7 +1367,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     //MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     
     
-    uint32_t i = 0;
+    i = 0;
     for(uint32_t j = 0; j < rank_nrowgrps_ ; j++)
     {    
         auto &tj_seg = T->segments[j];
@@ -1349,6 +1390,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
     out_requests.clear();
     out_statuses.clear();
+    
     //MPI_Barrier(MPI_COMM_WORLD);
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
@@ -1696,7 +1738,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     IA[j] = IA[j - 1];
                     //assert(iv_data[pair.row] == (j - 1));
                 }  
-                n = 0;
+                //n = 0;
                 //assert(iv_data[pair.row] == (j - 1));
                 
                 //if(Env::rank)
@@ -1717,6 +1759,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 #ifdef HAS_WEIGHT
                 A[i] = triple.weight;
                 #endif
+                
+ 
                 
                 //IA[k]++;
                 //k = iv_data[pair.row];
