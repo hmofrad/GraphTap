@@ -61,9 +61,9 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Tile2D<Weight, Integer_Type, Fractional_Type>::free_triples()
 {
     triples->clear();
-    //triples->shrink_to_fit();
+    triples->shrink_to_fit();
     delete triples;
-    triples = nullptr;
+    //triples = nullptr;
 }
  
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
