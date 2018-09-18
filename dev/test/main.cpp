@@ -232,8 +232,8 @@ int main(int argc, char **argv)
     }
     
     VR.checksumPR();
-    R.free();
-    R.free();
+    V.free();
+    V.free();
     VR.free();
     GR.free();
     Env::finalize();
