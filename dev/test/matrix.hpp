@@ -1661,7 +1661,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 test(triple);
                 pair = rebase(triple);
                 
-                /*
+                
                 if(i_data[pair.row] == 0)
                 {
                     printf("\nr=%d t=%d j-1=%d n=%d tw=%d rn=%d\n", Env::rank, t, j-1, n, tile_width, r_nitems);
@@ -1682,12 +1682,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                         for (uint32_t j = i + 1; j < r_nitems; j++) {
                             if (r_data[i] == r_data[j])
                                 printf("Duplicate: %d %d %d %d %d\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
+                            
                         }
                     }
                     
                     exit(1);
                 }
-                */
+                
                 
                 
                 assert(i_data[pair.row] != 0);
