@@ -97,6 +97,7 @@ class Vertex_Program
         std::vector<int32_t> all_rowgrp_ranks_accu_seg;
         std::vector<int32_t> accu_segment_rg_vec;
         std::vector<int32_t> local_row_segments;
+        std::vector<int32_t> all_rowgrp_ranks;
         std::vector<int32_t> follower_rowgrp_ranks_rg;
         std::vector<int32_t> follower_rowgrp_ranks_accu_seg_rg;
         std::vector<int32_t> follower_colgrp_ranks_cg;
@@ -113,6 +114,9 @@ class Vertex_Program
         
         std::vector<MPI_Request> out_requests;
         std::vector<MPI_Request> in_requests;
+        std::vector<MPI_Status> out_statuses;
+        std::vector<MPI_Status> in_statuses;
+        
     
         Matrix<Weight, Integer_Type, Fractional_Type> *A;
         Vector<Weight, Integer_Type, Fractional_Type> *X;
@@ -180,6 +184,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
         follower_rowgrp_ranks_accu_seg = A->follower_rowgrp_ranks_accu_seg;
         rowgrps_communicator = Env::rowgrps_comm;
         colgrps_communicator = Env::colgrps_comm;
+        all_rowgrp_ranks = A->all_rowgrp_ranks;
     }
     else if (ordering_type == _COL_)
     {
@@ -210,6 +215,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
         follower_rowgrp_ranks_accu_seg = A->follower_colgrp_ranks_accu_seg;
         rowgrps_communicator = Env::colgrps_comm;
         colgrps_communicator = Env::rowgrps_comm;
+        all_rowgrp_ranks = A->all_colgrp_ranks;
     }   
 }
 
@@ -898,7 +904,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                 {
                     //printf("%d: ", i);
                     for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {       
+                    {
                         #ifdef HAS_WEIGHT
                         if(x_data[JA[j]] and A[j])
                             y_data[i] += A[j] * x_data[JA[j]];
@@ -1228,6 +1234,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
 {
     //MPI_Comm communicator;
     MPI_Request request;
+    MPI_Status status;
     uint32_t tile_th, pair_idx;
     uint32_t leader, follower, my_rank, accu;
     bool vec_owner, communication;
@@ -1350,12 +1357,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
                     Integer_Type yj_nbytes = yj_seg.D->nbytes;
                     MPI_Irecv(yj_data, yj_nbytes, MPI_BYTE, follower, pair_idx, communicator, &request);
                     in_requests.push_back(request);
+                    
                 }
             }
             else
             {
                 MPI_Isend(y_data, y_nbytes, MPI_BYTE, leader, pair_idx, communicator, &request);
                 out_requests.push_back(request);
+                
             }
             yi++;
         }
@@ -1372,6 +1381,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     //struct Triple<Weight, Integer_Type> pair, pair1;
     //MPI_Comm communicator;
     MPI_Request request;
+    MPI_Status status;
     uint32_t tile_th, pair_idx;
     uint32_t leader, follower, my_rank, accu;
     bool vec_owner, communication;
@@ -1498,6 +1508,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     Integer_Type yj_nbytes = yj_seg.D->nbytes;
                     MPI_Irecv(yj_data, yj_nitems, T, follower, pair_idx, communicator, &request);
                     in_requests.push_back(request);
+                    in_statuses.push_back(status);
                 }
                 //yk = yi;
             }
@@ -1507,6 +1518,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                 //    printf("Send me=%d --> leader=%d\n", my_rank, leader);
                 MPI_Isend(y_data, y_nitems, T, leader, pair_idx, communicator, &request);
                 out_requests.push_back(request);
+                out_statuses.push_back(status);
             }
             xi = 0;
             yi++;
@@ -1670,10 +1682,38 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
 {
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
+    MPI_Datatype T = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
+    uint32_t i = 0;
+    uint32_t this_rank = 0;
+    uint32_t my_rank = Env::rank;
+    for(uint32_t j = 0; j < rowgrp_nranks; j++)
+    {            
+        uint32_t yi = accu_segment_row;
+        auto *Yp = Y[yi];
+        uint32_t yo = accu_segment_rg;
+        auto &y_seg = Yp->segments[yo];
+        auto *y_data = (Fractional_Type *) y_seg.D->data;
+        Integer_Type y_nitems = y_seg.D->n;
+        Integer_Type y_nbytes = y_seg.D->nbytes;
+
+        this_rank = all_rowgrp_ranks[j];
+        if(this_rank != my_rank)
+        {
+            int count = 0;
+            MPI_Get_count(&in_statuses[i], T, &count);
+            assert(count == y_nitems);
+            i++;
+        }
+    }
+    
+    
+    
     in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    in_statuses.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
     out_requests.clear();
+    out_statuses.clear();
     Env::barrier();
 }
 
