@@ -9,7 +9,7 @@ MPI_CXX = mpicxx
 CXX_FLAGS = -std=c++14 -fpermissive
 #THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 #OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
-DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
+#DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 obj=main
 
 .PHONY: all clean
