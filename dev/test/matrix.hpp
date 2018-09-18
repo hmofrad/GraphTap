@@ -1492,9 +1492,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 assert(i == tj_data[k]);
                 k++;
             }
+            
             else
             {
-                assert(kvj_data[i] == 0);
+                assert(kvj_data[i] == NA);
             }
             
             
@@ -1618,7 +1619,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 test(triple);
                 pair = rebase(triple);
                 
-                
+                /*
                 if(i_data[pair.row] == 0)
                 {
                     printf("\nr=%d t=%d j-1=%d n=%d tw=%d rn=%d\n", Env::rank, t, j-1, n, tile_width, r_nitems);
@@ -1627,13 +1628,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     
 
                     
-                    /*
-                    for(uint32_t i = 0; i < r_nitems; i++)
-                    {
-                        if(r_data[i] == pair.row)
-                            printf("<<<%d %d %d %d %d>>>\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
-                    }
-                    */
+                    
+                    //for(uint32_t i = 0; i < r_nitems; i++)
+                    //{
+                    //    if(r_data[i] == pair.row)
+                    //        printf("<<<%d %d %d %d %d>>>\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
+                    //}
+                    
                     
                     for (uint32_t i = 0; i < r_nitems; i++) {
                         for (uint32_t j = i + 1; j < r_nitems; j++) {
@@ -1644,7 +1645,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                     
                     exit(1);
                 }
-                
+                */
                 
                 
                 assert(i_data[pair.row] != 0);
