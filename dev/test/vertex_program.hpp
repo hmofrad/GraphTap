@@ -405,7 +405,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     }
     else if(filtering_type == _SOME_)
     {
-        x_sizes = A->nnz_col_sizes_loc;
+        x_sizes = nnz_col_sizes_loc;
     }
     
     X = new Vector<Weight, Integer_Type, Fractional_Type>(x_sizes,  local_col_segments);
@@ -531,9 +531,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         }
         else if(filtering_type == _SOME_)
         {
-            y_size.resize(1, A->nnz_row_sizes_loc[j]);
+            y_size.resize(1, nnz_row_sizes_loc[j]);
             //y_size = {A->nnz_row_sizes_loc[j]};
-            y_sizes.resize(rowgrp_nranks, A->nnz_row_sizes_loc[j]);    
+            y_sizes.resize(rowgrp_nranks, nnz_row_sizes_loc[j]);    
         }
         
         if(local_row_segments[j] == owned_segment)
