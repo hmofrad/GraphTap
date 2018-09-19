@@ -150,15 +150,16 @@ int main(int argc, char **argv)
 
     V.checksum();
     V.checksumPR();
-    G.free();
+    //G.free();
     Env::barrier(); 
     if(!Env::rank)
         printf("\n");
     /* Vertex execution */
     if(!Env::rank)
         printf("Computing PageRank ...\n");
-    transpose = false;
     
+    /*
+    transpose = true;
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> GR;
@@ -170,11 +171,18 @@ int main(int argc, char **argv)
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
+    */
+    transpose = true;
+    OT = _COL_;
+    fp alpha = 0.15;
+    x = 0, y = 0, v = alpha, s = 0;
+    Vertex_Program<wp, ip, fp> VR(G, OT);
+    
     
     if(!Env::rank)
         Env::tick();
     VR.init(x, y, v, s, &V);
-    V.free();
+    //V.free();
     if(!Env::rank)
         Env::tock("Init");
     
@@ -233,7 +241,13 @@ int main(int argc, char **argv)
     
     VR.checksumPR();
     VR.free();
+    V.free();
+    G.free();
+    
+    /*
+    VR.free();
     GR.free();
+    */
     Env::finalize();
     return(0);
 }
