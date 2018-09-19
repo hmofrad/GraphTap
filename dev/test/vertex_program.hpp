@@ -130,6 +130,9 @@ class Vertex_Program
         Vector<Weight, Integer_Type, char> *J;
         Vector<Weight, Integer_Type, Integer_Type> *JV;
         
+        std::vector<Integer_Type> nnz_row_sizes_loc;
+        std::vector<Integer_Type> nnz_col_sizes_loc;
+        
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -143,18 +146,15 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
-    R = Graph.A->R;
-    I = Graph.A->I;
-    IV= Graph.A->IV;
-    C = Graph.A->C;
-    J = Graph.A->J;
-    JV= Graph.A->JV;
+
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
     filtering_type = A->filtering_type;
     owned_segment = A->owned_segment;
     leader_ranks = A->leader_ranks;
+    
+            
 
     if(ordering_type == _ROW_)
     {
@@ -185,6 +185,14 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
         rowgrps_communicator = Env::rowgrps_comm;
         colgrps_communicator = Env::colgrps_comm;
         all_rowgrp_ranks = A->all_rowgrp_ranks;
+        nnz_row_sizes_loc = A->nnz_row_sizes_loc;
+        nnz_col_sizes_loc = A->nnz_col_sizes_loc;
+        R = Graph.A->R;
+        I = Graph.A->I;
+        IV= Graph.A->IV;
+        C = Graph.A->C;
+        J = Graph.A->J;
+        JV= Graph.A->JV;
     }
     else if (ordering_type == _COL_)
     {
@@ -216,6 +224,14 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
         rowgrps_communicator = Env::colgrps_comm;
         colgrps_communicator = Env::rowgrps_comm;
         all_rowgrp_ranks = A->all_colgrp_ranks;
+        nnz_row_sizes_loc = A->nnz_col_sizes_loc;
+        nnz_col_sizes_loc = A->nnz_row_sizes_loc;
+        R = Graph.A->C;
+        I = Graph.A->J;
+        IV= Graph.A->JV;
+        C = Graph.A->R;
+        J = Graph.A->I;
+        JV= Graph.A->IV;
     }   
 }
 
