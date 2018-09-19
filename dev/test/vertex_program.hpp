@@ -1508,7 +1508,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     Integer_Type yj_nbytes = yj_seg.D->nbytes;
                     MPI_Irecv(yj_data, yj_nitems, T, follower, pair_idx, communicator, &request);
                     in_requests.push_back(request);
-                    in_statuses.push_back(status);
+                    //in_statuses.push_back(status);
                 }
                 //yk = yi;
             }
@@ -1518,7 +1518,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                 //    printf("Send me=%d --> leader=%d\n", my_rank, leader);
                 MPI_Isend(y_data, y_nitems, T, leader, pair_idx, communicator, &request);
                 out_requests.push_back(request);
-                out_statuses.push_back(status);
+                //out_statuses.push_back(status);
             }
             xi = 0;
             yi++;
@@ -1682,6 +1682,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
 {
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    out_requests.clear();
+    Env::barrier();
+    /*
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
     MPI_Datatype T = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
     uint32_t i = 0;
@@ -1714,7 +1721,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
     MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
     out_requests.clear();
     out_statuses.clear();
-    Env::barrier();
+    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
