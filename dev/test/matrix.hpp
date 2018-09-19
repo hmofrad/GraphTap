@@ -63,7 +63,7 @@ void Tile2D<Weight, Integer_Type, Fractional_Type>::free_triples()
     triples->clear();
     triples->shrink_to_fit();
     delete triples;
-    //triples = nullptr;
+    triples = nullptr;
 }
  
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -942,16 +942,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         nedges_end_local += tile.triples->size();
     }
     
-    /*
+    
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
     if(Env::is_master)
     {
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
-        printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
+        //printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
     }
-    */ 
+    
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);
@@ -1296,6 +1296,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     
     
 /*
+  Still debugging ...
   in_requests.clear();
     out_requests.clear();
   
