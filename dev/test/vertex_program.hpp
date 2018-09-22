@@ -298,6 +298,7 @@ MPI_Datatype Vertex_Program<Weight, Integer_Type, Fractional_Type>::get_data_typ
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
 {
+    /*
     X->del_vec();
     V->del_vec();
     S->del_vec();
@@ -305,7 +306,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     {
         Y[i]->del_vec();
     }
-    
+    */
     delete X;
     delete V;
     delete S;   
