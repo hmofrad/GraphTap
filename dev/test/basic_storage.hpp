@@ -44,12 +44,16 @@ Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
     }
     else
     {
+        data = (void *) malloc(nbytes);
+        /*
         if((data = mmap(nullptr, nbytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS
                                                    | MAP_PRIVATE, -1, 0)) == (void*) -1)
         {    
             fprintf(stderr, "Error mapping memory\n");
             Env::exit(1);
         }
+        */
+        
         memset(data, 0, nbytes);
     }
 }
@@ -57,16 +61,19 @@ Basic_Storage<Weight, Integer_Type>::Basic_Storage(Integer_Type n_)
 template <typename Weight, typename Integer_Type>
 Basic_Storage<Weight, Integer_Type>::~Basic_Storage()
 {
-    /*
+    
     if(n)
     {
+        free(data);
+        /*
         if(munmap(data, nbytes) == -1)
         {
             fprintf(stderr, "Error unmapping memory\n");
             Env::exit(1);
         }
+        */
     }
-    */
+    
 }
 
 template <typename Weight, typename Integer_Type>
