@@ -1142,11 +1142,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     
                     MPI_Request request;
                     MPI_Status status;
-                    MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
-                    MPI_Wait(&request, &status);
-                    
                     //MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
-                    //in_requests.push_back(request);
+                    //MPI_Wait(&request, &status);
+                    
+                    MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
+                    in_requests.push_back(request);
                     
                     
                     //in_statuses.push_back(status);
@@ -1157,9 +1157,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             }   
             else
             {
-                MPI_Send(f_data, f_nitems, MPI_CHAR, leader, pair_idx, Env::MPI_WORLD);
-                //MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
-                //out_requests.push_back(request);
+                //MPI_Send(f_data, f_nitems, MPI_CHAR, leader, pair_idx, Env::MPI_WORLD);
+                MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
                 //out_statuses.push_back(status);
                 //printf("Send[%d]: -->leader=%d tag=%d tile=%d\n", Env::rank, leader, pair_idx, t);
                 //MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
@@ -1168,12 +1168,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         }
         //Env::barrier();
     }
-    /*
+    
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    */
+    
     /*
     Env::barrier();
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
@@ -1377,7 +1377,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     }     
     */
     
-    
+    /*
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         this_segment = local_row_segments_[j];
@@ -1418,10 +1418,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();     
+    */
     
     
     
-    /*
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         this_segment = local_row_segments_[j];
@@ -1448,8 +1448,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     //out_statuses.push_back(status);
                     //MPI_Send(tj_data, tj_nitems, MPI_UNSIGNED, follower, owned_segment, Env::MPI_WORLD);
                     
-                    if(!Env::rank)
-                       printf("%d --> %d %d %d <%d><%d> %d %d\n", leader, follower, owned_segment, this_segment, tj_data[0], tj_data[1], tj_nitems, tj_nbytes);
+                    //if(!Env::rank)
+                      // printf("%d --> %d %d %d <%d><%d> %d %d\n", leader, follower, owned_segment, this_segment, tj_data[0], tj_data[1], tj_nitems, tj_nbytes);
                 }
             }
             else
@@ -1458,8 +1458,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 //MPI_Recv(tj_data, tj_nbytes, MPI_BYTE, leader, this_segment, MPI_COMM_WORLD, &status);
                 in_requests.push_back(request);
                 //in_statuses.push_back(status);
-                if(!Env::rank)
-                printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
+                //if(!Env::rank)
+                //printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
                 
             }
         }
@@ -1471,7 +1471,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    */
+    
     /*
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());    
     i = 0;
