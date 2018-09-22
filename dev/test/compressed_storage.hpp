@@ -104,9 +104,11 @@ void CSR<Weight, Integer_Type>::populate()
 template<typename Weight, typename Integer_Type>
 CSR<Weight, Integer_Type>::~CSR()
 {
-    //delete A;
-    //delete IA;
-    //delete JA;
+    #ifdef HAS_WEIGHT
+    delete A;
+    #endif
+    delete IA;
+    delete JA;
 }
 
 template<typename Weight, typename Integer_Type>
@@ -174,9 +176,11 @@ void CSC<Weight, Integer_Type>::populate()
 template<typename Weight, typename Integer_Type>
 CSC<Weight, Integer_Type>::~CSC()
 {
-    //delete VAL;
-    //delete ROW_INDEX;
-    //delete COL_PTR;
+    #ifdef HAS_WEIGHT
+    delete VAL;
+    #endif
+    delete ROW_INDEX;
+    delete COL_PTR;
 }
 
 template<typename Weight, typename Integer_Type>
