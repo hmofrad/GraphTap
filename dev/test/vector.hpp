@@ -35,7 +35,10 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::Segment() {};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Segment<Weight, Integer_Type, Fractional_Type>::~Segment() {};
+Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
+{
+    delete D;
+};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n)
