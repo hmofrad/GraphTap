@@ -701,6 +701,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    printf("BCAST\n");
     //MPI_Datatype T;
     //MPI_Datatype T = get_data_type();
     MPI_Datatype T = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
