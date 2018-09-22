@@ -617,6 +617,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("Tiling Info: %d x %d [rank_nrowgrps x rank_ncolgrps]\n", tiling->rank_nrowgrps, tiling->rank_ncolgrps);
     }
     print("rank");
+    debug(0);
     Env::barrier();
 }
 
@@ -1139,8 +1140,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     Integer_Type fj_nitems = fj_seg.D->n;
                     Integer_Type fj_nbytes = fj_seg.D->nbytes;
                     
+                    MPI_Request request;
+                    MPI_Status status;
                     MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
-                    in_requests.push_back(request);
+                    MPI_Wait(&request, &status);
+                    
+                    //MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
+                    //in_requests.push_back(request);
+                    
+                    
                     //in_statuses.push_back(status);
                     //MPI_Recv(fj_data, fj_nitems, MPI_CHAR, follower, pair_idx, Env::MPI_WORLD, &status);
                     //in_statuses.push_back(status);
@@ -1149,9 +1157,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             }   
             else
             {
-                //MPI_Send(f_data, f_nitems, MPI_CHAR, leader, pair_idx, Env::MPI_WORLD);
-                MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
-                out_requests.push_back(request);
+                MPI_Send(f_data, f_nitems, MPI_CHAR, leader, pair_idx, Env::MPI_WORLD);
+                //MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
+                //out_requests.push_back(request);
                 //out_statuses.push_back(status);
                 //printf("Send[%d]: -->leader=%d tag=%d tile=%d\n", Env::rank, leader, pair_idx, t);
                 //MPI_Waitall(out_requests.size(), out_requests.data(), out_statuses.data());
@@ -1160,12 +1168,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         }
         //Env::barrier();
     }
-    
+    /*
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    
+    */
     /*
     Env::barrier();
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());
@@ -1370,7 +1378,50 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     */
     
     
-    ///
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        this_segment = local_row_segments_[j];
+        leader = leader_ranks[this_segment];
+        if(this_segment != owned_segment)
+        {
+            auto &tj_seg = T->segments[j];
+            Integer_Type *tj_data = (Integer_Type *) tj_seg.D->data;
+            Integer_Type tj_nitems = tj_seg.D->n;
+            Integer_Type tj_nbytes = tj_seg.D->nbytes; 
+            MPI_Request request;
+            MPI_Status status;
+            MPI_Irecv(tj_data, tj_nitems, TYPE_INT, leader, this_segment, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+            //if(!Env::rank)
+              //  printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, j, tj_nitems);
+        }
+    }
+    
+    uint32_t to = accu_segment_row;
+    auto &t_seg = T->segments[to];
+    Integer_Type *t_data = (Integer_Type *) t_seg.D->data;
+    Integer_Type t_nitems = t_seg.D->n;
+    Integer_Type t_nbytes = t_seg.D->nbytes;    
+    for(uint32_t j = 0; j < rowgrp_nranks_ - 1; j++)
+    {
+        follower = follower_rowgrp_ranks_[j];
+        MPI_Request request;
+        MPI_Status status;
+        MPI_Isend(t_data, t_nitems, TYPE_INT, follower, owned_segment, Env::MPI_WORLD, &request);
+        out_requests.push_back(request);
+        //if(!Env::rank)
+         //  printf("%d --> %d %d %d %d\n", Env::rank, follower, owned_segment, accu_segment_rg_, t_nitems);
+    }
+     
+    
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();     
+    
+    
+    
+    /*
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         this_segment = local_row_segments_[j];
@@ -1389,13 +1440,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
                 {
                     follower = follower_rowgrp_ranks_[i];
+                    
+                    
+                    
                     MPI_Isend(tj_data, tj_nitems, TYPE_INT, follower, owned_segment, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
                     //out_statuses.push_back(status);
                     //MPI_Send(tj_data, tj_nitems, MPI_UNSIGNED, follower, owned_segment, Env::MPI_WORLD);
                     
-                    //if(!Env::rank)
-                   // printf("%d --> %d %d %d <%d><%d> %d %d\n", leader, follower, owned_segment, this_segment, tj_data[0], tj_data[1], tj_nitems, tj_nbytes);
+                    if(!Env::rank)
+                       printf("%d --> %d %d %d <%d><%d> %d %d\n", leader, follower, owned_segment, this_segment, tj_data[0], tj_data[1], tj_nitems, tj_nbytes);
                 }
             }
             else
@@ -1404,8 +1458,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 //MPI_Recv(tj_data, tj_nbytes, MPI_BYTE, leader, this_segment, MPI_COMM_WORLD, &status);
                 in_requests.push_back(request);
                 //in_statuses.push_back(status);
-                //if(!Env::rank)
-                //printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
+                if(!Env::rank)
+                printf("%d <-- %d %d %d %d\n", Env::rank, leader, this_segment, tj_nitems, tj_nbytes);
                 
             }
         }
@@ -1417,7 +1471,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    
+    */
     /*
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());    
     i = 0;
@@ -1637,10 +1691,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         J = K;
         JV = KV;
     }
+    /*
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         F[i]->del_vec();
     }
+    */
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         delete F[i];
@@ -2322,22 +2378,22 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
 {
     if(filtering_type == _SOME_)
     {
-        R->del_vec();
+        //R->del_vec();
         delete R;
         
-        I->del_vec();
+        //I->del_vec();
         delete I;
         
-        IV->del_vec();
+        //IV->del_vec();
         delete IV;
         
-        C->del_vec();
+        //C->del_vec();
         delete C;
         
-        J->del_vec();
+        //J->del_vec();
         delete J;
         
-        JV->del_vec();
+        //JV->del_vec();
         delete JV;   
     }
     
@@ -2355,12 +2411,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
         {
             if(compression_type == Compression_type::_CSR_)
             {
-                tile.csr->del_csr();
+                //tile.csr->del_csr();
                 delete tile.csr;
             }
             else if(compression_type == Compression_type::_CSC_)
             {
-                tile.csc->del_csc();
+                //tile.csc->del_csc();
                 delete tile.csc;
             }
             else if(compression_type == Compression_type::_TCSR_)
