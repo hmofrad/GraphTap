@@ -10,6 +10,8 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 
+//#include "basic_storage.hpp"
+
 template<typename Weight = char, typename Integer_Type = uint32_t, typename Fractional_Type = float>
 struct Segment
 {
@@ -18,39 +20,77 @@ struct Segment
     
     //template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
     //friend class Vertex_Program;
-    
     Segment();
+    Segment(Integer_Type n_, Integer_Type g_);
     ~Segment();
 
-    void allocate(Integer_Type n);
+    void allocate(Integer_Type n_, Integer_Type g_);
     void del_seg();
     
-    struct Basic_Storage<Fractional_Type, Integer_Type> *D;
-
-    uint32_t g, cg, rg;
+    //struct Basic_Storage<Fractional_Type, Integer_Type> *D;
+    void *D;
+    Integer_Type n;
+    uint64_t nbytes;
     bool allocated;
+
+    uint32_t g;
+    
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Segment<Weight, Integer_Type, Fractional_Type>::Segment() {};
+Segment<Weight, Integer_Type, Fractional_Type>::Segment(Integer_Type n_, Integer_Type g_)
+{
+    n = n_;
+    nbytes = n_ * sizeof(Fractional_Type);
+    g = g_;
+    /*
+    if(n)
+    {
+        D = malloc(nbytes);
+        allocated = true;
+    }
+    else
+        allocated = true;
+    */
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+Segment<Weight, Integer_Type, Fractional_Type>::Segment(){};
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
 {
-    delete D;
-};
+    //delete D;
+    
+    //printf("Segment %d %d %d\n", Env::rank, g, n);
+    if(n)
+        free(D);
+    
+}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n)
+void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n_, Integer_Type g_)
 {
-    D = new struct Basic_Storage<Fractional_Type, Integer_Type>(n);
+    n = n_;
+    g = g_;
+    D = nullptr;
+    nbytes = n * sizeof(Fractional_Type);
+    if(n)
+    {
+        D = malloc(nbytes);
+        allocated = true;
+    }
+    else
+        allocated = true;
+    memset(D, 0, nbytes);
 }
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Segment<Weight, Integer_Type, Fractional_Type>::del_seg()
 {
-    D->del_storage();
-    delete D;
+    //D->del_storage();
+    //delete D;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -61,7 +101,7 @@ class Vector
     
     public:
         Vector();
-        Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
+        //Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
         Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_);
         ~Vector();
         void del_vec();
@@ -69,15 +109,22 @@ class Vector
         std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
         uint32_t vector_length;
-        Integer_Type nelems;
+        //Integer_Type nelems;
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 
+
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::~Vector() {};
+    
+    //printf("~vector %d\n", Env::rank);
 
+
+
+
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_)
 {
@@ -96,6 +143,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nelems_, std:
         #endif
     }
 }
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_)
@@ -103,7 +151,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     //printf("Vector rank=%d nelems=%lu ls=%lu\n", Env::rank, nelems_.size(), local_segments_.size());
     assert(nelems_.size() == local_segments_.size());
     
-    nelems = -1;
+    //nelems = -1;
     local_segments = local_segments_;
     vector_length = local_segments.size();
     // Reserve the 1D vector of segments. 
@@ -111,6 +159,14 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     
     for(uint32_t i = 0; i < vector_length; i++)
     {
+        //Segment<Weight, Integer_Type, Fractional_Type> segment(nelems_[i], local_segments[i]);
+        //segment.g = local_segments[i];
+        segments[i].allocate(nelems_[i], local_segments[i]);
+        //segments.push_back(segment);
+        //segments[i].g = local_segments[i];
+        
+       // segments[i] = &segment;
+        /*
         if(nelems_[i])
         {
             //if(!Env::rank)
@@ -123,11 +179,12 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
             segments[i].allocated = false;
             segments[i].allocate(nelems_[i]);
         }
+        */
+        //segments[i].g = local_segments[i];
         
-        segments[i].g = local_segments[i];
-        #ifdef PREFETCH
-        madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
-        #endif
+        //#ifdef PREFETCH
+        //madvise(segments[i].D->data, segments[i].D->nbytes, MADV_SEQUENTIAL);
+        //#endif
     }
 }
 
@@ -139,7 +196,7 @@ void Vector<Weight, Integer_Type, Fractional_Type>::del_vec()
     {
         //if(segments[i].allocated)
         //{
-            segments[i].del_seg();
+            //segments[i].del_seg();
         //}
     }
 }
