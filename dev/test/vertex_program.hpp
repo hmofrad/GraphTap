@@ -1804,7 +1804,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
    
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
-        printf("Degree checksum: %d\n", (uint32_t) v_sum_gloabl);
+        printf("Degree checksum: %f\n", v_sum_gloabl);
     //Env::barrier();
     /*  
     v_sum_local = 0, v_sum_gloabl = 0;
