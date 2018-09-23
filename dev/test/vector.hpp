@@ -64,8 +64,8 @@ Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
     
     //printf("Segment %d %d %d\n", Env::rank, g, n);
     if(n)
-        free(D);
-    
+        //free(D);
+    delete[] (Fractional_Type *) D;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -77,12 +77,14 @@ void Segment<Weight, Integer_Type, Fractional_Type>::allocate(Integer_Type n_, I
     nbytes = n * sizeof(Fractional_Type);
     if(n)
     {
-        D = malloc(nbytes);
+        //D = malloc(nbytes);
+        D = new Fractional_Type[n];
+        memset(D, 0, nbytes);
         allocated = true;
     }
     else
-        allocated = true;
-    memset(D, 0, nbytes);
+        allocated = false;
+    
 }
 
 
