@@ -617,7 +617,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
         printf("Tiling Info: %d x %d [rank_nrowgrps x rank_ncolgrps]\n", tiling->rank_nrowgrps, tiling->rank_ncolgrps);
     }
     print("rank");
-    debug(0);
+    //debug(0);
     Env::barrier();
 }
 
@@ -977,6 +977,212 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
     }
 }
 
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
+{
+    if(compression_type == Compression_type::_CSR_)
+    {
+        if(Env::is_master)
+            printf("Edge compression: CSR\n");
+        
+        if(filtering_type == _NONE_)
+            init_csr();
+        else if(filtering_type == _SOME_)
+            init_tcsr();
+    }
+    else if(compression_type == Compression_type::_CSC_)
+    {
+        if(Env::is_master)
+            printf("Edge compression: CSC\n");
+        if(filtering_type == _NONE_)
+            init_csc();
+        else if(filtering_type == _SOME_)
+            init_tcsc();
+    }
+    else
+    {
+        fprintf(stderr, "Invalid compression type\n");
+        Env::exit(1);
+    }
+}
+
+
+
+
+
+/*
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
+{
+     Create the the csr format by allocating the csr data structure
+       and then Sorting triples and populating the csr 
+    struct Triple<Weight, Integer_Type> pair;
+    //RowSort<Weight, Integer_Type> f;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        //if(tile.allocated)
+        //{
+        //    tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
+        //}        
+        
+        //std::sort(tile.triples->begin(), tile.triples->end(), f);
+        
+
+        if(tile.allocated)
+        {
+            tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
+            uint32_t i = 0; // CSR Index
+            uint32_t j = 1; // Row index
+             //A hack over partial specialization because 
+               //we didn't want to duplicate the code for 
+               //Empty weights though! 
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csr->A->data;
+            #endif
+            
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
+            IA[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                //nedges_local++;
+                pair = rebase(triple);
+                while((j - 1) != pair.row)
+                {
+                    j++;
+                    IA[j] = IA[j - 1];
+                }
+                
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                A[i] = triple.weight;
+                #endif
+                
+                IA[j]++;
+                JA[i] = pair.col;    
+                i++;
+                //assert(iv_data[pair.row] != NA);
+                //assert(jv_data[pair.col] != NA);
+            }
+            
+            while(j < tile_height + 1)
+            {
+                j++;
+                IA[j] = IA[j - 1];
+            }   
+            
+            Env::barrier();
+
+            if(Env::rank == 0)
+            {
+            printf("rank=%d tile=%d\n", Env::rank, t);
+            for(uint32_t i = 0; i < tile_height - 1; i++)
+            {
+                printf("%d: ", i);
+                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                {
+                    printf("%d ", JA[j]);
+                }
+                printf("\n");
+            }
+            }
+            Env::barrier();
+            if(Env::rank == 1)
+            {
+            printf("rank=%d tile=%d\n", Env::rank, t);
+            for(uint32_t i = 0; i < tile_height - 1; i++)
+            {
+                printf("%d: ", i);
+                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                {
+                    printf("%d ", JA[j]);
+                }
+                printf("\n");
+            }
+            }
+            Env::barrier();
+            
+            
+        }
+    }
+    
+    //del_triples();
+}
+*/
+/*
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
+{
+    struct Triple<Weight, Integer_Type> pair;
+    //ColSort<Weight, Integer_Type> f;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        //if(tile.allocated)
+        //{
+            //tile.nedges = tile.triples->size();
+         //   tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
+            //tile.allocated = true;
+        //}        
+        
+        //std::sort(tile.triples->begin(), tile.triples->end(), f);
+        
+        ///uint32_t i = 0; // CSR Index
+        //uint32_t j = 1; // Row index
+        //if(!Env::rank)
+        //{
+        //    printf("t=%d a=%d n=%lu\n", t, tile.allocated, tile.nedges);
+        //}
+        
+        if(tile.allocated)
+        {
+            tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
+            uint32_t i = 0; // CSC Index
+            uint32_t j = 1; // Col index
+            #ifdef HAS_WEIGHT
+            Weight *VAL = (Weight *) tile.csc->VAL->data;
+            #endif
+            
+            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data; // ROW_INDEX
+            Integer_Type *COL_PTR = (Integer_Type *) tile.csc->COL_PTR->data; // COL_PTR
+            COL_PTR[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                pair = rebase(triple);
+                while((j - 1) != pair.col)
+                {
+                    j++;
+                    COL_PTR[j] = COL_PTR[j - 1];
+                }            
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                VAL[i] = triple.weight;
+                #endif
+                
+                COL_PTR[j]++;
+                ROW_INDEX[i] = pair.row;
+                i++;
+            }
+            
+            while(j < tile_width + 1)
+            {
+                j++;
+                COL_PTR[j] = COL_PTR[j - 1];
+            }
+        }
+    }
+
+    //del_triples();
+}
+*/
+
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filtering_type_)
 {
@@ -1085,9 +1291,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         
         auto *Fp = F[fi];
         auto &f_seg = Fp->segments[fo];
-        auto *f_data = (char *) f_seg.D->data;
-        Integer_Type f_nitems = f_seg.D->n;
-        Integer_Type f_nbytes = f_seg.D->nbytes;        
+        auto *f_data = (char *) f_seg.D;
+        Integer_Type f_nitems = f_seg.n;
         
         if(tile.allocated)
         {
@@ -1136,9 +1341,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     follower = follower_rowgrp_ranks_[j];
                     accu = follower_rowgrp_ranks_accu_seg_[j];
                     auto &fj_seg = Fp->segments[accu];
-                    auto *fj_data = (char *) fj_seg.D->data;
-                    Integer_Type fj_nitems = fj_seg.D->n;
-                    Integer_Type fj_nbytes = fj_seg.D->nbytes;
+                    auto *fj_data = (char *) fj_seg.D;
+                    Integer_Type fj_nitems = fj_seg.n;
                     
                     MPI_Request request;
                     MPI_Status status;
@@ -1226,9 +1430,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     auto *Fp = F[fi];
     fo = accu_segment_rg_;
     auto &f_seg = Fp->segments[fo];
-    auto *f_data = (char *) f_seg.D->data;
-    Integer_Type f_nitems = f_seg.D->n;
-    Integer_Type f_nbytes = f_seg.D->nbytes;
+    auto *f_data = (char *) f_seg.D;
+    Integer_Type f_nitems = f_seg.n;
     //for(uint32_t i = 0; i < f_nitems; i++)
     //{
       //  if(f_data[i])
@@ -1241,9 +1444,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     {
         accu = follower_rowgrp_ranks_accu_seg_[j];
         auto &fj_seg = Fp->segments[accu];
-        auto *fj_data = (char *) fj_seg.D->data;
-        Integer_Type fj_nitems = fj_seg.D->n;
-        Integer_Type fj_nbytes = fj_seg.D->nbytes;                        
+        auto *fj_data = (char *) fj_seg.D;
+        Integer_Type fj_nitems = fj_seg.n;                     
         for(uint32_t i = 0; i < fj_nitems; i++)
         {
             if(fj_data[i] and !f_data[i])
@@ -1315,13 +1517,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     if(nnz_sizes_all[owned_segment])
     {
         auto &tj_seg = T->segments[accu_segment_row_];
-        auto *tj_data = (Integer_Type *) tj_seg.D->data;
+        auto *tj_data = (Integer_Type *) tj_seg.D;
         
         auto &kj_seg = K->segments[accu_segment_row_];
-        auto *kj_data = (char *) kj_seg.D->data;
+        auto *kj_data = (char *) kj_seg.D;
         
         auto &kvj_seg = KV->segments[accu_segment_row_];
-        auto *kvj_data = (Integer_Type *) kvj_seg.D->data;
+        auto *kvj_data = (Integer_Type *) kvj_seg.D;
         
         Integer_Type j = 0;
         for(uint32_t i = 0; i < f_nitems; i++)
@@ -1428,9 +1630,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         leader = leader_ranks[this_segment];
         
         auto &tj_seg = T->segments[j];
-        Integer_Type *tj_data = (Integer_Type *) tj_seg.D->data;
-        Integer_Type tj_nitems = tj_seg.D->n;
-        Integer_Type tj_nbytes = tj_seg.D->nbytes;
+        Integer_Type *tj_data = (Integer_Type *) tj_seg.D;
+        Integer_Type tj_nitems = tj_seg.n;
         //printf("r=%d s=%d l=%d\n", Env::rank, this_segment, leader);
         //tj_data[0] = 10;
         if(tj_seg.allocated)
@@ -1508,9 +1709,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         leader = leader_ranks[this_segment];
         
         auto &kj_seg = K->segments[j];
-        auto *kj_data = (char *) kj_seg.D->data;
-        Integer_Type kj_nitems = kj_seg.D->n;
-        Integer_Type kj_nbytes = kj_seg.D->nbytes;
+        auto *kj_data = (char *) kj_seg.D;
+        Integer_Type kj_nitems = kj_seg.n;
         
         if(kj_seg.allocated)
         {
@@ -1578,9 +1778,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         leader = leader_ranks[this_segment];
         
         auto &kvj_seg = KV->segments[j];
-        auto *kvj_data = (Integer_Type *) kvj_seg.D->data;
-        Integer_Type kvj_nitems = kvj_seg.D->n;
-        Integer_Type kvj_nbytes = kvj_seg.D->nbytes;
+        auto *kvj_data = (Integer_Type *) kvj_seg.D;
+        Integer_Type kvj_nitems = kvj_seg.n;
         
         if(kvj_seg.allocated)
         {
@@ -1642,19 +1841,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     for (uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         auto &tj_seg = T->segments[j];
-        auto *tj_data = (Integer_Type *) tj_seg.D->data;
-        Integer_Type tj_nitems = tj_seg.D->n;
-        Integer_Type tj_nbytes = tj_seg.D->nbytes;
+        auto *tj_data = (Integer_Type *) tj_seg.D;
+        Integer_Type tj_nitems = tj_seg.n;
       
         auto &kj_seg = K->segments[j];
-        auto *kj_data = (char *) kj_seg.D->data;
-        Integer_Type kj_nitems = kj_seg.D->n;
-        Integer_Type kj_nbytes = kj_seg.D->nbytes;
+        auto *kj_data = (char *) kj_seg.D;
+        Integer_Type kj_nitems = kj_seg.n;
         
         auto &kvj_seg = KV->segments[j];
-        auto *kvj_data = (Integer_Type *) kvj_seg.D->data;
-        Integer_Type kvj_nitems = kvj_seg.D->n;
-        Integer_Type kvj_nbytes = kvj_seg.D->nbytes;
+        auto *kvj_data = (Integer_Type *) kvj_seg.D;
+        Integer_Type kvj_nitems = kvj_seg.n;
         Integer_Type k = 0;
         
         
@@ -1697,6 +1893,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         F[i]->del_vec();
     }
     */
+    
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         delete F[i];
@@ -1710,457 +1907,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
-{
-    if(compression_type == Compression_type::_CSR_)
-    {
-        if(Env::is_master)
-            printf("Edge compression: CSR\n");
-        
-        if(filtering_type == _NONE_)
-            init_csr();
-        else if(filtering_type == _SOME_)
-            init_tcsr();
-    }
-    else if(compression_type == Compression_type::_CSC_)
-    {
-        if(Env::is_master)
-            printf("Edge compression: CSC\n");
-        if(filtering_type == _NONE_)
-            init_csc();
-        else if(filtering_type == _SOME_)
-            init_tcsc();
-    }
-    else
-    {
-        fprintf(stderr, "Invalid compression type\n");
-        Env::exit(1);
-    }
-}
-
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
-{
-    uint32_t yi = 0, xi = 0, next_row = 0;
-    struct Triple<Weight, Integer_Type> pair;
-    uint32_t n = 0;
-    for(uint32_t t: local_tiles_row_order)
-    {        
-        auto &r_seg = R->segments[yi];
-        auto *r_data = (Integer_Type *) r_seg.D->data;
-        Integer_Type r_nitems = r_seg.D->n;
-        
-        auto &i_seg = I->segments[yi];
-        char *i_data = (char *) i_seg.D->data;
-        Integer_Type i_nitems = i_seg.D->n;
-
-        auto &iv_seg = IV->segments[yi];
-        auto *iv_data = (Integer_Type *) iv_seg.D->data;
-        Integer_Type iv_nitems = iv_seg.D->n;
-        
-        auto &c_seg = C->segments[xi];
-        auto *c_data = (Integer_Type *) c_seg.D->data;
-        Integer_Type c_nitems = c_seg.D->n;
-        
-        auto &j_seg = J->segments[xi];
-        char *j_data = (char *) j_seg.D->data;
-        Integer_Type j_nitems = j_seg.D->n;
-
-        auto &jv_seg = JV->segments[xi];
-        auto *jv_data = (Integer_Type *) jv_seg.D->data;
-        Integer_Type jv_nitems = jv_seg.D->n;
-        
-        
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        
-        if(tile.allocated)
-        {
-
-            tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), r_nitems + 1);
-            uint32_t i = 0; // CSR Index
-            uint32_t j = 1; // Row index
-            #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csr->A->data;
-            #endif
-            
-            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data; // Rows
-            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data; // Cols
-            IA[0] = 0;
-            for (auto &triple : *(tile.triples))
-            {
-                test(triple);
-                pair = rebase(triple);
-                
-                /*
-                if(i_data[pair.row] == 0)
-                {
-                    printf("\nr=%d t=%d j-1=%d n=%d tw=%d rn=%d\n", Env::rank, t, j-1, n, tile_width, r_nitems);
-                    printf("row=%d i=%d iv=%d r=%d\n", pair.row, i_data[pair.row], iv_data[pair.row], r_data[0]);
-                    printf("col=%d j=%d jv=%d c=%d\n", pair.col, j_data[pair.col], jv_data[pair.col], c_data[0]);
-                    
-
-                    
-                    
-                    //for(uint32_t i = 0; i < r_nitems; i++)
-                    //{
-                    //    if(r_data[i] == pair.row)
-                    //        printf("<<<%d %d %d %d %d>>>\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
-                    //}
-                    
-                    
-                    for (uint32_t i = 0; i < r_nitems; i++) {
-                        for (uint32_t j = i + 1; j < r_nitems; j++) {
-                            if (r_data[i] == r_data[j])
-                                printf("Duplicate: %d %d %d %d %d\n", i, r_data[i], pair.row, i_data[r_data[i]], iv_data[r_data[i]]);
-                            
-                        }
-                    }
-                    
-                    exit(1);
-                }
-                */
-                
-                
-                assert(i_data[pair.row] != 0);
-                assert(j_data[pair.col] != 0);
-                //printf("r=%d c=%d r_i=%d c_i=%d\n", pair.row, pair.col, iv_data[pair.row], jv_data[pair.col]);
-                /*
-                if((j - 1) != pair.row)
-                {
-                    j++;
-                    IA[j] = IA[j - 1];
-                }
-                */
-                /*
-                while((j - 1) != pair.row)
-                {
-                    //printf("j-1=%d i[j-1]=%d\n", j - 1, i_data[j - 1]);
-                    if(i_data[j - 1])
-                    {
-                        k++;
-                        IA[k] = IA[k - 1];
-                    }
-                    j++;
-                }
-                */
-                /*
-                if(iv_data[pair.row] > k)
-                {
-                    IA[iv_data[pair.row] + 1] = IA[iv_data[pair.row]];
-                    k = iv_data[pair.row];
-                    j++;
-                    
-                    //if(iv_data[pair.row] != k)
-                    //{
-                    //    printf("Increase %d %d\n", iv_data[pair.row], k);
-                    //    assert(iv_data[pair.row] == k);
-                    //}
-                }
-                */
-                //if(Env::rank)
-                   // printf("1.rank = %d tile = %d row=%d row_iv=%d j=%d %d\n", Env::rank, t, pair.row, iv_data[pair.row], j, r_nitems); 
-                //while((j - 1) != pair.row)
-                while((j - 1) != iv_data[pair.row])
-                {
-                    //j = iv_data[pair.row];
-                    //k = iv_data[pair.row];
-                    j++;
-                    //assert(j <= (r_nitems + 1));
-                    IA[j] = IA[j - 1];
-                    //assert(iv_data[pair.row] == (j - 1));
-                }  
-                //n = 0;
-                //assert(iv_data[pair.row] == (j - 1));
-                
-                //if(Env::rank)
-                   // printf("2.rank = %d tile = %d row=%d row_iv=%d j=%d\n", Env::rank, t, pair.row, iv_data[pair.row], j); 
-                
-                
-               //if(!Env::rank and t == 0)
-                 //  printf("rank = %d tile = %d row=%d k = %d j=%d row_iv=%d\n", Env::rank, t, pair.row, k, j, iv_data[pair.row]); 
-                //    printf("tile = %d row=%d col=%d iv=%d jv=%d j=%d iv=%d k = %d %d\n", t, pair.row, pair.col, iv_data[pair.row], jv_data[pair.col], j, iv_data[pair.col] + 1, k, r_nitems);
-                
-                
-                
-                
-
-                
-                
-                // In case weights are there
-                #ifdef HAS_WEIGHT
-                A[i] = triple.weight;
-                #endif
-                
- 
-                
-                //IA[k]++;
-                //k = iv_data[pair.row];
-                //IA[iv_data[pair.row] + 1]++;
-                IA[j]++;
-                //JA[i] = pair.col;    
-                JA[i] = jv_data[pair.col];    
-                i++;
-                //if(jv_data[pair.col] == 0)
-                  //  n++;
-                
-                //if(iv_data[pair.row] == 0)
-                //    m++;
-                
-                //n++;
-
-            }
-            //printf("1.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
-            while(j < r_nitems + 1)
-            {
-                j++;
-                IA[j] = IA[j - 1];
-            }
-            //n = 0;
-            //m = 0;
-            //printf("r=%d t=%d n=%d m=%d\n", Env::rank, t, n, m);
-            //printf("2.%d %d %d %d\n",t,  j, r_nitems + 1, k < (r_nitems + 1));
-            
-            //if(!Env::rank)
-            //{
-                
-                //Env::barrier();
-                //if(!Env::rank)
-                   // printf("Edge compression: TCSR\n");
-               /*
-                if(Env::rank == 0)
-                {
-                  
-                printf("rank=%d tile=%d\n", Env::rank, t);
-                for(uint32_t i = 0; i < r_nitems; i++)
-                {
-                    printf("%d: ", i);
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {
-                        printf("%d ", JA[j]);
-                    }
-                    printf("\n");
-                }
-                
-                }
-                */
-                //Env::barrier();
-                
-                /*
-                if(Env::rank == 1)
-                {
-                printf("rank=%d tile=%d\n", Env::rank, t);
-                for(uint32_t i = 0; i < r_nitems; i++)
-                {
-                    printf("%d: ", i);
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {
-                        printf("%d ", JA[j]);
-                    }
-                    printf("\n");
-                }
-                }
-                Env::barrier();
-                */
-            //}
-        }    
-        xi++;
-        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
-        if(next_row)
-        {
-            xi = 0;
-            yi++;
-        }  
-        
-//printf("%d %d %d\n", Env::rank, t, n);        
-    }
-    //printf("/XXXXXXXXXXXX %d\n", Env::rank);
-    
-    //del_dcsr();
-    //R, I, IV
-    
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
-{
-    struct Triple<Weight, Integer_Type> pair;
-    uint32_t yi = 0, xi = 0, next_row = 0;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        
-        auto &i_seg = I->segments[yi];
-        char *i_data = (char *) i_seg.D->data;
-        Integer_Type i_nitems = i_seg.D->n;
-        
-        auto &r_seg = R->segments[yi];
-        auto *r_data = (Integer_Type *) r_seg.D->data;
-        Integer_Type r_nitems = r_seg.D->n;
-
-        auto &iv_seg = IV->segments[yi];
-        auto *iv_data = (Integer_Type *) iv_seg.D->data;
-        Integer_Type iv_nitems = iv_seg.D->n;
-        
-        auto &j_seg = J->segments[xi];
-        char *j_data = (char *) j_seg.D->data;
-        Integer_Type j_nitems = j_seg.D->n;
-        
-        auto &c_seg = C->segments[xi];
-        auto *c_data = (Integer_Type *) c_seg.D->data;
-        Integer_Type c_nitems = c_seg.D->n;
-
-        auto &jv_seg = JV->segments[xi];
-        auto *jv_data = (Integer_Type *) jv_seg.D->data;
-        Integer_Type jv_nitems = jv_seg.D->n;
-        
-        
-        //if(tile.allocated)
-        //{
-            //tile.nedges = tile.triples->size();
-         //   tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
-            //tile.allocated = true;
-        //}        
-        
-        //std::sort(tile.triples->begin(), tile.triples->end(), f);
-        
-        //uint32_t i = 0; // CSR Index
-        //uint32_t j = 1; // Row index
-        //if(!Env::rank)
-        //{
-        //    printf("t=%d a=%d n=%lu\n", t, tile.allocated, tile.nedges);
-        //}
-        
-        if(tile.allocated)
-        {
-            tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), c_nitems + 1);
-            uint32_t i = 0; // CSC Index
-            uint32_t j = 1; // Col index
-            uint32_t k = 0; // Col indirected index
-            #ifdef HAS_WEIGHT
-            Weight *VAL = (Weight *) tile.csc->VAL->data;
-            #endif
-            
-            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data; // ROW_INDEX
-            Integer_Type *COL_PTR = (Integer_Type *) tile.csc->COL_PTR->data; // COL_PTR
-            COL_PTR[0] = 0;
-            for (auto& triple : *(tile.triples))
-            {
-                test(triple);
-                pair = rebase(triple);
-                /*
-                if(i_data[pair.row] == 0)
-                {
-                    printf("row=%d col=%d i=%d iv=%d j=%d jv=%d j-1=%d\n", pair.row, pair.col, i_data[pair.row], iv_data[pair.row], j_data[pair.col], jv_data[pair.col], j-1);
-                    exit(1);
-                }
-                */
-                assert(i_data[pair.row] != 0);
-                assert(j_data[pair.col] != 0);
-
-                /*
-                while((j - 1) != pair.col)
-                {
-                    j++;
-                    COL_PTR[j] = COL_PTR[j - 1];
-                }  
-                */
-                /*
-                if(pair.col > k)
-                //if(jv_data[pair.col] > k)                    
-                //if((k - 1) != jv_data[pair.col])
-                {
-                    COL_PTR[jv_data[pair.col] + 1] = COL_PTR[jv_data[pair.col]];
-                    k = pair.col;
-                    //k = jv_data[pair.col];
-                    //k++;
-                }
-                */
-                
-                while((j -1) != jv_data[pair.col])
-                {
-                    //k = pair.col;
-                    j++;
-                    COL_PTR[j] = COL_PTR[j - 1];
-                    
-                }  
-                
-      
-                
-                //if(!Env::rank)
-                //    printf("row=%d col=%d j=%d v=%d\n", pair.row, pair.col, j, jv_data[pair.col] + 1);
-                
-                // In case weights are there
-                #ifdef HAS_WEIGHT
-                VAL[i] = triple.weight;
-                #endif
-                
-                COL_PTR[j]++;
-                //COL_PTR[jv_data[pair.col] + 1]++;
-                ROW_INDEX[i] = iv_data[pair.row];
-                i++;
-                //assert(iv_data[pair.row] != NA);
-                //assert(jv_data[pair.col] != NA);
-            }
-            while(j < c_nitems + 1)
-            {
-                j++;
-                COL_PTR[j] = COL_PTR[j - 1];
-            }
-            /*
-            if(Env::rank == 0)
-            {
-            printf("rank=%d tile=%d j=%d cn=%d\n", Env::rank, t, j, c_nitems);
-            for(uint32_t i = 0; i < c_nitems; i++)
-            {
-                printf("%d: ", i);
-                for(uint32_t j = COL_PTR[i]; j < COL_PTR[i + 1]; j++)
-                {
-                    printf("%d ", ROW_INDEX[j]);
-                }
-                printf("\n");
-            }
-            
-            }
-            */
-            
-            
-        }
-        
-        
-        
-        xi++;
-        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
-        if(next_row)
-        {
-            xi = 0;
-            yi++;
-        }  
-    }    
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
     /* Create the the csr format by allocating the csr data structure
        and then Sorting triples and populating the csr */
     struct Triple<Weight, Integer_Type> pair;
-    //RowSort<Weight, Integer_Type> f;
     for(uint32_t t: local_tiles_row_order)
     {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        
-        //if(tile.allocated)
-        //{
-        //    tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
-        //}        
-        
-        //std::sort(tile.triples->begin(), tile.triples->end(), f);
-        
-
         if(tile.allocated)
         {
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
@@ -2170,15 +1925,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                we didn't want to duplicate the code for 
                Empty weights though! */
             #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csr->A->data;
+            Weight *A = (Weight *) tile.csr->A;
             #endif
             
-            Integer_Type *IA = (Integer_Type *) tile.csr->IA->data;
-            Integer_Type *JA = (Integer_Type *) tile.csr->JA->data;
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA;
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA;
             IA[0] = 0;
             for (auto& triple : *(tile.triples))
             {
-                //nedges_local++;
                 pair = rebase(triple);
                 while((j - 1) != pair.row)
                 {
@@ -2194,184 +1948,258 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 IA[j]++;
                 JA[i] = pair.col;    
                 i++;
-                //assert(iv_data[pair.row] != NA);
-                //assert(jv_data[pair.col] != NA);
+                //printf("%d %d\n", pair.row, pair.col);
             }
-            
             while(j < tile_height + 1)
             {
                 j++;
                 IA[j] = IA[j - 1];
-            }   
+            }
             /*
-            Env::barrier();
-
-            if(Env::rank == 0)
-            {
-            printf("rank=%d tile=%d\n", Env::rank, t);
-            for(uint32_t i = 0; i < tile_height - 1; i++)
+            for(uint32_t i = 0; i < tile_width; i++)
             {
                 printf("%d: ", i);
                 for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                 {
-                    printf("%d ", JA[j]);
+                    printf("[%d %d]", j, JA[j]);                
                 }
-                printf("\n");
-            }
-            }
-            Env::barrier();
-            if(Env::rank == 1)
-            {
-            printf("rank=%d tile=%d\n", Env::rank, t);
-            for(uint32_t i = 0; i < tile_height - 1; i++)
-            {
-                printf("%d: ", i);
-                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                {
-                    printf("%d ", JA[j]);
-                }
-                printf("\n");
-            }
-            }
-            Env::barrier();
+                printf("\n");                        
+            }    
             */
-            
         }
     }
-    
-    //del_triples();
 }
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
 {
     struct Triple<Weight, Integer_Type> pair;
-    //ColSort<Weight, Integer_Type> f;
     for(uint32_t t: local_tiles_row_order)
     {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        
-        //if(tile.allocated)
-        //{
-            //tile.nedges = tile.triples->size();
-         //   tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
-            //tile.allocated = true;
-        //}        
-        
-        //std::sort(tile.triples->begin(), tile.triples->end(), f);
-        
-        ///uint32_t i = 0; // CSR Index
-        //uint32_t j = 1; // Row index
-        //if(!Env::rank)
-        //{
-        //    printf("t=%d a=%d n=%lu\n", t, tile.allocated, tile.nedges);
-        //}
-        
         if(tile.allocated)
         {
             tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), tile_width + 1);
             uint32_t i = 0; // CSC Index
             uint32_t j = 1; // Col index
             #ifdef HAS_WEIGHT
-            Weight *VAL = (Weight *) tile.csc->VAL->data;
+            Weight *A = (Weight *) tile.csc->A;
             #endif
             
-            Integer_Type *ROW_INDEX = (Integer_Type *) tile.csc->ROW_INDEX->data; // ROW_INDEX
-            Integer_Type *COL_PTR = (Integer_Type *) tile.csc->COL_PTR->data; // COL_PTR
-            COL_PTR[0] = 0;
+            Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
+            Integer_Type *JA = (Integer_Type *) tile.csc->JA; // COL_PTR
+            JA[0] = 0;
             for (auto& triple : *(tile.triples))
             {
                 pair = rebase(triple);
+                //printf("%d %d\n", pair.row, pair.col);
                 while((j - 1) != pair.col)
                 {
                     j++;
-                    COL_PTR[j] = COL_PTR[j - 1];
+                    JA[j] = JA[j - 1];
                 }            
                 // In case weights are there
                 #ifdef HAS_WEIGHT
-                VAL[i] = triple.weight;
+                A[i] = triple.weight;
                 #endif
                 
-                COL_PTR[j]++;
-                ROW_INDEX[i] = pair.row;
+                JA[j]++;
+                IA[i] = pair.row;
                 i++;
             }
-            
             while(j < tile_width + 1)
             {
                 j++;
-                COL_PTR[j] = COL_PTR[j - 1];
+                JA[j] = JA[j - 1];
+            }
+            /*
+            for(uint32_t i = 0; i < tile_width; i++)
+            {
+                printf("%d: ", i);
+                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                {
+                    printf("[%d %d]", j, JA[j]);                
+                }
+                printf("\n");                        
+            } 
+            */
+        }
+    }
+}
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
+{
+    uint32_t yi = 0, xi = 0, next_row = 0;
+    struct Triple<Weight, Integer_Type> pair;
+    uint32_t n = 0;
+    for(uint32_t t: local_tiles_row_order)
+    {        
+        auto &r_seg = R->segments[yi];
+        auto *r_data = (Integer_Type *) r_seg.D;
+        Integer_Type r_nitems = r_seg.n;
+        
+        auto &i_seg = I->segments[yi];
+        char *i_data = (char *) i_seg.D;
+        Integer_Type i_nitems = i_seg.n;
+
+        auto &iv_seg = IV->segments[yi];
+        auto *iv_data = (Integer_Type *) iv_seg.D;
+        Integer_Type iv_nitems = iv_seg.n;
+        
+        auto &c_seg = C->segments[xi];
+        auto *c_data = (Integer_Type *) c_seg.D;
+        Integer_Type c_nitems = c_seg.n;
+        
+        auto &j_seg = J->segments[xi];
+        char *j_data = (char *) j_seg.D;
+        Integer_Type j_nitems = j_seg.n;
+
+        auto &jv_seg = JV->segments[xi];
+        auto *jv_data = (Integer_Type *) jv_seg.D;
+        Integer_Type jv_nitems = jv_seg.n;
+        
+        
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        if(tile.allocated)
+        {
+            tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), r_nitems + 1);
+            uint32_t i = 0; // CSR Index
+            uint32_t j = 1; // Row index
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csr->A;
+            #endif
+            
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA; // Rows
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA; // Cols
+            IA[0] = 0;
+            for (auto &triple : *(tile.triples))
+            {
+                test(triple);
+                pair = rebase(triple);
+                assert(i_data[pair.row] != 0);
+                assert(j_data[pair.col] != 0);
+                while((j - 1) != iv_data[pair.row])
+                {
+                    j++;
+                    IA[j] = IA[j - 1];
+                }  
+
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                A[i] = triple.weight;
+                #endif
+
+                IA[j]++;
+                JA[i] = jv_data[pair.col];    
+                i++;
+            }
+            while(j < r_nitems + 1)
+            {
+                j++;
+                IA[j] = IA[j - 1];
+            }
+        }   
+        
+        xi++;
+        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
+        if(next_row)
+        {
+            xi = 0;
+            yi++;
+        }
+    }
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
+{
+    struct Triple<Weight, Integer_Type> pair;
+    uint32_t yi = 0, xi = 0, next_row = 0;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        auto &i_seg = I->segments[yi];
+        char *i_data = (char *) i_seg.D;
+        Integer_Type i_nitems = i_seg.n;
+        
+        auto &r_seg = R->segments[yi];
+        auto *r_data = (Integer_Type *) r_seg.D;
+        Integer_Type r_nitems = r_seg.n;
+
+        auto &iv_seg = IV->segments[yi];
+        auto *iv_data = (Integer_Type *) iv_seg.D;
+        Integer_Type iv_nitems = iv_seg.n;
+        
+        auto &j_seg = J->segments[xi];
+        char *j_data = (char *) j_seg.D;
+        Integer_Type j_nitems = j_seg.n;
+        
+        auto &c_seg = C->segments[xi];
+        auto *c_data = (Integer_Type *) c_seg.D;
+        Integer_Type c_nitems = c_seg.n;
+
+        auto &jv_seg = JV->segments[xi];
+        auto *jv_data = (Integer_Type *) jv_seg.D;
+        Integer_Type jv_nitems = jv_seg.n;
+        
+        if(tile.allocated)
+        {
+            tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), c_nitems + 1);
+            uint32_t i = 0; // Row Index
+            uint32_t j = 1; // Col index
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csc->A;
+            #endif
+            
+            Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
+            Integer_Type *JA = (Integer_Type *) tile.csc->JA; // COL_PTR
+            JA[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                test(triple);
+                pair = rebase(triple);
+                assert(i_data[pair.row] != 0);
+                assert(j_data[pair.col] != 0);
+                
+                while((j -1) != jv_data[pair.col])
+                {
+                    j++;
+                    JA[j] = JA[j - 1];
+                }  
+                
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                A[i] = triple.weight;
+                #endif
+                
+                JA[j]++;
+                IA[i] = iv_data[pair.row];
+                i++;
+            }
+            while(j < c_nitems + 1)
+            {
+                j++;
+                JA[j] = JA[j - 1];
             }
         }
-    }
-
-    //del_triples();
-}
-/*
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
-{
-    if(compression_type == Compression_type::_CSR_)
-    {
-        del_csr();
-    }
-    else if(compression_type == Compression_type::_CSC_)
-    {
-        del_csc();
-    }
-    else
-    {
-        fprintf(stderr, "Invalid compression type\n");
-        Env::exit(1);
-    }        
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::del_dcsr()
-{
-    Triple<Weight, Integer_Type> pair;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        if(tile.allocated)
+        
+        xi++;
+        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
+        if(next_row)
         {
-            delete tile.tcsr;
-        }
-    }
+            xi = 0;
+            yi++;
+        }  
+    }    
 }
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::del_csr()
-{
-    Triple<Weight, Integer_Type> pair;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        if(tile.allocated)
-        {
-            delete tile.csr;
-        }
-    }
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::del_csc()
-{
-    Triple<Weight, Integer_Type> pair;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        pair = tile_of_local_tile(t);
-        auto& tile = tiles[pair.row][pair.col];
-        if(tile.allocated)
-        {
-            delete tile.csc;
-        }
-    }
-}
-*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
@@ -2395,8 +2223,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
         
         //JV->del_vec();
         delete JV;   
-    }
-    
+    }    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -2411,18 +2238,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
         {
             if(compression_type == Compression_type::_CSR_)
             {
-                //tile.csr->del_csr();
                 delete tile.csr;
             }
             else if(compression_type == Compression_type::_CSC_)
             {
-                //tile.csc->del_csc();
                 delete tile.csc;
             }
-            else if(compression_type == Compression_type::_TCSR_)
-                delete tile.tcsr;
-            else if(compression_type == Compression_type::_TCSC_)
-                delete tile.tcsc;
         }
     }
 }
@@ -2443,7 +2264,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
             auto& tile = tiles[pair.row][pair.col];
             tile.free_triples();
         }
-        
     }
     else
     {
