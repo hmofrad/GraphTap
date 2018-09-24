@@ -2083,10 +2083,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             for (auto &triple : *(tile.triples))
             {
                 test(triple);
-                pair = rebase(triple);
-                assert(i_data[pair.row] != 0);
-                assert(j_data[pair.col] != 0);
-                while((j - 1) != iv_data[pair.row])
+                auto pair1 = rebase(triple);
+                if((!i_data[pair1.row]) or (!j_data[pair1.col]))
+                    printf("Invalid triple[%d, %d] with i_data=%d j_data=%d \n", pair1.row, pair1.col, 
+                                                              i_data[pair1.row], j_data[pair1.col]);
+                
+                assert(i_data[pair1.row] != 0);
+                assert(j_data[pair1.col] != 0);
+                while((j - 1) != iv_data[pair1.row])
                 {
                     j++;
                     IA[j] = IA[j - 1];
@@ -2098,7 +2102,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 #endif
 
                 IA[j]++;
-                JA[i] = jv_data[pair.col];    
+                JA[i] = jv_data[pair1.col];    
                 i++;
             }
             while(j < r_nitems + 1)
@@ -2169,11 +2173,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             for (auto& triple : *(tile.triples))
             {
                 test(triple);
-                pair = rebase(triple);
-                assert(i_data[pair.row] != 0);
-                assert(j_data[pair.col] != 0);
-                
-                while((j -1) != jv_data[pair.col])
+                auto pair1 = rebase(triple);
+                if((!i_data[pair1.row]) or (!j_data[pair1.col]))
+                    printf("Invalid triple[%d, %d] with i_data=%d j_data=%d \n", pair1.row, pair1.col, 
+                                                              i_data[pair1.row], j_data[pair1.col]);
+                assert(i_data[pair1.row] != 0);
+                assert(j_data[pair1.col] != 0);
+
+                while((j -1) != jv_data[pair1.col])
                 {
                     j++;
                     JA[j] = JA[j - 1];
@@ -2185,7 +2192,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 #endif
                 
                 JA[j]++;
-                IA[i] = iv_data[pair.row];
+                IA[i] = iv_data[pair1.row];
                 i++;
             }
             while(j < c_nitems + 1)
