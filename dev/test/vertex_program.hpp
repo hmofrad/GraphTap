@@ -1565,19 +1565,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     else if(filtering_type == _SOME_)
     {
+        /*
         yi = accu_segment_row;
         auto &r_seg = R->segments[yi];
         auto *r_data = (Integer_Type *) r_seg.D;
         Integer_Type r_nitems = r_seg.n;
-        
+        */
         auto &i_seg = I->segments[yi];
         auto *i_data = (char *) i_seg.D;
         Integer_Type i_nitems = i_seg.n;
-
+        /*
         auto &iv_seg = IV->segments[yi];
         auto *iv_data = (Integer_Type *) iv_seg.D;
         Integer_Type iv_nitems = iv_seg.n;
-
+        */
         /*
         for(uint32_t i = 0; i < y_nitems; i++)
         {
@@ -1597,7 +1598,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         {
             if(i_data[i])
             {
-                assert(iv_data[i] == j);
+                //assert(iv_data[i] == j);
                 v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
             }
