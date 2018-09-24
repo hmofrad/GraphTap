@@ -127,7 +127,11 @@ Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
     for(uint32_t i = 0; i < vector_length; i++)
     {
         if(allocated[i])
+        {
             free(data[i]);
+            //delete[] (Fractional_Type *) data[i];
+            data[i] =nullptr;
+        }
     }
 }
     
@@ -168,20 +172,29 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     vector_length = local_segments.size();
     // Reserve the 1D vector of segments. 
     //segments.resize(vector_length);
-    
+    data.resize(vector_length);
+    allocated.resize(vector_length);
     for(uint32_t i = 0; i < vector_length; i++)
     {
         //nitems.push_back(nitems_[i]);
         uint64_t nbytes = nitems[i] * sizeof(Fractional_Type);
         if(nbytes)
         {
-            void *D = (Fractional_Type *) malloc(nbytes);
-            memset(D, 0, nbytes);
-            data.push_back(D);
-            allocated.push_back(true);    
+            //void *D = (Fractional_Type *) malloc(nbytes);
+            //void *D = new Fractional_Type[nitems[i]];
+            //memset(D, 0, nbytes);
+            //data.push_back(D);
+            //allocated.push_back(true);    
+            data[i] = (Fractional_Type *) malloc(nbytes);
+            memset(data[i], 0, nbytes);
+            allocated[i] = true;
         }
         else
-            allocated.push_back(false);
+        {
+            data[i] = nullptr;
+            allocated[i] = false;
+            //allocated.push_back(false);
+        }
         
         
         
