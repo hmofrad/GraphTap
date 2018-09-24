@@ -871,7 +871,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Request request;
     MPI_Status status;
     
-    Env::barrier();
+    //Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -882,7 +882,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    Env::barrier();     
+    //Env::barrier();     
 
     for (uint32_t i = 0; i < Env::nranks; i++)
     {
@@ -1237,6 +1237,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         accu_segment_row_vec_ = accu_segment_col_vec;
     }
     
+    MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
+    MPI_Datatype TYPE_CHAR = Types<Weight, Integer_Type, char>::get_data_type();
+    
     std::vector<MPI_Request> out_requests;
     std::vector<MPI_Request> in_requests;
     std::vector<MPI_Status> out_statuses;
@@ -1249,7 +1252,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     uint32_t tile_th, pair_idx;
     bool vec_owner, communication;
     uint32_t fi = 0, fo = 0;
-    MPI_Datatype TYPE_CHAR = Types<Weight, Integer_Type, char>::get_data_type();
+    
     std::vector<Vector<Weight, Integer_Type, char> *> F;
     Vector<Weight, Integer_Type, char> *F_;
     std::vector<Integer_Type> f_size = {tile_length};
@@ -1495,7 +1498,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     nnz_sizes_all.resize(nrowgrps_);
     nnz_sizes_all[owned_segment] = nnz_local;
     
-    MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
+    
     //Env::barrier();
     for (uint32_t j = 0; j < nrowgrps_; j++)
     {
@@ -1507,7 +1510,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         }
         
     }
-    Env::barrier();     
+    //Env::barrier();     
     
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
