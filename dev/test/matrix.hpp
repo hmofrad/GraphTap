@@ -871,7 +871,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Request request;
     MPI_Status status;
     
-    //Env::barrier();
+    Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -882,7 +882,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    //Env::barrier();     
+    Env::barrier();     
 
     for (uint32_t i = 0; i < Env::nranks; i++)
     {
@@ -1499,7 +1499,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     nnz_sizes_all[owned_segment] = nnz_local;
     
     
-    //Env::barrier();
+    Env::barrier();
     for (uint32_t j = 0; j < nrowgrps_; j++)
     {
         uint32_t r = leader_ranks[j];
@@ -1510,7 +1510,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         }
         
     }
-    //Env::barrier();     
+    Env::barrier();     
     
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
