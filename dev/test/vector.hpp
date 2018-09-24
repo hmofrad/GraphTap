@@ -63,9 +63,9 @@ Segment<Weight, Integer_Type, Fractional_Type>::~Segment()
     //delete D;
     
     //printf("Segment %d %d %d\n", Env::rank, g, n);
-    if(n)
+    //if(n)
         //free(D);
-    delete[] (Fractional_Type *) D;
+    //delete[] (Fractional_Type *) D;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -104,12 +104,15 @@ class Vector
     public:
         Vector();
         //Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
-        Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_);
+        Vector(std::vector<Integer_Type> &nitems_, std::vector<int32_t> &local_segments_);
         ~Vector();
         void del_vec();
         
         std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
+        std::vector<Integer_Type> nitems;
+        std::vector<void *> data;
+        std::vector<bool> allocated;
         uint32_t vector_length;
         //Integer_Type nelems;
 };
@@ -119,7 +122,14 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vector<Weight, Integer_Type, Fractional_Type>::~Vector() {};
+Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
+{
+    for(uint32_t i = 0; i < vector_length; i++)
+    {
+        if(allocated[i])
+            free(data[i]);
+    }
+}
     
     //printf("~vector %d\n", Env::rank);
 
@@ -148,22 +158,38 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(Integer_Type nelems_, std:
 */
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> &nelems_, std::vector<int32_t> &local_segments_)
+Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> &nitems_, std::vector<int32_t> &local_segments_)
 {
     //printf("Vector rank=%d nelems=%lu ls=%lu\n", Env::rank, nelems_.size(), local_segments_.size());
-    assert(nelems_.size() == local_segments_.size());
+    assert(nitems_.size() == local_segments_.size());
     
-    //nelems = -1;
+    nitems = nitems_;
     local_segments = local_segments_;
     vector_length = local_segments.size();
     // Reserve the 1D vector of segments. 
-    segments.resize(vector_length);
+    //segments.resize(vector_length);
     
     for(uint32_t i = 0; i < vector_length; i++)
     {
+        uint64_t nbytes = nitems[i] * sizeof(Fractional_Type);
+        if(nbytes)
+        {
+            void *D = (Fractional_Type *) malloc(nbytes);
+            data.push_back(D);
+            allocated.push_back(true);    
+        }
+        else
+            allocated.push_back(false);
+        
+        
+        
+        
         //Segment<Weight, Integer_Type, Fractional_Type> segment(nelems_[i], local_segments[i]);
         //segment.g = local_segments[i];
-        segments[i].allocate(nelems_[i], local_segments[i]);
+        //segments[i].allocate(nitems_[i], local_segments[i]);
+       
+       // void *D = malloc(nbytes);
+        //data.push_back(
         //segments.push_back(segment);
         //segments[i].g = local_segments[i];
         
