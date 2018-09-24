@@ -1477,7 +1477,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             }
 
                 //f_data[i] += fj_data[i];
+                //printf("%d ", f_data[i]);
         }
+        //printf("\n");
     }
     
     
@@ -1486,7 +1488,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     {
         if(f_data[i])
             nnz_local++;
+        //printf("%d ", f_data[i]);
     }
+    //printf("\n");
     //printf("###r=%d n=%d m=%d n+m=%d %d %d\n", Env::rank, n, m, n + m, f_nitems, nnz_local);
     nnz_sizes_all.resize(nrowgrps_);
     nnz_sizes_all[owned_segment] = nnz_local;
