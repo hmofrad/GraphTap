@@ -1508,7 +1508,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     //exit(0);
     //Env::barrier();     
     
-    Vector<Weight, Integer_Type, Integer_Type> *T = new Vector<Weight, Integer_Type, Integer_Type>(nnz_sizes_loc,  local_row_segments_);
+    //Vector<Weight, Integer_Type, Integer_Type> *T = new Vector<Weight, Integer_Type, Integer_Type>(nnz_sizes_loc,  local_row_segments_);
     std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
     Vector<Weight, Integer_Type, char> *K = new Vector<Weight, Integer_Type, char>(tile_length_sizes,  local_row_segments_);
     Vector<Weight, Integer_Type, Integer_Type> *KV = new Vector<Weight, Integer_Type, Integer_Type>(tile_length_sizes,  local_row_segments_);
@@ -1516,8 +1516,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Datatype type1 = Types<Weight, Integer_Type, char>::get_data_type();
     if(nnz_sizes_all[owned_segment])
     {
-        auto &tj_seg = T->segments[accu_segment_row_];
-        auto *tj_data = (Integer_Type *) tj_seg.D;
+        //auto &tj_seg = T->segments[accu_segment_row_];
+        //auto *tj_data = (Integer_Type *) tj_seg.D;
         
         auto &kj_seg = K->segments[accu_segment_row_];
         auto *kj_data = (char *) kj_seg.D;
@@ -1530,7 +1530,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         {
             if(f_data[i])
             {
-                tj_data[j] = i;
+                //tj_data[j] = i;
                 kj_data[i] = 1;
                 kvj_data[i] = j; 
                 j++;
@@ -1623,7 +1623,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     */
     
     
-    
+    /*
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         this_segment = local_row_segments_[j];
@@ -1672,7 +1672,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    
+    */
     /*
     MPI_Waitall(in_requests.size(), in_requests.data(), in_statuses.data());    
     i = 0;
@@ -1840,9 +1840,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     //MPI_Barrier(MPI_COMM_WORLD);
     for (uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
-        auto &tj_seg = T->segments[j];
-        auto *tj_data = (Integer_Type *) tj_seg.D;
-        Integer_Type tj_nitems = tj_seg.n;
+        //auto &tj_seg = T->segments[j];
+        //auto *tj_data = (Integer_Type *) tj_seg.D;
+        //Integer_Type tj_nitems = tj_seg.n;
       
         auto &kj_seg = K->segments[j];
         auto *kj_data = (char *) kj_seg.D;
@@ -1859,7 +1859,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             if(kj_data[i])
             {
                 assert(k == kvj_data[i]);
-                assert(i == tj_data[k]);
+                //assert(i == tj_data[k]);
                 k++;
             }
             else
@@ -1868,14 +1868,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             }
         }
         //printf("r=%d k=%d tj=%d kj=%d\n", Env::rank, k, tj_nitems, kj_nitems);
-        assert(k == tj_nitems);
+        //assert(k == tj_nitems);
     }
      
     if(filtering_type_ == _SRCS_)
     {
         nnz_row_sizes_all = nnz_sizes_all;
         nnz_row_sizes_loc = nnz_sizes_loc;
-        R = T;
+        //R = T;
         I = K;
         IV = KV;
     }
@@ -1883,7 +1883,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     {
         nnz_col_sizes_all = nnz_sizes_all;
         nnz_col_sizes_loc = nnz_sizes_loc;
-        C = T;
+        //C = T;
         J = K;
         JV = KV;
     }
@@ -2038,9 +2038,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
     uint32_t n = 0;
     for(uint32_t t: local_tiles_row_order)
     {        
-        auto &r_seg = R->segments[yi];
-        auto *r_data = (Integer_Type *) r_seg.D;
-        Integer_Type r_nitems = r_seg.n;
+        //auto &r_seg = R->segments[yi];
+        //auto *r_data = (Integer_Type *) r_seg.D;
+        //Integer_Type r_nitems = r_seg.n;
         
         auto &i_seg = I->segments[yi];
         char *i_data = (char *) i_seg.D;
@@ -2050,9 +2050,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         auto *iv_data = (Integer_Type *) iv_seg.D;
         Integer_Type iv_nitems = iv_seg.n;
         
-        auto &c_seg = C->segments[xi];
-        auto *c_data = (Integer_Type *) c_seg.D;
-        Integer_Type c_nitems = c_seg.n;
+        //auto &c_seg = C->segments[xi];
+        //auto *c_data = (Integer_Type *) c_seg.D;
+        //Integer_Type c_nitems = c_seg.n;
         
         auto &j_seg = J->segments[xi];
         char *j_data = (char *) j_seg.D;
@@ -2065,6 +2065,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
+        
+        Integer_Type r_nitems = nnz_row_sizes_loc[yi];
         
         if(tile.allocated)
         {
@@ -2130,9 +2132,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         char *i_data = (char *) i_seg.D;
         Integer_Type i_nitems = i_seg.n;
         
-        auto &r_seg = R->segments[yi];
-        auto *r_data = (Integer_Type *) r_seg.D;
-        Integer_Type r_nitems = r_seg.n;
+        //auto &r_seg = R->segments[yi];
+        //auto *r_data = (Integer_Type *) r_seg.D;
+        //Integer_Type r_nitems = r_seg.n;
 
         auto &iv_seg = IV->segments[yi];
         auto *iv_data = (Integer_Type *) iv_seg.D;
@@ -2142,13 +2144,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         char *j_data = (char *) j_seg.D;
         Integer_Type j_nitems = j_seg.n;
         
-        auto &c_seg = C->segments[xi];
-        auto *c_data = (Integer_Type *) c_seg.D;
-        Integer_Type c_nitems = c_seg.n;
+        //auto &c_seg = C->segments[xi];
+        //auto *c_data = (Integer_Type *) c_seg.D;
+        //Integer_Type c_nitems = c_seg.n;
 
         auto &jv_seg = JV->segments[xi];
         auto *jv_data = (Integer_Type *) jv_seg.D;
         Integer_Type jv_nitems = jv_seg.n;
+        
+        Integer_Type c_nitems = nnz_col_sizes_loc[xi];
         
         if(tile.allocated)
         {
@@ -2207,7 +2211,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
     if(filtering_type == _SOME_)
     {
         //R->del_vec();
-        delete R;
+        //delete R;
         
         //I->del_vec();
         delete I;
@@ -2216,7 +2220,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
         delete IV;
         
         //C->del_vec();
-        delete C;
+        //delete C;
         
         //J->del_vec();
         delete J;
