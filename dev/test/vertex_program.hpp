@@ -1282,11 +1282,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
         //printf("%d %d %d %d %d %d\n", Env::rank, t, yi, yo, accu_segment_col, accu_segment_cg);    
+        /*
         auto *Yp = Y[yi];
+        
+
         
         auto &y_seg = Yp->segments[yo];
         auto &x_seg = X->segments[xi];
         spmv(y_seg, x_seg, tile);
+        */
+        auto *Yp = Y[yi];
+        Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
+        Integer_Type y_nitems = Yp->nitems[yo];
+        
+        Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
+        spmv(y_data, x_data, tile);
+
         
         xi++;
     }
@@ -1323,12 +1334,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
             yo = accu_segment_rg;
         else
             yo = 0;
-        
+        /*
         auto *Yp = Y[yi];
         auto &y_seg = Yp->segments[yo];
         
         auto &x_seg = X->segments[xi];
         spmv(y_seg, x_seg, tile);
+        */
+        
+        
+        auto *Yp = Y[yi];
+        Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
+        Integer_Type y_nitems = Yp->nitems[yo];
+        
+        Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
+        spmv(y_data, x_data, tile);
+        
+        
+        
         yi++;
         
         //if(!Env::rank)
@@ -1355,11 +1378,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
             yo = accu_segment_rg;
         else
             yo = 0;
-        
+        /*
         auto *Yp = Y[yi];
         auto &y_seg = Yp->segments[yo];
         auto *y_data = (Fractional_Type *) y_seg.D;
         Integer_Type y_nitems = y_seg.n;
+        */
+        
+        
+        auto *Yp = Y[yi];
+        Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
+        Integer_Type y_nitems = Yp->nitems[yo];
+        
+        
+        
         
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
@@ -1396,9 +1428,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
                         accu = follower_rowgrp_ranks_accu_seg[j];
                     }
                     
-                    auto &yj_seg = Yp->segments[accu];
-                    auto *yj_data = (Fractional_Type *) yj_seg.D;
-                    Integer_Type yj_nitems = yj_seg.n;
+                    //auto &yj_seg = Yp->segments[accu];
+                    //auto *yj_data = (Fractional_Type *) yj_seg.D;
+                    //Integer_Type yj_nitems = yj_seg.n;
+                    
+                    Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
+                    Integer_Type yj_nitems = Yp->nitems[accu];
+                    
+                    
                     MPI_Irecv(yj_data, yj_nitems, MPI_TYPE, follower, pair_idx, communicator, &request);
                     in_requests.push_back(request);
                     
