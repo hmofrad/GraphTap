@@ -893,7 +893,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             uint32_t outbox_bound = outbox.size() + many_triples_size;
             outbox.resize(outbox_bound);
             /* Send the triples with many_triples_size padding. */
-            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, Env::rank, Env::MPI_WORLD, &request);
             out_requests.push_back(request);
         }
     }     
@@ -908,7 +908,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
             inbox.resize(inbox_bound);
             /* Recv the triples with many_triples_size padding. */
-            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, r, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
     }
@@ -944,7 +944,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         nedges_end_local += tile.triples->size();
     }
     
-    
+    /*
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
@@ -953,7 +953,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
         //printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
     }
-    
+    */
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);
