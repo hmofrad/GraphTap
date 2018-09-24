@@ -92,9 +92,8 @@ int main(int argc, char **argv)
     G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
     if(!Env::rank)
         Env::tock("Ingress");
-
-    if(!Env::rank)
-        Env::tick();
+    
+    
     
     if(!Env::rank)
         Env::tick();
@@ -104,6 +103,8 @@ int main(int argc, char **argv)
     V.init(x, y, v, s);
     if(!Env::rank)
         Env::tock("Init");
+    
+
     
     if(!Env::rank)
     {
@@ -132,13 +133,15 @@ int main(int argc, char **argv)
         if(!Env::rank)
             Env::tock("Gather"); 
     }
-
+    
     if(!Env::rank)
         Env::tick();
     V.combine();
     if(!Env::rank)
         Env::tock("Combine stacked"); 
     
+
+
     if(!Env::rank)
         Env::tick();
     V.apply(f.assign);
@@ -177,6 +180,7 @@ int main(int argc, char **argv)
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(GR);
+    
     
     /*
     transpose = true;
