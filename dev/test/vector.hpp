@@ -108,7 +108,7 @@ class Vector
         ~Vector();
         void del_vec();
         
-        std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
+        //std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
         std::vector<Integer_Type> nitems;
         std::vector<void *> data;
@@ -171,10 +171,12 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     
     for(uint32_t i = 0; i < vector_length; i++)
     {
+        //nitems.push_back(nitems_[i]);
         uint64_t nbytes = nitems[i] * sizeof(Fractional_Type);
         if(nbytes)
         {
             void *D = (Fractional_Type *) malloc(nbytes);
+            memset(D, 0, nbytes);
             data.push_back(D);
             allocated.push_back(true);    
         }
