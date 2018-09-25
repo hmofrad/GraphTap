@@ -841,7 +841,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             }
         }
     }
-    
+    /*    
     Triple<Weight, Integer_Type> triple;
     
     const int nitems = 2;
@@ -852,7 +852,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 
     //offsets[0] = offsetof(Triple<Weight, Integer_Type> triple, shifts);
     //offsets[1] = offsetof(Triple<Weight, Integer_Type> triple, topSpeed);
-/*    
+
     MPI_Type_create_struct(nitems, blocklengths, offsets, types, &MPI_TRIPLES);
     MPI_Type_commit(&MPI_TRIPLES);
     */
@@ -910,13 +910,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &outbox = outboxes[r];
-            uint32_t outbox_size = outbox.size() * 2;
-            outbox.resize(outbox_size);
-            MPI_Isend(outbox.data(), outbox_size, TYPE_INT, r, Env::rank, Env::MPI_WORLD, &request);
+            //uint32_t outbox_size = outbox.size() * 2;
+            //outbox.resize(outbox_size);
+            //MPI_Isend(outbox.data(), outbox_size, TYPE_INT, r, Env::rank, Env::MPI_WORLD, &request);
             //printf("Send: %d --> %d %d %lu\n", Env::rank, r, outbox_size, outbox.size());
-            //uint32_t outbox_bound = outbox.size();
-            //outbox.resize(outbox_bound);
-            //MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, Env::rank, Env::MPI_WORLD, &request);
+            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            outbox.resize(outbox_bound);
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, Env::rank, Env::MPI_WORLD, &request);
             
             
             out_requests.push_back(request);
@@ -930,14 +930,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &inbox = inboxes[r];
-            uint32_t inbox_size = inbox_sizes[r] * 2;
-            inbox.resize(inbox_size);
-            MPI_Irecv(inbox.data(), inbox_size, TYPE_INT, r, r, Env::MPI_WORLD, &request);
+            //uint32_t inbox_size = inbox_sizes[r] * 2;
+            //inbox.resize(inbox_size);
+            //MPI_Irecv(inbox.data(), inbox_size, TYPE_INT, r, r, Env::MPI_WORLD, &request);
             //printf("Recv: %d <-- %d %d %lu %d\n", r, Env::rank, inbox_size, inbox.size(), inbox_sizes[r]);
             
-            //uint32_t inbox_bound = inbox_sizes[r];
-            //inbox.resize(inbox_bound);
-            //MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, r, Env::MPI_WORLD, &request);
+            uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
+            inbox.resize(inbox_bound);
+            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, r, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
     }
