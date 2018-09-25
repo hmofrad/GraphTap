@@ -890,10 +890,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &outbox = outboxes[r];
-            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            //uint32_t outbox_size = outbox.size();
+            //outbox.resize(outbox_size);
+            //MPI_Isend(outbox.data(), outbox_size, MANY_TRIPLES, r, Env::rank, Env::MPI_WORLD, &request);
+            uint32_t outbox_bound = outbox.size();
             outbox.resize(outbox_bound);
-            /* Send the triples with many_triples_size padding. */
+            //printf("Send: %d --> %d %d %lu\n", Env::rank, r, outbox_bound, outbox.size());
             MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, Env::rank, Env::MPI_WORLD, &request);
+            
+            
             out_requests.push_back(request);
         }
     }     
@@ -905,17 +910,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &inbox = inboxes[r];
-            uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
+            //uint32_t inbox_size = inbox.size();
+            //inbox.resize(inbox_size);
+            //MPI_Irecv(inbox.data(), inbox_size, MANY_TRIPLES, r, r, Env::MPI_WORLD, &request);
+            
+            uint32_t inbox_bound = inbox_sizes[r];
             inbox.resize(inbox_bound);
-            /* Recv the triples with many_triples_size padding. */
+            //printf("Recv: %d <-- %d %d %lu %d\n", r, Env::rank, inbox_bound, inbox.size(), inbox_sizes[r]);
             MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, r, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
     }
 
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    in_requests.clear();
     out_requests.clear();
 
     for (uint32_t r = 0; r < Env::nranks; r++)
