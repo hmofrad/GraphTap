@@ -819,7 +819,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
     }
 }
 
-#include <stddef.h>
+//#include <stddef.h>
 /* Borrowed from LA3 code @
    https://github.com/cmuq-ccl/LA3/blob/master/src/matrix/dist_matrix2d.hpp
 */
@@ -901,8 +901,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
-        printf("%d <--> %d out=%d in=%d\n", Env::rank, r, outbox_sizes[r], inbox_sizes[r]);
+        //printf("%d <--> %d out=%d in=%d\n", Env::rank, r, outbox_sizes[r], inbox_sizes[r]);
     }
+    
+    
+    
     
     
     int flag , source, count;            
