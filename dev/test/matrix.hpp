@@ -841,27 +841,282 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             }
         }
     }
-    /*    
-    Triple<Weight, Integer_Type> triple;
-    
-    const int nitems = 2;
-    int blocklengths[2] = {1,1};
-    MPI_Datatype types[2] = {MPI_UNSIGNED, MPI_UNSIGNED};
-    MPI_Datatype MPI_TRIPLES;
-    MPI_Aint     offsets[2];
 
-    //offsets[0] = offsetof(Triple<Weight, Integer_Type> triple, shifts);
-    //offsets[1] = offsetof(Triple<Weight, Integer_Type> triple, topSpeed);
-
-    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &MPI_TRIPLES);
-    MPI_Type_commit(&MPI_TRIPLES);
-    */
+    std::vector<MPI_Request> out_requests;
+    std::vector<MPI_Request> in_requests;
+    MPI_Request request;
+    MPI_Status status;
     
     MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
+    #ifdef HAS_WEIGHT
+    MPI_Datatype TYPE_WEIGHT = Types<Weight, Integer_Type, Weight>::get_data_type();
+    #endif
+    
+    std::vector<std::vector<Integer_Type>> outboxes_row(Env::nranks);
+    std::vector<std::vector<Integer_Type>> outboxes_col(Env::nranks);
+    std::vector<std::vector<Integer_Type>> inboxes_row(Env::nranks);
+    std::vector<std::vector<Integer_Type>> inboxes_col(Env::nranks);
+    #ifdef HAS_WEIGHT
+    std::vector<std::vector<Weight>> outboxes_weight(Env::nranks);
+    std::vector<std::vector<Weight>> inboxes_weight(Env::nranks);
+    #endif
+    
+    std::vector<uint32_t> outbox_sizes(Env::nranks);
+    std::vector<uint32_t> inbox_sizes(Env::nranks);
     
     
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+            if(tile.rank != Env::rank)
+            {   
+                auto &outbox_row = outboxes_row[tile.rank];
+                auto &outbox_col = outboxes_col[tile.rank];
+                #ifdef HAS_WEIGHT
+                auto &outbox_weight = outboxes_weight[tile.rank];
+                #endif
+                for (auto& triple : *(tile.triples))
+                {
+                    //Integer_Type t = triple.row;
+                    outbox_row.push_back(triple.row);
+                    outbox_col.push_back(triple.col);
+                    #ifdef HAS_WEIGHT
+                    outbox_weight.push_back(triple.weight);
+                    #endif
+                }
+                tile.free_triples();
+            }
+        }
+    }
+    
+    
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            outbox_sizes[r] = outboxes_row[r].size();
+            uint32_t outbox_size = outbox_sizes[r];
+            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
+                                                        r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+        }
+        printf("%d <--> %d out=%d in=%d\n", Env::rank, r, outbox_sizes[r], inbox_sizes[r]);
+    }
+    
+    
+    int flag , source, count;            
+    
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    //for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &outbox_row = outboxes_row[r];
+            MPI_Isend(outbox_row.data(), outbox_row.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+            out_requests.push_back(request);
+            //printf("Send: %d --> %d %lu outbox_row\n", Env::rank, r, outbox_row.size());
+        }
+    } 
+
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    //for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            /*
+            flag = 0;
+            while(!flag)
+                MPI_Iprobe(MPI_ANY_SOURCE, 0, Env::MPI_WORLD, &flag, &status);
+            source = status.MPI_SOURCE;
+            MPI_Get_count(&status, TYPE_INT, &count);
+            auto &inbox_row = inboxes_row[source];  
+            inbox_row.resize(count);
+            MPI_Recv(inbox_row.data(), inbox_row.size(), TYPE_INT, source, 0, Env::MPI_WORLD, &status);
+            */
+            auto &inbox_row = inboxes_row[r];  
+            inbox_row.resize(inbox_sizes[r]);
+            MPI_Irecv(inbox_row.data(), inbox_row.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+            //if(!Env::rank)
+            //printf("Recv: %d <-- %d %lu inbox_row\n", Env::rank, r, inbox_row.size());
+        }
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    in_requests.clear();
+    out_requests.clear();  
     
 
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    //for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &outbox_col = outboxes_col[r];
+            MPI_Isend(outbox_col.data(), outbox_col.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+            out_requests.push_back(request);
+            //printf("Send: %d --> %d %lu outbox_col\n", Env::rank, r, outbox_col.size());
+        }
+    } 
+
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    //for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            /*
+            flag = 0;
+            while(!flag)
+                MPI_Iprobe(MPI_ANY_SOURCE, 0, Env::MPI_WORLD, &flag, &status);
+            source = status.MPI_SOURCE;
+            MPI_Get_count(&status, TYPE_INT, &count);
+            auto &inbox_col = inboxes_col[source];
+            inbox_col.resize(count);
+            MPI_Recv(inbox_col.data(), inbox_col.size(), TYPE_INT, source, 0, Env::MPI_WORLD, &status);
+            */
+            auto &inbox_col = inboxes_col[r];
+            inbox_col.resize(inbox_sizes[r]);
+            MPI_Irecv(inbox_col.data(), inbox_col.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+            //if(!Env::rank)
+                //printf("Recv: %d <-- %d %lu inbox_col\n", Env::rank, r, inbox_col.size());
+        }
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    in_requests.clear();
+    out_requests.clear(); 
+
+    
+    
+    #ifdef HAS_WEIGHT    
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    //for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &outbox_weight = outboxes_weight[r];
+            MPI_Isend(outbox_weight.data(), outbox_weight.size(), TYPE_WEIGHT, r, 0, Env::MPI_WORLD, &request);
+            out_requests.push_back(request);
+            //printf("Send: %d --> %d %lu outbox_weight\n", Env::rank, r, outbox_weight.size());
+        }
+    } 
+
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            /*
+            flag = 0;
+            while(!flag)
+                MPI_Iprobe(r, 0, Env::MPI_WORLD, &flag, &status);
+            source = status.MPI_SOURCE;
+            MPI_Get_count(&status, TYPE_WEIGHT, &count);
+            auto &inbox_weight = inboxes_weight[source];    
+            inbox_weight.resize(count);
+            MPI_Recv(inbox_weight.data(), inbox_weight.size(), TYPE_WEIGHT, source, 0, Env::MPI_WORLD, &status);
+            */
+            
+            auto &inbox_weight = inboxes_weight[r]; 
+            inbox_weight.resize(inbox_sizes[r]);
+            MPI_Irecv(inbox_weight.data(), inbox_weight.size(), TYPE_WEIGHT, r, 0, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        
+            //printf("Recv: %d <-- %d %lu %d outbox_weight\n", Env::rank, r, inbox_weight.size(), count);
+        }
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    in_requests.clear();
+    out_requests.clear();
+    #endif
+    //printf("Update %d\n",Env::rank);
+    //Env::barrier();
+    //MPI_Barrier(MPI_COMM_WORLD);
+    
+    
+    Triple<Weight, Integer_Type> triple;
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            auto &inbox_row = inboxes_row[r];
+            auto &inbox_col = inboxes_col[r];
+            #ifdef HAS_WEIGHT
+            auto &inbox_weight = inboxes_weight[r];
+            #endif
+            uint64_t num_triples = inbox_row.size();
+            assert(inbox_row.size() == inbox_col.size());
+            for (uint32_t i = 0; i < num_triples; i++)
+            {
+                //printf("1.r=%d i=%d row=%d col=%d\n", Env::rank, i, inbox_row[i], inbox_col[i]);
+                #ifdef HAS_WEIGHT
+                triple = {inbox_row[i], inbox_col[i], inbox_weight[i]};
+                //triple.row = inbox_row[i];
+                //triple.col = inbox_col[i];
+                //triple.weight = inbox_weight[i];
+                #else
+                //triple = {inbox_row[i], inbox_col[i]};
+                triple.row = inbox_row[i];
+                triple.col = inbox_col[i];
+                #endif    
+                //printf("2.r=%d i=%d\n", Env::rank, i);  
+                //struct Triple<Weight, Integer_Type> pair1 = tile_of_triple(triple);
+                //uint32_t t = (pair1.row * tiling->ncolgrps) + pair1.col;
+                //printf("1.r=%d i=%d row=%d col=%d %d %d %d\n", Env::rank, i, inbox_row[i], inbox_col[i], pair1.row, pair1.col, t);
+
+                
+                test(triple);
+                insert(triple);
+            }
+            inbox_row.clear();
+            inbox_row.shrink_to_fit();
+            inbox_col.clear();
+            inbox_col.shrink_to_fit();
+            #ifdef HAS_WEIGHT
+            inbox_weight.clear();
+            inbox_weight.shrink_to_fit();
+            #endif
+        }
+    }
+    
+
+    //printf("Here %d\n",Env::rank);
+    //Env::barrier();
+    
+    //Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        Triple<Weight, Integer_Type> pair = tile_of_local_tile(t);
+        auto &tile = tiles[pair.row][pair.col];
+        nedges_end_local += tile.triples->size();
+    }
+    
+    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    
+    if(Env::is_master)
+    {
+        printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
+        //printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
+    }
+    assert(nedges_start_global == nedges_end_global);
+    
+
+    //std::vector<uint32_t> inbox_sizes(Env::nranks);
+    
+    
+    
+    
+    Env::barrier();
+    /*
     MPI_Datatype MANY_TRIPLES;
     const uint32_t many_triples_size = 1;
     
@@ -870,7 +1125,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
     std::vector<std::vector<Triple<Weight, Integer_Type>>> outboxes(Env::nranks);
     std::vector<std::vector<Triple<Weight, Integer_Type>>> inboxes(Env::nranks);
-    std::vector<uint32_t> inbox_sizes(Env::nranks);
+    //std::vector<uint32_t> inbox_sizes(Env::nranks);
     
     for (uint32_t i = 0; i < nrowgrps; i++)
     {
@@ -886,10 +1141,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    std::vector<MPI_Request> out_requests;
-    std::vector<MPI_Request> in_requests;
-    MPI_Request request;
-    MPI_Status status;
+    
+
+
     
     Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
@@ -973,7 +1227,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         nedges_end_local += tile.triples->size();
     }
     
-    /*
+    
     MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges_start_global == nedges_end_global);
@@ -982,11 +1236,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
         //printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_local);
     }
-    */
+    
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);
     Env::barrier();
+    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1526,12 +1781,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     }
     //printf("\n");
     //printf("###r=%d n=%d m=%d n+m=%d %d %d\n", Env::rank, n, m, n + m, f_nitems, nnz_local);
-    nnz_sizes_all.resize(nrowgrps_);
+    nnz_sizes_all.resize(Env::nranks);
     nnz_sizes_all[owned_segment] = nnz_local;
     
     
-    Env::barrier();
-    for (uint32_t j = 0; j < nrowgrps_; j++)
+    //Env::barrier();
+    for (uint32_t j = 0; j < Env::nranks; j++)
     {
         uint32_t r = leader_ranks[j];
         if (j != owned_segment)
@@ -1552,7 +1807,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     if(!Env::rank)
     {
         printf("nnz_sizes_all[%d]: ", filtering_type_);
-        for(uint32_t i = 0 ; i < nrowgrps_; i++)
+        for(uint32_t i = 0 ; i < Env::nranks; i++)
             printf("%d ", nnz_sizes_all[i]);
         printf("\n");
         
