@@ -111,7 +111,9 @@ class Vector
         //std::vector<struct Segment<Weight, Integer_Type, Fractional_Type>> segments;
         std::vector<int32_t> local_segments;
         std::vector<Integer_Type> nitems;
-        std::vector<void *> data;
+        //std::vector<void *> data;
+        Fractional_Type **data;
+        
         std::vector<bool> allocated;
         uint32_t vector_length;
         //Integer_Type nelems;
@@ -128,11 +130,18 @@ Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
     {
         if(allocated[i])
         {
+            
             free(data[i]);
+            //free(data1[i]);
             //delete[] (Fractional_Type *) data[i];
             data[i] =nullptr;
         }
     }
+    free(data);
+    
+    
+    //data.clear();
+    //data.shrink_to_fit();
 }
     
     //printf("~vector %d\n", Env::rank);
@@ -172,8 +181,9 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
     vector_length = local_segments.size();
     // Reserve the 1D vector of segments. 
     //segments.resize(vector_length);
-    data.resize(vector_length);
+    //data.resize(vector_length);
     allocated.resize(vector_length);
+    data = (Fractional_Type **) malloc(vector_length * sizeof(Fractional_Type *));
     for(uint32_t i = 0; i < vector_length; i++)
     {
         //nitems.push_back(nitems_[i]);
@@ -185,8 +195,12 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector(std::vector<Integer_Type> 
             //memset(D, 0, nbytes);
             //data.push_back(D);
             //allocated.push_back(true);    
+            //data[i] = (Fractional_Type *) malloc(nbytes);
+            //memset(data[i], 0, nbytes);
+            
             data[i] = (Fractional_Type *) malloc(nbytes);
             memset(data[i], 0, nbytes);
+            
             allocated[i] = true;
         }
         else
