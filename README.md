@@ -1,1 +1,1 @@
-# GraphTap: A Distributed Graph Analytics Platfrom
+# GraphTap: A Distributed Graph Analytics Platform
