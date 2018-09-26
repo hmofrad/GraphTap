@@ -322,6 +322,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     {
         delete Y[i];
     }   
+    Y.clear();
+    Y.shrink_to_fit();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
