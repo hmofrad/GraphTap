@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=la3
-#SBATCH --output=la3.out
-#SBATCH --error=la3.err
+#SBATCH --job-name=graphtap
+#SBATCH --output=graphtap.out
+#SBATCH --error=graphtap.err
 #SBATCH --ntasks=32
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=4
