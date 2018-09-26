@@ -55,7 +55,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Tile2D<Weight, Integer_Type, Fractional_Type>::allocate_triples()
 {
     if (!triples)
-        triples = new std::vector<Triple<Weight, Integer_Type>>;
+        triples = new std::vector<struct Triple<Weight, Integer_Type>>;
 }
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Tile2D<Weight, Integer_Type, Fractional_Type>::free_triples()
@@ -1567,7 +1567,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         F.push_back(F_);
     }
     */
-    
+    /*
     char ***F;
     F = (char ***) malloc(rowgrp_nranks_ * sizeof(char **));
     uint64_t nbytes = tile_length * sizeof(char *);
@@ -1590,9 +1590,30 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             
         }
     }
+    */
     
-
+    uint64_t nbytes = tile_length * sizeof(char *);
+    std::vector<std::vector<std::vector<char>>> F;
+    F.resize(rank_nrowgrps_);
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        if(local_row_segments_[j] == owned_segment)
+        {
+            F[j].resize(rowgrp_nranks_);
+            for(uint32_t i = 0; i < rowgrp_nranks_; i++)
+            {
+                F[j][i].resize(tile_length, 0);
+                //memset(F[j][i], 0, nbytes);
+            }
+        }
+        else
+            F[j].resize(1);
+            F[j][0].resize(tile_length, 0);
+            //F[j][0] = new char(tile_length);
+            //memset(F[j][0], 0, nbytes);
+    }
     
+    //exit(1);
     
     //printf(">>>>>>>>>>>>>>>>>>%d\n", Env::rank);
     for(uint32_t t: local_tiles_row_order_)
@@ -1617,8 +1638,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         else
             fo = 0;
         
-        char *f_data = (char *) F[fi][fo];
+        auto &f_data = F[fi][fo];
         Integer_Type f_nitems = tile_length;
+        
+        //char *f_data = (char *) F[fi][fo];
+        //Integer_Type f_nitems = tile_length;
         
         //auto *Fp = F[fi];
         //char *f_data = (char *) Fp->data[fo];
@@ -1679,8 +1703,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     follower = follower_rowgrp_ranks_[j];
                     accu = follower_rowgrp_ranks_accu_seg_[j];
                     
-                    char *fj_data = (char *) F[fi][accu];
+                    auto &fj_data = F[fi][accu];
                     Integer_Type fj_nitems = tile_length;
+                    
+                    //char *fj_data = (char *) F[fi][accu];
+                    //Integer_Type fj_nitems = tile_length;
                     
                     //auto *fj_data = (char *) Fp->data[accu];
                     //Integer_Type fj_nitems = Fp->nitems[accu];
@@ -1697,7 +1724,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                     //MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
                     //MPI_Wait(&request, &status);
                     
-                    MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
+                    //MPI_Irecv(fj_data, fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
+                    MPI_Irecv(fj_data.data(), fj_nitems, TYPE_CHAR, follower, pair_idx, Env::MPI_WORLD, &request);
                     in_requests.push_back(request);
                     
                     
@@ -1710,7 +1738,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             else
             {
                 //MPI_Send(f_data, f_nitems, MPI_CHAR, leader, pair_idx, Env::MPI_WORLD);
-                MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
+                MPI_Isend(f_data.data(), f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
+                //MPI_Isend(f_data, f_nitems, TYPE_CHAR, leader, pair_idx, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
                 //out_statuses.push_back(status);
                 //printf("Send[%d]: -->leader=%d tag=%d tile=%d\n", Env::rank, leader, pair_idx, t);
@@ -1783,9 +1812,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     
     fi = accu_segment_row_;
     fo = accu_segment_rg_;
-    
-    char *f_data = (char *) F[fi][fo];
+
+    auto &f_data = F[fi][fo];
     Integer_Type f_nitems = tile_length;
+    
+    //char *f_data = (char *) F[fi][fo];
+    //Integer_Type f_nitems = tile_length;
     
     //auto *Fp = F[fi];
     //char *f_data = (char *) Fp->data[fo];
@@ -1808,8 +1840,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     for(uint32_t j = 0; j < rowgrp_nranks_ - 1; j++)
     {
         accu = follower_rowgrp_ranks_accu_seg_[j];
-        char *fj_data = F[fi][accu];
+        
+        auto &fj_data = F[fi][accu];
         Integer_Type fj_nitems = tile_length;
+        
+        //char *fj_data = F[fi][accu];
+        //Integer_Type fj_nitems = tile_length;
         
         //char *fj_data = (char *) Fp->data[accu];
         //Integer_Type fj_nitems = Fp->nitems[accu];
@@ -2303,7 +2339,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     F.shrink_to_fit();
     */
     
-    
+    /*
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         if(local_row_segments_[j] == owned_segment)
@@ -2319,8 +2355,25 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         }
     }
     free(F);
+    */
     
-    
+    /*
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        if(local_row_segments_[j] == owned_segment)
+        {
+            for(uint32_t i = 0; i < rowgrp_nranks_; i++)
+                delete [] (char *) F[j][i];
+            delete F[j];
+        }
+        else
+        {
+            delete [] (char *) F[j][0];
+            delete F[j];
+        }
+    }
+    delete F;
+    */
     Env::barrier();
     
 }
