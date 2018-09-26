@@ -71,27 +71,3 @@ struct ColSort
         return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
     }
 };
-
-/*
- * Index vector to code the sparsity of vectors. The indices will later
- * be used to traverse the received segments from other ranks. This requires
- * significant more storage compared to having a bit vector but we can iterate
- * over the received segment faster. 
- * Another way of implementing this indexing process is to use bit vector,
- * where bit vector is used to identify the non-zero elements and then use this
- * information to index the received regment. Bit vector has better storage,
- * but index vector has better performance.
- */
-//template <typename Type>
-//struct IV : basic_storage<Type> {};
-
-
-
-
-
-
-
-
-
-
-
