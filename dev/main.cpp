@@ -93,8 +93,6 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tock("Ingress");
     
-    
-    
     if(!Env::rank)
         Env::tick();
     fp x = 0, y = 0, v = 0, s = 0;
@@ -103,8 +101,6 @@ int main(int argc, char **argv)
     V.init(x, y, v, s);
     if(!Env::rank)
         Env::tock("Init");
-    
-
     
     if(!Env::rank)
     {
