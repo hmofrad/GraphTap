@@ -1542,6 +1542,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     bool vec_owner, communication;
     uint32_t fi = 0, fo = 0;
     
+
+    
+    //printf("<<<<<<<<<<<<<%d\n", Env::rank);
+    //std::vector<Vector<Weight, Integer_Type, char>> F;
+    //Vector<Weight, Integer_Type, char> F_;
+    /*
     std::vector<Vector<Weight, Integer_Type, char> *> F;
     Vector<Weight, Integer_Type, char> *F_;
     std::vector<Integer_Type> f_size = {tile_length};
@@ -1551,14 +1557,44 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         if(local_row_segments_[j] == owned_segment)
         {
             F_ = new Vector<Weight, Integer_Type, char>(f_sizes, all_rowgrp_ranks_accu_seg_);
+            //F_ = new Vector<Weight, Integer_Type, char>(f_sizes, all_rowgrp_ranks_accu_seg_);
         }
         else
         {
             F_ = new Vector<Weight, Integer_Type, char>(f_size, accu_segment_row_vec_);
+            //F_ = new Vector<Weight, Integer_Type, char>(f_size, accu_segment_row_vec_);
         }
         F.push_back(F_);
     }
+    */
     
+    char ***F;
+    F = (char ***) malloc(rowgrp_nranks_ * sizeof(char **));
+    uint64_t nbytes = tile_length * sizeof(char *);
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        if(local_row_segments_[j] == owned_segment)
+        {
+            F[j] = (char **) malloc(rowgrp_nranks_ * sizeof(char **));
+            for(uint32_t i = 0; i < rowgrp_nranks_; i++)
+            {
+                F[j][i] = (char *) malloc(nbytes);
+                memset(F[j][i], 0, nbytes);
+            }
+        }
+        else
+        {
+            F[j] = (char **) malloc(sizeof(char **));
+            F[j][0] = (char *) malloc(nbytes);
+            memset(F[j][0], 0, nbytes);  
+            
+        }
+    }
+    
+
+    
+    
+    //printf(">>>>>>>>>>>>>>>>>>%d\n", Env::rank);
     for(uint32_t t: local_tiles_row_order_)
     {
         auto pair = tile_of_local_tile(t);
@@ -1581,9 +1617,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         else
             fo = 0;
         
-        auto *Fp = F[fi];
-        char *f_data = (char *) Fp->data[fo];
-        Integer_Type f_nitems = Fp->nitems[fo];
+        char *f_data = (char *) F[fi][fo];
+        Integer_Type f_nitems = tile_length;
+        
+        //auto *Fp = F[fi];
+        //char *f_data = (char *) Fp->data[fo];
+        //Integer_Type f_nitems = Fp->nitems[fo];
+        
+        //auto Fp = F[fi];
+        //char *f_data = (char *) Fp.data[fo];
+        //Integer_Type f_nitems = Fp.nitems[fo];
         
         //auto &f_seg = Fp->segments[fo];
         //auto *f_data = (char *) f_seg.D;
@@ -1635,8 +1678,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 {
                     follower = follower_rowgrp_ranks_[j];
                     accu = follower_rowgrp_ranks_accu_seg_[j];
-                    auto *fj_data = (char *) Fp->data[accu];
-                    Integer_Type fj_nitems = Fp->nitems[accu];
+                    
+                    char *fj_data = (char *) F[fi][accu];
+                    Integer_Type fj_nitems = tile_length;
+                    
+                    //auto *fj_data = (char *) Fp->data[accu];
+                    //Integer_Type fj_nitems = Fp->nitems[accu];
+                    
+                    //auto *fj_data = (char *) Fp.data[accu];
+                    //Integer_Type fj_nitems = Fp.nitems[accu];
                     
                     //auto &fj_seg = Fp->segments[accu];
                     //auto *fj_data = (char *) fj_seg.D;
@@ -1732,10 +1782,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     //Integer_Type f_nitems = f_seg.n;
     
     fi = accu_segment_row_;
-    auto *Fp = F[fi];
     fo = accu_segment_rg_;
-    char *f_data = (char *) Fp->data[fo];
-    Integer_Type f_nitems = Fp->nitems[fo];
+    
+    char *f_data = (char *) F[fi][fo];
+    Integer_Type f_nitems = tile_length;
+    
+    //auto *Fp = F[fi];
+    //char *f_data = (char *) Fp->data[fo];
+    //Integer_Type f_nitems = Fp->nitems[fo];
+    
+    //auto Fp = F[fi];
+    //char *f_data = (char *) Fp.data[fo];
+    //Integer_Type f_nitems = Fp.nitems[fo];
         
     
     
@@ -1750,8 +1808,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     for(uint32_t j = 0; j < rowgrp_nranks_ - 1; j++)
     {
         accu = follower_rowgrp_ranks_accu_seg_[j];
-        char *fj_data = (char *) Fp->data[accu];
-        Integer_Type fj_nitems = Fp->nitems[accu];
+        char *fj_data = F[fi][accu];
+        Integer_Type fj_nitems = tile_length;
+        
+        //char *fj_data = (char *) Fp->data[accu];
+        //Integer_Type fj_nitems = Fp->nitems[accu];
+        
+        //char *fj_data = (char *) Fp.data[accu];
+        //Integer_Type fj_nitems = Fp.nitems[accu];
+        
         //auto &fj_seg = Fp->segments[accu];
         //auto *fj_data = (char *) fj_seg.D;
         //Integer_Type fj_nitems = fj_seg.n;                     
@@ -2227,12 +2292,33 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         F[i]->del_vec();
     }
     */
-    
+    /*
     for (uint32_t i = 0; i < rank_nrowgrps_; i++)
     {
         delete F[i];
+        
     }
     
+    F.clear();
+    F.shrink_to_fit();
+    */
+    
+    
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        if(local_row_segments_[j] == owned_segment)
+        {
+            for(uint32_t i = 0; i < rowgrp_nranks_; i++)
+                free(F[j][i]);
+            free(F[j]);
+        }
+        else
+        {
+            free(F[j][0]);
+            free(F[j]);
+        }
+    }
+    free(F);
     
     
     Env::barrier();
