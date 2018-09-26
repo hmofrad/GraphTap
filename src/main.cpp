@@ -150,8 +150,8 @@ int main(int argc, char **argv)
         printf("Degree time: %fseconds\n", time2 - time1);
     }
 
+    V.checksum_degree();
     V.checksum();
-    V.checksumPR();
     //V.free();
     G.free();
     //Env::finalize();
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
         printf("Pagerank time: %f seconds\n", time2 - time1);
     }
     
-    VR.checksumPR();
+    VR.checksum();
     //VR.free();
     //V.free();
     //G.free();
