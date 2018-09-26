@@ -158,7 +158,9 @@ int main(int argc, char **argv)
     V.checksumPR();
     //V.free();
     G.free();
-    
+    //Env::finalize();
+    //return(1);
+
     Env::barrier(); 
     if(!Env::rank)
         printf("\n");
@@ -183,8 +185,7 @@ int main(int argc, char **argv)
     
     
     /*
-    transpose = true;
-    //OT = _COL_;
+    OT = _COL_;
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
     Vertex_Program<wp, ip, fp> VR(G, OT);
