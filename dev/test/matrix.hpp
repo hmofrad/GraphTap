@@ -1087,8 +1087,30 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             inbox_weight.clear();
             inbox_weight.shrink_to_fit();
             #endif
+            
+            auto &outbox_row = outboxes_row[r];
+            outbox_row.clear();
+            outbox_row.shrink_to_fit();
+            
+            auto &outbox_col = outboxes_col[r];
+            outbox_col.clear();
+            outbox_col.shrink_to_fit();
+
+            #ifdef HAS_WEIGHT
+            auto &outbox_weight = outboxes_weight[r];
+            outbox_weight.clear();
+            outbox_weight.shrink_to_fit();
+            #endif
+            
+            
         }
     }
+    
+    inbox_sizes.clear();
+    inbox_sizes.shrink_to_fit();
+    
+    outbox_sizes.clear();
+    outbox_sizes.shrink_to_fit();
     
 
     //printf("Here %d\n",Env::rank);
@@ -1592,7 +1614,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     }
     */
     
-    uint64_t nbytes = tile_length * sizeof(char *);
+    //uint64_t nbytes = tile_length * sizeof(char *);
     std::vector<std::vector<std::vector<char>>> F;
     F.resize(rank_nrowgrps_);
     for(uint32_t j = 0; j < rank_nrowgrps_; j++)
@@ -1921,7 +1943,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         printf("\n"); 
     }
     //exit(0);
-    //Env::barrier();     
+    //Env::barrier();    
+
+    //std::vector<std::vector<std::vector<char>>> F;    
     
     //Vector<Weight, Integer_Type, Integer_Type> *T = new Vector<Weight, Integer_Type, Integer_Type>(nnz_sizes_loc,  local_row_segments_);
     std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
@@ -2374,6 +2398,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     }
     delete F;
     */
+    
+    F.clear();
+    F.shrink_to_fit();
+    
     Env::barrier();
     
 }
