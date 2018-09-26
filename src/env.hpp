@@ -329,6 +329,4 @@ void Env::affinity()
     }
     Env::barrier();
 }
-
-
 #endif
