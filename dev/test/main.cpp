@@ -169,7 +169,6 @@ int main(int argc, char **argv)
     if(!Env::rank)
         printf("Computing PageRank ...\n");
     
-    
     transpose = true;
     if(!Env::rank)
         Env::tick();
@@ -255,7 +254,6 @@ int main(int argc, char **argv)
     //VR.free();
     //V.free();
     //G.free();
-    
     
     VR.free();
     GR.free();
