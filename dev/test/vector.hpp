@@ -101,6 +101,12 @@ class Vector
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Graph;
     
+    template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
+    friend class Matrix;
+    
+    template<typename Weight___, typename Integer_Type___, typename Fractional_Type___>
+    friend class Vertex_Program;
+    
     public:
         Vector();
         //Vector(Integer_Type nelems_, std::vector<int32_t> &local_segments_);
@@ -126,6 +132,7 @@ Vector<Weight, Integer_Type, Fractional_Type>::Vector() {};
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
 {
+    
     for(uint32_t i = 0; i < vector_length; i++)
     {
         if(allocated[i])
@@ -134,11 +141,11 @@ Vector<Weight, Integer_Type, Fractional_Type>::~Vector()
             free(data[i]);
             //free(data1[i]);
             //delete[] (Fractional_Type *) data[i];
-            data[i] =nullptr;
+            data[i] = nullptr;
         }
     }
     free(data);
-    
+    //printf("Freed(%d)\n", Env::rank);
     
     //data.clear();
     //data.shrink_to_fit();
