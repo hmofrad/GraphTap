@@ -10,9 +10,9 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
-#include "tiling.hpp" 
-#include "vector.hpp" 
-#include "types.hpp" 
+#include "mat/tiling.hpp" 
+#include "ds/vector.hpp" 
+#include "mpi/types.hpp" 
 
 #define NA 0
 
