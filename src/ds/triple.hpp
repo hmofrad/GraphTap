@@ -4,6 +4,9 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
+#ifndef TRIPLE_HPP
+#define TRIPLE_HPP
+ 
 template <typename Weight, typename Integer_Type = uint32_t>
 struct Triple
 {
@@ -71,3 +74,5 @@ struct ColSort
         return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
     }
 };
+
+#endif
