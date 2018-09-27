@@ -2,6 +2,8 @@
  * Edge list to binary converter
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
+ * Standalone compile commnad:
+ * g++ -o edge2bin edge2bin.cpp  -std=c++14
  */
  
 #include <iostream>
