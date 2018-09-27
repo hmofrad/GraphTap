@@ -7,8 +7,8 @@
 #ifndef VERTEX_PROGRAM_HPP
 #define VERTEX_PROGRAM_HPP
  
-#include "vector.hpp"
-#include "types.hpp" 
+#include "ds/vector.hpp"
+#include "mpi/types.hpp" 
 
 enum Ordering_type
 {
@@ -33,19 +33,11 @@ class Vertex_Program
         void checksum_degree();
         void checksum();
         void free();
-        void filter();
-        //void combine1();
         void apply(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
     
     protected:
-        void spmv(Segment<Weight, Integer_Type, Fractional_Type> &y_seg,
-                  Segment<Weight, Integer_Type, Fractional_Type> &x_seg,
-                  struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
-                  
         void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);                  
-                  
-        void print(Segment<Weight, Integer_Type, Fractional_Type> &segment);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
@@ -1076,23 +1068,5 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
             printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
         }  
     }
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::print(Segment<Weight,
-                            Integer_Type, Fractional_Type> &segment)
-{
-    Triple<Weight, Integer_Type> pair;
-    Triple<Weight, Integer_Type> pair1;
-    auto *data = (Fractional_Type *) segment.D;
-    Integer_Type nitems = segment.n;
-    
-    for(uint32_t i = 0; i < nitems; i++)
-    {
-        pair.row = i;
-        pair.col = 0;
-        auto pair1 = A->base(pair, owned_segment, owned_segment);
-        printf("R(%d),V[%d]=%f\n",  Env::rank, pair1.row, data[i]);
-    } 
 }
 #endif
