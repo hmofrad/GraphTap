@@ -19,8 +19,6 @@
 #include <numeric>
 #include <algorithm>
 
-
-
 #define NUM_SOCKETS 2
 #define NUM_CORES_PER_SOCKET 16
 #define NUM_CORES_PER_MACHINE (NUM_SOCKETS * NUM_CORES_PER_SOCKET)
