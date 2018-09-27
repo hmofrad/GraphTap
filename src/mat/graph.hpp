@@ -12,9 +12,9 @@
 #include <cassert>
 #include <algorithm>
 
-#include "triple.hpp"
-#include "compressed_storage.hpp"
-#include "matrix.hpp"
+#include "ds/triple.hpp"
+#include "ds/compressed_storage.hpp"
+#include "mat/matrix.hpp"
 
 /* Class template specialization for Weight
  * We think of two ways for processing graphs with empty weights:
