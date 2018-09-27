@@ -3,12 +3,13 @@
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
- 
-#include "env.hpp"
-#include "graph.hpp"
-#include "vertex_program.hpp"
+
 #include <iostream>
 #include <unistd.h>
+ 
+#include "mpi/env.hpp"
+#include "mat/graph.hpp"
+#include "vp/vertex_program.hpp"
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -29,6 +30,11 @@ struct Generic_functions
     static fp ones(fp x, fp y, fp v, fp s)
     {
         return(1);
+    }
+    
+    static fp assign(fp x, fp y, fp v, fp s)
+    {
+        return(y);
     }
 };
 
