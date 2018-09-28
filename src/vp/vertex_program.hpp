@@ -21,7 +21,7 @@ class Vertex_Program
 {
     public:
         Vertex_Program();
-        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, Ordering_type = _ROW_);
+        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, bool stationary_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
         void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s,
@@ -30,6 +30,7 @@ class Vertex_Program
         void gather();
         void combine();
         void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
+        void bcast1(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void checksum_degree();
         void checksum();
         void free();
@@ -55,7 +56,7 @@ class Vertex_Program
         
         struct Triple<Weight, Integer_Type> leader_info( 
                        const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);  
-
+        bool stationary;
         Ordering_type ordering_type;
         Tiling_type tiling_type;
         Compression_type compression_type;
@@ -115,11 +116,11 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program() {};
    column-wise tile processing designated to transpose of the matrix. */                
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weight,
-                       Integer_Type, Fractional_Type> &Graph, Ordering_type ordering_type_)
+                       Integer_Type, Fractional_Type> &Graph, bool stationary_, Ordering_type ordering_type_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
-
+    stationary = stationary_;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
@@ -286,6 +287,9 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type x, Fractional_Type y, 
      Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
+    double t1, t2;
+    t1 = Env::clock();
+    
     MPI_TYPE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
     std::vector<Integer_Type> x_sizes;
     
@@ -347,6 +351,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         populate(Y_, y);
         Y.push_back(Y_);
     }
+    
+    t2 = Env::clock();
+    Env::print_time("Init", t2 - t1);
 }
 
 
@@ -354,6 +361,9 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    double t1, t2;
+    t1 = Env::clock();
+     
     uint32_t xo = accu_segment_col;
     Fractional_Type *x_data = (Fractional_Type *) X->data[xo];
     Integer_Type x_nitems = X->nitems[xo];
@@ -422,11 +432,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter(Fractional_T
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    
+    t2 = Env::clock();
+    Env::print_time("Scatter", t2 - t1);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
-{   
+{  
+    double t1, t2;
+    t1 = Env::clock();
+     
     uint32_t leader;
     MPI_Request request;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
@@ -473,14 +489,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    
+    t2 = Env::clock();
+    Env::print_time("Gather", t2 - t1);
 }
 
+
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
-    uint32_t leader;
+    double t1, t2;
+    t1 = Env::clock();
     
+    uint32_t leader;
     uint32_t xo = accu_segment_col;
     Fractional_Type *x_data = (Fractional_Type *) X->data[xo];
     Integer_Type x_nitems = X->nitems[xo];
@@ -545,6 +567,90 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Typ
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    
+    t2 = Env::clock();
+    Env::print_time("Bcast", t2 - t1);
+}
+
+
+
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast(Fractional_Type (*f)
+                   (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
+{
+    double t1, t2;
+    t1 = Env::clock();
+    
+    uint32_t leader;
+    uint32_t xo = accu_segment_col;
+    Fractional_Type *x_data = (Fractional_Type *) X->data[xo];
+    Integer_Type x_nitems = X->nitems[xo];
+
+    uint32_t vo = 0;
+    Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
+    Integer_Type v_nitems = V->nitems[vo];
+
+    uint32_t so = 0;
+    Fractional_Type *s_data = (Fractional_Type *) S->data[so];
+    Integer_Type s_nitems = S->nitems[so];
+    
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
+        }
+    }
+    else if(filtering_type == _SOME_)
+    {
+        char *j_data = (char *) J->data[xo];
+        Integer_Type j_nitems = J->nitems[xo];
+        
+        Integer_Type j = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(j_data[i])
+            {
+                x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
+                j++;
+            }               
+        }
+    }
+    
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+        or (tiling_type == Tiling_type::_1D_ROW) 
+        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
+    {
+        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+        {
+            leader = leader_ranks_cg[local_col_segments[i]];
+            Fractional_Type *xj_data = (Fractional_Type *) X->data[i];
+            Integer_Type xj_nitems = X->nitems[i];
+            if(Env::comm_split)
+            {
+                MPI_Bcast(xj_data, xj_nitems, MPI_TYPE, leader, colgrps_communicator);
+            }
+            else
+            {
+                fprintf(stderr, "Invalid communicator\n");
+                Env::exit(1);
+            }
+        }
+    }
+    else if(tiling_type == Tiling_type::_1D_COL)
+    {
+        ;
+    }
+    else
+    {
+        fprintf(stderr, "Invalid tiling\n");
+        Env::exit(1);
+    }
+    
+    t2 = Env::clock();
+    Env::print_time("Bcast", t2 - t1);
 }                   
 
 
