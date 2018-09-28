@@ -56,6 +56,7 @@ int main(int argc, char **argv)
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
     bool transpose = false;
+    bool acyclic = false;
     Tiling_type TT = _2D_;
     Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
@@ -70,7 +71,7 @@ int main(int argc, char **argv)
     if(!Env::rank)
         Env::tick();
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, TT, CT, FT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
     if(!Env::rank)
         Env::tock("Ingress");
     
