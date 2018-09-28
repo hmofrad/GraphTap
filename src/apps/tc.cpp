@@ -74,12 +74,12 @@ int main(int argc, char **argv)
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-    bool directed = false;
-    bool transpose = false;
-    bool acyclic = true;
+    bool directed = true;
+    bool transpose = true;
+    bool acyclic = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _SOME_;
+    Filtering_type FT = _NONE_;
     bool parread = true;
     bool stationary = true;
     Ordering_type OT = _ROW_;
@@ -96,17 +96,21 @@ int main(int argc, char **argv)
     //if(!Env::rank)
         //Env::tock("Ingress");
     //Env::tick();
-    
+    time1 = Env::clock();
     Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
-    
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
     V.init(x, y, v, s);
-    V.bcast1(f.ones);
-    
+    V.bcast(f.ones);
+    V.combine();
+    V.apply(f.assign);
+    V.checksum();
+    V.display();
     
     V.free();
     G.free();
+    time2 = Env::clock();
+    Env::print_time("Triangle couting", time2 - time1);
     Env::finalize();
     return(0);
     
@@ -161,8 +165,8 @@ int main(int argc, char **argv)
         printf("Degree time: %fseconds\n", time2 - time1);
     }
 
-    V.checksum_degree();
-    V.checksum();
+    //V.checksum_degree();
+    //V.checksum();
     //V.free();
     G.free();
     //Env::finalize();
@@ -257,7 +261,7 @@ int main(int argc, char **argv)
         printf("Pagerank time: %f seconds\n", time2 - time1);
     }
     
-    VR.checksum();
+    //VR.checksum();
     //VR.free();
     //V.free();
     //G.free();
