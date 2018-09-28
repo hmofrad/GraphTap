@@ -16,7 +16,8 @@ DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 
 .PHONY: all clean
 
-objs = deg pr
+objs = tc
+#objs = deg pr tc
 
 all: $(objs)
 
