@@ -58,6 +58,7 @@ class Env
     static double clock();
     static void   tick();
     static void   tock(std::string preamble);
+    static void print_time(std::string preamble, double time);
     static void   set_comm_split();
     static bool   get_comm_split();
     
@@ -186,7 +187,13 @@ void Env::tock(std::string preamble)
 {
     finish = Env::clock();
     double elapsed_time = finish - start;
-    printf("%s time: %f seconds\n", preamble.c_str(), elapsed_time);
+    Env::print_time(preamble, elapsed_time);
+}
+
+void Env::print_time(std::string preamble, double time)
+{
+    if(is_master)
+        printf("%s time: %f seconds\n", preamble.c_str(), time);
 }
 
 void Env::finalize()
