@@ -31,8 +31,8 @@ class Vertex_Program
         void combine();
         void bcast(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void bcast1(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void checksum_degree();
         void checksum();
+        void display();
         void free();
         void apply(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
     
@@ -515,6 +515,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
     Fractional_Type *s_data = (Fractional_Type *) S->data[so];
     Integer_Type s_nitems = S->nitems[so];
     
+    
+    
     if(filtering_type == _NONE_)
     {
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -751,6 +753,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
 {
+    double t1, t2;
+    t1 = Env::clock();
     if(tiling_type == Tiling_type::_1D_ROW)
     {  
         if(ordering_type == _ROW_)
@@ -777,6 +781,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
     {
         optimized_2d();    
     }
+    t2 = Env::clock();
+    Env::print_time("Combine", t2 - t1);
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -896,8 +903,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     uint32_t leader, follower, my_rank, accu;
     bool vec_owner, communication;
     uint32_t xi= 0, yi = 0, yo = 0;
-    double t1, t2;
-    t1 = Env::clock();
     for(uint32_t t: local_tiles_row_order)
     {
         auto pair = A->tile_of_local_tile(t);
@@ -958,21 +963,43 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         }
     }
      
-    t2 = Env::clock();
-    if(!Env::rank)
-        printf("Combine spmv: %f seconds\n", t2 - t1);
+    //t2 = Env::clock();
+    //if(!Env::rank)
+     //   printf("Combine spmv: %f seconds\n", t2 - t1);
     
-    t1 = Env::clock();
+    //t1 = Env::clock();
     wait_for_all();
-    t2 = Env::clock();
+    //t2 = Env::clock();
+    //if(!Env::rank)
+    //    printf("Combine recv: %f seconds\n", t2 - t1);
+
+    yi = accu_segment_row;
+    yo = accu_segment_rg;
+    auto *Yp = Y[yi];
     if(!Env::rank)
-        printf("Combine recv: %f seconds\n", t2 - t1);
+    {
+        for(uint32_t j = 0; j < rowgrp_nranks; j++)
+        {
+            Fractional_Type *yj_data = (Fractional_Type *) Yp->data[j];
+            Integer_Type yj_nitems = Yp->nitems[j];
+            for(uint32_t i = 0; i < yj_nitems; i++)
+            {
+                printf("%f ", yj_data[i]);
+            }
+            printf("\n");
+        }
+    }
+    
+
+
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Type (*f)
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
+    double t1, t2;
+    t1 = Env::clock();
     uint32_t accu;
     uint32_t yi = accu_segment_row;
     auto *Yp = Y[yi];
@@ -1026,6 +1053,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
         clear(Y[i]);
+    t2 = Env::clock();
+    Env::print_time("Apply", t2 - t1);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1111,7 +1140,7 @@ struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractio
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum_degree()
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 {
     double v_sum_local = 0, v_sum_gloabl = 0;
     
@@ -1125,27 +1154,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum_degree()
    
     MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
-        printf("Degree checksum: %f\n", v_sum_gloabl);
-}
-
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
-{
-    double v_local = 0, v_gloabl = 0;
-    
-    uint32_t vo = 0;
-    Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
-    Integer_Type v_nitems = V->nitems[vo];
-    
-    for(uint32_t i = 0; i < v_nitems; i++)
-    {
-        v_local += v_data[i];
-    }
-    
-    MPI_Allreduce(&v_local, &v_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
-    if(Env::is_master)
-        printf("Value checksum: %f\n", v_gloabl); 
+        printf("Value checksum: %f\n", v_sum_gloabl);
     
     uint64_t s_local = 0, s_gloabl = 0;
     uint32_t so = 0;
@@ -1160,6 +1169,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     MPI_Allreduce(&s_local, &s_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
+}
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
+{
+    uint32_t vo = 0;
+    Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
+    Integer_Type v_nitems = V->nitems[vo];
+    
+    uint32_t so = 0;
+    Fractional_Type *s_data = (Fractional_Type *) S->data[so];
+    Integer_Type s_nitems = S->nitems[so];
     
     uint32_t NUM = 31;
     uint32_t count = v_nitems < NUM ? v_nitems : NUM;
