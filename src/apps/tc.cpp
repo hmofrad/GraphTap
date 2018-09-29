@@ -11,6 +11,8 @@
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
 
+#define TRIANGLE_COUNTING
+
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
    make WEIGHT="-DHASWEIGHT"         */
@@ -75,7 +77,7 @@ int main(int argc, char **argv)
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
-    bool transpose = true;
+    bool transpose = false;
     bool acyclic = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
