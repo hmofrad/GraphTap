@@ -1117,7 +1117,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     std::vector<Integer_Type> nnz_sizes_all, nnz_sizes_loc;
     uint32_t nrowgrps_;
     
-    
     if(filtering_type_ == _SRCS_)
     {
         rank_nrowgrps_ = tiling->rank_nrowgrps;
