@@ -326,7 +326,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         nedges++;
         offset = fin.tellg();
 
-        if(!Env::rank)
+        if(Env::is_master)
         {
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
@@ -395,7 +395,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
         nedges++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
-        if(!Env::rank)
+        if(Env::is_master)
         {
             if ((offset & ((1L << 26) - 1L)) == 0)
                 printf("|");
@@ -523,7 +523,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         
         nedges_local++;
         offset++;
-        if(!Env::rank)
+        if(Env::is_master)
         {
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
@@ -609,7 +609,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
-        if(!Env::rank)
+        if(Env::is_master)
         {
             if ((offset & ((1L << 26) - 1L)) == 0)
             {
