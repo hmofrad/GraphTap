@@ -399,13 +399,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
             Z_SZ[j].resize(rowgrp_nranks);
             for(uint32_t i = 0; i < rowgrp_nranks; i++)
-                Z_SZ[j][i].resize(yy_sizes[i] + 1); // Sum of elements + 0 + data
+                Z_SZ[j][i].resize(yy_sizes[i] + 2); // 0 + items
         }
         else
         {
             y_size = {y_sizes[j]};
             Z_SZ[j].resize(1);
-            Z_SZ[j][0].resize(y_size[0] + 1); // Sum of elements + data
+            Z_SZ[j][0].resize(y_size[0] + 2); // 0 + items
         }        
     }
     
@@ -1260,14 +1260,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     std::vector<std::vector<Integer_Type>> &z_data = Z[yi][yo];  
                     Integer_Type outbox_nitems = 0;
                     //std::vector<Integer_Type> z_sizes(y_nitems);
-                    for(uint32_t i = 0; i < y_nitems; i++)
+                    z_sz_data[0] = 0;
+                    for(uint32_t i = 1; i < y_nitems + 1; i++)
                     {
-                        z_sz_data[i] = z_data[i].size();
-                        outbox_nitems += z_sz_data[i];
+                        z_sz_data[i] += z_data[i].size();
+                        //outbox_nitems += z_sz_data[i];
                         //if(Env::rank == 2 and pair_idx == 0)
                         //printf("z_sz_data[%d]=%d\n", i, z_sz_data[i]);
                     }
-                    z_sz_data[y_nitems] = outbox_nitems;
+                    //z_sz_data[y_nitems] = outbox_nitems;
                     
                     
                         //z_sizes.push_back(z_data[i].size());
@@ -1396,7 +1397,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                 printf("i=%d ib=%d ", i, inbox[i]);
             }
             printf("\n");
-            
+            //z_data[IA[i]].push_back(pair.col);
             //std::vector<Integer_Type> &z_data = Z_SZ[yi][yo][j]];
             Integer_Type l = 0;
             for(uint32_t i = 0; i < z_sz_data.size() - 1; i++)
