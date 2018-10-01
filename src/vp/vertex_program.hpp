@@ -1223,13 +1223,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     {
                         //Integer_Type yj_nitems = Yp->nitems[accu];
                         std::vector<Integer_Type> &zj_size = Z_SIZE[yi][accu];
-                        Integer_Type sj_size_nitems = zj_size.size() - 1;
-                        MPI_Recv(zj_size.data(), zj_size.size(), TYPE_INT, follower, pair_idx, communicator, &status);
+                        Integer_Type sj_s_nitems = zj_size.size();
+                        MPI_Recv(zj_size.data(), sj_s_nitems, TYPE_INT, follower, pair_idx, communicator, &status);
                         //Env::barrier();
                         auto &inbox = inboxes[j];
                         //Integer_Type inbox_nitems = zj_size[yj_nitems];
-                        Integer_Type inbox_nitems = zj_size[sj_size_nitems];
-                        printf("%d <-- %d, tag=%d and nitems=%d  sz=%lu yn=%d yi=%d\n", my_rank, follower, pair_idx, inbox_nitems,  zj_size.size(), y_nitems, yi);
+                        Integer_Type inbox_nitems = zj_size[sj_s_nitems - 1];
+                        //printf("%d <-- %d, tag=%d and nitems=%d  sz=%lu yn=%d yi=%d\n", my_rank, follower, pair_idx, inbox_nitems,  zj_size.size(), y_nitems, yi);
                         
                         inbox.resize(inbox_nitems);
                         
@@ -1242,60 +1242,39 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
             {
                 if(stationary)
                 {
-                    printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, y_nitems);
+                    //printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, y_nitems);
                     MPI_Isend(y_data, y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
                     out_requests.push_back(request);
                 }
                 else
                 {
                     std::vector<Integer_Type> &z_size = Z_SIZE[yi][yo];
-                    Integer_Type s_size_nitems = z_size.size() - 1;
-                    
-                                        
-                    //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];  
+                    Integer_Type z_s_nitems = z_size.size();
                     
                     z_size[0] = 0;
-                    for(Integer_Type i = 1; i < y_nitems + 1; i++)
+                    for(Integer_Type i = 1; i < z_s_nitems; i++)
                     {
                         z_size[i] = z_size[i-1] + z_data[i-1].size();
                     }              
-                    MPI_Send(z_size.data(), z_size.size(), TYPE_INT, leader, pair_idx, communicator);
+                    MPI_Send(z_size.data(), z_s_nitems, TYPE_INT, leader, pair_idx, communicator);
 
-                    Integer_Type outbox_nitems = z_size[y_nitems];    
-                    printf("%d --> %d, tag=%d and nitems=%d sz=%lu yn=%d yi=%d\n", my_rank, leader, pair_idx, outbox_nitems,  z_size.size(), y_nitems, yi);
+                    Integer_Type outbox_nitems = z_size[z_s_nitems - 1];    
+                    //printf("%d --> %d, tag=%d and nitems=%d sz=%lu yn=%d yi=%d\n", my_rank, leader, pair_idx, outbox_nitems,  z_size.size(), y_nitems, yi);
                     
                     auto &outbox = outboxes[oi];
                     
                     outbox.resize(outbox_nitems);
                     Integer_Type k = 0;
                     std::vector<std::set<Integer_Type>> &z_data = Z[yi]; 
-                    for(Integer_Type i = 0; i < y_nitems; i++)
+                    for(Integer_Type i = 0; i < z_s_nitems - 1; i++)
                     {
-                        //z_data[i].erase(unique(z_data[i].begin(), z_data[i].end()), z_data[i].end());
-                        /*
-                        for(uint32_t j = 0; j < z_data[i].size(); j++)
-                        {
-                            //outbox.push_back(z_data[i][j]);
-                            outbox.push_back(z_data[i][j]);
-                            //k++;
-                        }
-                        */
-                        
                         for(auto j: z_data[i])
                         {
-                            //printf("%d\n", i);
-                            //outbox[k] = push_back(j);
                             outbox[k] = j;
-                            //outbox.push_back(z_data[i][j]);
                             k++;
-                            
                         }
                         
                     }
-                    //outbox.erase(unique(z_data[i].begin(), z_data[i].end()), z_data[i].end());
-                    
-
-                    
                     
                     MPI_Isend(outbox.data(), outbox.size(), TYPE_INT, leader, pair_idx, communicator, &request);
                     out_requests_.push_back(request);  
@@ -1308,164 +1287,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     }
 
     wait_for_all();
-
-
-    //t2 = Env::clock();
-    //if(!Env::rank)
-    //    printf("Combine recv: %f seconds\n", t2 - t1);
-
-    //yi = accu_segment_row;
-    //yo = accu_segment_rg;
-    //auto *Yp = Y[yi];
-    //Integer_Type y_nitems = Yp->nitems[yo];
-    
-    /*
-    if(Env::rank == 0)
-    {    
-        for(uint32_t j = 0; j < rowgrp_nranks; j++)
-        {
-       //     printf("**************\n");
-            std::vector<Integer_Type> &z_size = Z_SZ[yi][j];
-            for(uint32_t i = 0; i < z_size.size(); i++)
-            {
-                printf("%d ", z_size[i]);
-            }
-            printf("\n");
-            
-            std::vector<std::vector<Integer_Type>> &z_data = Z[yi][j];
-            printf("j=%d: ", j);
-            for(uint32_t i = 0; i < z_data.size(); i++)
-            {
-                printf("i=%d: ", i);
-                for(uint32_t j = 0; j < z_data[i].size(); j++)
-                {
-                    printf("z=%d ", z_data[i][j]);
-                }
-                printf("\n");
-            }
-            if(j == 1)
-            {
-                auto &inbox = inboxes[0];
-                for(uint32_t i = 0; i < inbox.size(); i++)
-                {
-                    printf("i=%d ibox=%d\n", i, inbox[i]);
-                }
-            }
-       }
-       */
-       //std::vector<std::vector<Integer_Type>> &z_data = Z[yi][yo];  
-       //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-        //if(!Env::rank)
-        //{
-            
-            /*
-            std::vector<Integer_Type> &inbox = inboxes[0];
-            
-            for(uint32_t i = 0; i < inbox.size(); i++)
-            {
-                printf("i=%d inbox=%d", i, inbox[i]);
-            }
-            printf("\n**************\n");
-            */
-            
-        //for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-        //{
-            /*
-            if(Env::comm_split)
-            {   
-                accu = follower_rowgrp_ranks_accu_seg_rg[j];
-            }
-            else
-            {
-                accu = follower_rowgrp_ranks_accu_seg[j];
-            }
-            
-            std::vector<Integer_Type> &z_size = Z_SIZE[yi][accu];
-            std::vector<Integer_Type> &inbox = inboxes[j];
-            */
-            /*
-            for(uint32_t i = 0; i < z_size.size(); i++)
-            {
-                printf("i=%d isz=%d ", i, z_size[i]);
-            }
-            printf("\n");
-            for(uint32_t i = 0; i < inbox.size(); i++)
-            {
-                printf("i=%d ib=%d ", i, inbox[i]);
-            }
-            printf("\n");
-            */
-            //z_data[IA[i]].push_back(pair.col);
-            //std::vector<Integer_Type> &z_data = Z_SZ[yi][yo][j]];
-            //Integer_Type l = 0;
-            /*
-            for(uint32_t i = 0; i < z_size.size() - 1; i++)
-            {
-               // printf("%d %d: ", i, z_size[i]);  
-                for(uint32_t k = z_size[i]; k < z_size[i+1]; k++)
-                {
-                    //printf("[%d %d]", k, inbox[k]);  
-                    z_data[i].push_back(inbox[k]);
-                    //l++;
-                }
-                //printf("\n");
-            }
-            */
-        //}
-        /*
-        if(Env::rank == 3)
-        {
-            for(uint32_t i = 0; i < y_nitems; i++)
-            {
-                printf("i=%d: ", i);
-                auto &z_d = z_data[i];
-                for(uint32_t j: z_d)
-                    printf("%d ", j);
-                printf("\n");
-            }
-        }
-        */
-            
-        //}
-        
-
-    
-       
-       
-        /*
-        if(!Env::rank)
-        {
-            std::vector<Integer_Type> z_sizes;
-            //Triple<Weight, Integer_Type> pair;
-            for(uint32_t j = 0; j < rowgrp_nranks; j++)
-            {
-                //printf("j=%d, ", rowgrp_nranks);
-                std::vector<std::vector<Integer_Type>> &z_data = Z[yi][yo];
-                for(uint32_t i = 0; i < y_nitems; i++)
-                {
-                    z_sizes.push_back(z_data[i].size());
-                    //printf("i=%d: ", i);
-                    printf("j=%d i=%d sz=%lu\n", j, i, z_data[i].size());
-                    //std::vector<Integer_Type> &z_d = z_data[i];
-                    
-                   // for(uint32_t k = 0 ; k < z_d.size(); k++)
-                    //{
-                        //pair = A->base({z_d[k], j}, 0, 1);
-                      //  printf("k=%d ", z_d[k]);
-                    //}
-                    //printf("\n");
-                }
-                Fractional_Type *yj_data = (Fractional_Type *) Yp->data[j];
-                Integer_Type yj_nitems = Yp->nitems[j];
-            }
-        }
-        */
-        
-        
-    
-    
-
-
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1477,24 +1298,21 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     t1 = Env::clock();
     uint32_t accu;
     uint32_t yi = accu_segment_row;
-    auto *Yp = Y[yi];
-    uint32_t yo = accu_segment_rg;
-    
-    Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
-    Integer_Type y_nitems = Yp->nitems[yo];
-    
-    std::vector<std::set<Integer_Type>> &z_data = Z[yi];
-    //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-    
-    for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+
+    if(stationary)
     {
-        if(Env::comm_split)
-            accu = follower_rowgrp_ranks_accu_seg_rg[j];
-        else
-            accu = follower_rowgrp_ranks_accu_seg[j];
-        
-        if(stationary)
+        auto *Yp = Y[yi];
+        uint32_t yo = accu_segment_rg;
+        Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
+        Integer_Type y_nitems = Yp->nitems[yo];
+                   
+        for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
         {
+            if(Env::comm_split)
+                accu = follower_rowgrp_ranks_accu_seg_rg[j];
+            else
+                accu = follower_rowgrp_ranks_accu_seg[j];
+            
             Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
             Integer_Type yj_nitems = Yp->nitems[accu];
 
@@ -1502,10 +1320,50 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             {
                 if(yj_data[i])
                     y_data[i] += yj_data[i];
+            }    
+        }
+        
+        uint32_t vo = 0;
+        Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
+        Integer_Type v_nitems = V->nitems[vo];
+
+        if(filtering_type == _NONE_)
+        {
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                v_data[i] = (*f)(0, y_data[i], 0, 0); 
             }
         }
-        else
+        else if(filtering_type == _SOME_)
         {
+            char *i_data = (char *) I->data[yi];        
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                if(i_data[i])
+                {
+                    v_data[i] = (*f)(0, y_data[j], 0, 0);
+                    j++;
+                }
+                else
+                    v_data[i] = (*f)(0, 0, 0, 0);
+            }
+        }
+        for(uint32_t i = 0; i < rank_nrowgrps; i++)
+            clear(Y[i]);
+    }
+    else
+    {
+        std::vector<std::set<Integer_Type>> &z_data = Z[yi];
+    //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+    
+        for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+        {
+            if(Env::comm_split)
+                accu = follower_rowgrp_ranks_accu_seg_rg[j];
+            else
+                accu = follower_rowgrp_ranks_accu_seg[j];
+
             std::vector<Integer_Type> &zj_size = Z_SIZE[yi][accu];
             Integer_Type zj_nitems = zj_size.size() - 1;
             std::vector<Integer_Type> &inbox = inboxes[j];
@@ -1532,10 +1390,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             inbox.clear();
             inbox.shrink_to_fit();
         }
-    }
     
-    if(not stationary)
-    {
         for(uint32_t j = 0; j < rank_nrowgrps; j++)
         {
             std::vector<std::vector<Integer_Type>> &zj_size = Z_SIZE[j];
@@ -1560,36 +1415,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             outbox.clear();
             outbox.shrink_to_fit();
         }
-    }
     
-    uint32_t vo = 0;
-    Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
-    Integer_Type v_nitems = V->nitems[vo];
+    }
 
-    if(filtering_type == _NONE_)
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            v_data[i] = (*f)(0, y_data[i], 0, 0); 
-        }
-    }
-    else if(filtering_type == _SOME_)
-    {
-        char *i_data = (char *) I->data[yi];        
-        Integer_Type j = 0;
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            if(i_data[i])
-            {
-                v_data[i] = (*f)(0, y_data[j], 0, 0);
-                j++;
-            }
-            else
-                v_data[i] = (*f)(0, 0, 0, 0);
-        }
-    }
-    for(uint32_t i = 0; i < rank_nrowgrps; i++)
-        clear(Y[i]);
+    
     t2 = Env::clock();
     Env::print_time("Apply", t2 - t1);
 }
