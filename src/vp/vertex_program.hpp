@@ -1375,7 +1375,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     z_data[i].push_back(inbox[j]);  
             }
             
-            if(Env::rank == 1)
+            if(Env::rank == -1)
             {
                 
                 for(uint32_t i = 0; i < zj_nitems; i++)
