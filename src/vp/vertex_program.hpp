@@ -341,7 +341,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     std::vector<Integer_Type> y_size;
     std::vector<Integer_Type> y_sizes;
     std::vector<Integer_Type> yy_sizes;
-    Vector<Weight, Integer_Type, Fractional_Type> *Y_;    
+    Vector<Weight, Integer_Type, Fractional_Type> *Y_;  
 
     if(filtering_type == _NONE_)
     {
@@ -350,14 +350,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
     else if(filtering_type == _SOME_) 
     {
         y_sizes = nnz_row_sizes_loc;
-    }   
-
+    }     
+    
     for(uint32_t j = 0; j < rank_nrowgrps; j++)
     {  
         if(local_row_segments[j] == owned_segment)
         {
             yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
-            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
+            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(yy_sizes, all_rowgrp_ranks_accu_seg);
+            yy_sizes.clear();
             
             //Z[j].resize(rowgrp_nranks);
             //for(uint32_t i = 0; i < rowgrp_nranks; i++)
@@ -365,18 +366,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
         }
         else
         {
+            
             y_size = {y_sizes[j]};
             Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
-            
+            y_size.clear();
             //Z[j].resize(1);
             //Z[j][0].resize(y_size[0]);
         }
         populate(Y_, y);
         Y.push_back(Y_);
     }    
- 
-    yy_sizes.clear();
-    y_size.clear();
+    
+    
+    
     
     Z.resize(rank_nrowgrps);
     //Z_.resize(rank_nrowgrps);
@@ -1213,18 +1215,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     {
                         Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
                         Integer_Type yj_nitems = Yp->nitems[accu];
-                        
+                        printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, yj_nitems);
                         MPI_Irecv(yj_data, yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                         in_requests.push_back(request);
                     }
                     else
                     {
+                        //Integer_Type yj_nitems = Yp->nitems[accu];
                         std::vector<Integer_Type> &zj_size = Z_SIZE[yi][accu];
+                        Integer_Type sj_size_nitems = zj_size.size() - 1;
                         MPI_Recv(zj_size.data(), zj_size.size(), TYPE_INT, follower, pair_idx, communicator, &status);
-
+                        //Env::barrier();
                         auto &inbox = inboxes[j];
-                        Integer_Type inbox_nitems = zj_size[y_nitems];
-                        //printf("%d <-- %d, tag=%d and nitems=%d \n", my_rank, follower, pair_idx, inbox_nitems);
+                        //Integer_Type inbox_nitems = zj_size[yj_nitems];
+                        Integer_Type inbox_nitems = zj_size[sj_size_nitems];
+                        printf("%d <-- %d, tag=%d and nitems=%d  sz=%lu yn=%d yi=%d\n", my_rank, follower, pair_idx, inbox_nitems,  zj_size.size(), y_nitems, yi);
+                        
                         inbox.resize(inbox_nitems);
                         
                         MPI_Irecv(inbox.data(), inbox.size(), TYPE_INT, follower, pair_idx, communicator, &request);
@@ -1236,29 +1242,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
             {
                 if(stationary)
                 {
+                    printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, y_nitems);
                     MPI_Isend(y_data, y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
                     out_requests.push_back(request);
                 }
                 else
                 {
                     std::vector<Integer_Type> &z_size = Z_SIZE[yi][yo];
-                    std::vector<std::set<Integer_Type>> &z_data = Z[yi];  
+                    Integer_Type s_size_nitems = z_size.size() - 1;
+                    
+                                        
                     //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];  
                     
                     z_size[0] = 0;
                     for(Integer_Type i = 1; i < y_nitems + 1; i++)
                     {
                         z_size[i] = z_size[i-1] + z_data[i-1].size();
-                    }
-                    Integer_Type outbox_nitems = z_size[y_nitems];                    
+                    }              
                     MPI_Send(z_size.data(), z_size.size(), TYPE_INT, leader, pair_idx, communicator);
 
+                    Integer_Type outbox_nitems = z_size[y_nitems];    
+                    printf("%d --> %d, tag=%d and nitems=%d sz=%lu yn=%d yi=%d\n", my_rank, leader, pair_idx, outbox_nitems,  z_size.size(), y_nitems, yi);
                     
-                    //printf("%d --> %d, tag=%d and nitems=%d \n", my_rank, leader, pair_idx, outbox_nitems);
                     auto &outbox = outboxes[oi];
                     
-                    //outbox.resize(outbox_nitems);
+                    outbox.resize(outbox_nitems);
                     Integer_Type k = 0;
+                    std::vector<std::set<Integer_Type>> &z_data = Z[yi]; 
                     for(Integer_Type i = 0; i < y_nitems; i++)
                     {
                         //z_data[i].erase(unique(z_data[i].begin(), z_data[i].end()), z_data[i].end());
@@ -1274,9 +1284,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                         for(auto j: z_data[i])
                         {
                             //printf("%d\n", i);
-                            outbox.push_back(j);
+                            //outbox[k] = push_back(j);
+                            outbox[k] = j;
                             //outbox.push_back(z_data[i][j]);
-                            //k++;
+                            k++;
                             
                         }
                         
@@ -1588,17 +1599,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
 {
     if(stationary)
     {
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
         out_requests.clear();
     }
     else
     {
-        MPI_Waitall(out_requests_.size(), out_requests_.data(), MPI_STATUSES_IGNORE);
         MPI_Waitall(in_requests_.size(), in_requests_.data(), MPI_STATUSES_IGNORE);
-        out_requests_.clear();
+        MPI_Waitall(out_requests_.size(), out_requests_.data(), MPI_STATUSES_IGNORE);
         in_requests_.clear();
+        out_requests_.clear();
     }
     
     
