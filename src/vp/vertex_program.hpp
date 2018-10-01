@@ -41,8 +41,8 @@ class Vertex_Program
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);                  
         void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
                   struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
-                  std::vector<std::set<Integer_Type>> &z_data);
-                  //std::vector<std::vector<Integer_Type>> &z_data);
+                  //std::vector<std::set<Integer_Type>> &z_data);
+                  std::vector<std::vector<Integer_Type>> &z_data);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
@@ -116,8 +116,8 @@ class Vertex_Program
         MPI_Datatype TYPE_INT;
         
         //std::vector<std::vector<std::vector<std::vector<Integer_Type>>>> Z_;
-        //std::vector<std::vector<std::vector<Integer_Type>>> Z;
-        std::vector<std::vector<std::set<Integer_Type>>> Z;
+        std::vector<std::vector<std::vector<Integer_Type>>> Z;
+        //std::vector<std::vector<std::set<Integer_Type>>> Z;
         std::vector<std::vector<std::vector<Integer_Type>>> Z_SIZE;
         std::vector<std::vector<Integer_Type>> inboxes;
         std::vector<std::vector<Integer_Type>> outboxes;
@@ -848,8 +848,8 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Fractional_Type *y_data, Fractional_Type *x_data,
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
-            std::vector<std::set<Integer_Type>> &z_data)
-            //std::vector<std::vector<Integer_Type>> &z_data)
+            //std::vector<std::set<Integer_Type>> &z_data)
+            std::vector<std::vector<Integer_Type>> &z_data)
 {
     Triple<Weight, Integer_Type> pair;
     if(tile.allocated)
@@ -880,8 +880,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     #endif
                     //list[IA[i]].push_back(j);
                     pair = A->base({IA[i], j}, tile.rg, tile.cg);
-                    //z_data[IA[i]].push_back(pair.col);
-                    z_data[IA[i]].insert(pair.col);
+                    z_data[IA[i]].push_back(pair.col);
+                    //z_data[IA[i]].insert(pair.col);
                     //if(!Env::rank)
                     //    printf("[%d %d]", pair.row, pair.col);
                     
@@ -1181,8 +1181,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         
         Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
         
-        std::vector<std::set<Integer_Type>> &z_data = Z[yi];  
-        //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];  
+        //std::vector<std::set<Integer_Type>> &z_data = Z[yi];  
+        std::vector<std::vector<Integer_Type>> &z_data = Z[yi];  
         
         if(stationary)
             spmv(y_data, x_data, tile);
@@ -1265,7 +1265,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     
                     outbox.resize(outbox_nitems);
                     Integer_Type k = 0;
-                    std::vector<std::set<Integer_Type>> &z_data = Z[yi]; 
+                    //std::vector<std::set<Integer_Type>> &z_data = Z[yi]; 
+                    std::vector<std::vector<Integer_Type>> &z_data = Z[yi]; 
                     for(Integer_Type i = 0; i < z_s_nitems - 1; i++)
                     {
                         for(auto j: z_data[i])
@@ -1354,8 +1355,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     }
     else
     {
-        std::vector<std::set<Integer_Type>> &z_data = Z[yi];
-    //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+        //std::vector<std::set<Integer_Type>> &z_data = Z[yi];
+        std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
     
         for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
         {
@@ -1370,10 +1371,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             for(uint32_t i = 0; i < zj_nitems; i++)
             {
                 for(uint32_t j = zj_size[i]; j < zj_size[i+1]; j++)
-                    z_data[i].insert(inbox[j]);
-                    //z_data[i].push_back(inbox[j]);  
+                    //z_data[i].insert(inbox[j]);
+                    z_data[i].push_back(inbox[j]);  
             }
-            /*
+            
             if(Env::rank == 1)
             {
                 
@@ -1386,7 +1387,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     printf("\n");
                 }
             }
-            */
+            
             inbox.clear();
             inbox.shrink_to_fit();
         }
