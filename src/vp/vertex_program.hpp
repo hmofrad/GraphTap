@@ -117,6 +117,8 @@ class Vertex_Program
         
         //std::vector<std::vector<std::vector<std::vector<Integer_Type>>>> Z_;
         std::vector<std::vector<std::vector<Integer_Type>>> Z;
+		std::vector<std::vector<Integer_Type>> W;
+		std::vector<std::vector<Integer_Type>> R;
         //std::vector<std::vector<std::set<Integer_Type>>> Z;
         std::vector<std::vector<std::vector<Integer_Type>>> Z_SIZE;
         std::vector<std::vector<Integer_Type>> inboxes;
@@ -226,13 +228,39 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     delete V;
     delete S;   
     
-    for (uint32_t i = 0; i < rank_nrowgrps; i++)
+    for (uint32_t j = 0; j < rank_nrowgrps; j++)
     {
-        delete Y[i];
+        delete Y[j];
     }   
     
     Y.clear();
     Y.shrink_to_fit();
+	
+	
+	if(not stationary)
+	{
+		for (uint32_t j = 0; j < rank_nrowgrps; j++)
+		{
+			Z[j].clear();
+			Z[j].shrink_to_fit();
+		}   
+		Z.clear();
+		Z.shrink_to_fit();
+		
+		W.clear();
+		W.shrink_to_fit();
+		
+		R.clear();
+		R.shrink_to_fit();
+		
+		for (uint32_t j = 0; j < rank_nrowgrps; j++)
+		{
+			Z_SIZE[j].clear();
+			Z_SIZE[j].shrink_to_fit();
+		}
+		Z_SIZE.clear();
+		Z_SIZE.shrink_to_fit();
+	}
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -359,10 +387,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
             Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(yy_sizes, all_rowgrp_ranks_accu_seg);
             yy_sizes.clear();
-            
-            //Z[j].resize(rowgrp_nranks);
-            //for(uint32_t i = 0; i < rowgrp_nranks; i++)
-            //    Z[j][i].resize(yy_sizes[i]);
         }
         else
         {
@@ -370,176 +394,52 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             y_size = {y_sizes[j]};
             Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
             y_size.clear();
-            //Z[j].resize(1);
-            //Z[j][0].resize(y_size[0]);
         }
         populate(Y_, y);
         Y.push_back(Y_);
     }    
     
-    
-    
-    
-    Z.resize(rank_nrowgrps);
-    //Z_.resize(rank_nrowgrps);
-    for(uint32_t j = 0; j < rank_nrowgrps; j++)
-    {  
-        ///Z[j].resize(1);
-        Z[j].resize(y_sizes[j]);
-        //Z_[j].resize(y_sizes[j]);
-        /*
-        if(local_row_segments[j] == owned_segment)
-        {
-            yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
-            Z[j].resize(rowgrp_nranks);
-            for(uint32_t i = 0; i < rowgrp_nranks; i++)
-                Z[j][i].resize(yy_sizes[i]);
-        }
-        else
-        {
-            y_size = {y_sizes[j]};
-            Z[j].resize(1);
-            Z[j][0].resize(y_size[0]);
-        }
-        */
-    }  
-    
-    Z_SIZE.resize(rank_nrowgrps);
-    for(uint32_t j = 0; j < rank_nrowgrps; j++)
-    {
-        if(local_row_segments[j] == owned_segment)
-        {
-            yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
-            Z_SIZE[j].resize(rowgrp_nranks);
-            for(uint32_t i = 0; i < rowgrp_nranks; i++)
-                Z_SIZE[j][i].resize(yy_sizes[i] + 1); // 0 + items
-        }
-        else
-        {
-            y_size = {y_sizes[j]};
-            Z_SIZE[j].resize(1);
-            Z_SIZE[j][0].resize(y_size[0] + 1); // 0 + items
-        }        
-    }
-    inboxes.resize(rowgrp_nranks - 1);
-    outboxes.resize(rowgrp_nranks - 1);
-    
-    
-    /*
-    if(filtering_type == _NONE_)
-    {
-        y_size = {tile_height};
-        for(uint32_t j = 0; j < rank_nrowgrps; j++)
-        {  
-            if(local_row_segments[j] == owned_segment)
-            {
-                y_sizes.clear();
-                y_sizes.resize(rowgrp_nranks, tile_height);
-                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
-            }
-            else
-            {
-                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
-            }
-            populate(Y_, y);
-            Y.push_back(Y_);
-        }
-    }
-    else if(filtering_type == _SOME_)
-    {
-        for(uint32_t j = 0; j < rank_nrowgrps; j++)
-        {
-            if(local_row_segments[j] == owned_segment)
-            {
-                y_sizes.clear();
-                y_sizes.resize(rowgrp_nranks, nnz_row_sizes_loc[j]);  
-                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
-            }
-            else
-            {
-                y_size.clear();
-                y_size = {nnz_row_sizes_loc[j]};
-                Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
-            }
-            populate(Y_, y);
-            Y.push_back(Y_);
-        }
-    }
-    
-    for(uint32_t j = 0; j < rank_nrowgrps; j++)
-    {
-        y_size.clear();
-        y_sizes.clear();        
-        if(filtering_type == _NONE_)
-        {
-            y_size.resize(1, tile_height);
-            y_sizes.resize(rowgrp_nranks, tile_height);            
-        }
-        else if(filtering_type == _SOME_)
-        {
-            y_size.resize(1, nnz_row_sizes_loc[j]);
-            y_sizes.resize(rowgrp_nranks, nnz_row_sizes_loc[j]);    
-        }
-        
-        if(local_row_segments[j] == owned_segment)
-        {
-            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_sizes, all_rowgrp_ranks_accu_seg);
-        }
-        else
-        {
-            Y_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
-        }
-        populate(Y_, y);
-        Y.push_back(Y_);
-    }
-    
-    
-    std::vector<Integer_Type> z_size;
-    std::vector<Integer_Type> z_sizes;
-    Vector<Weight, Integer_Type, Fractional_Type> *Z_;
-    for(uint32_t j = 0; j < rank_nrowgrps; j++)
-    {
-        z_size.clear();
-        z_sizes.clear();        
-        if(filtering_type == _NONE_)
-        {
-            z_size.resize(1, tile_height);
-            z_sizes.resize(rowgrp_nranks, tile_height);
-        }
-        else if(filtering_type == _SOME_)
-        {
-            z_size.resize(1, nnz_row_sizes_loc[j]);
-            z_sizes.resize(rowgrp_nranks, nnz_row_sizes_loc[j]);    
-        }
-        
-        if(local_row_segments[j] == owned_segment)
-        {
-            Z_ = new Vector<Weight, Integer_Type, Fractional_Type>(z_sizes, all_rowgrp_ranks_accu_seg);
-        }
-        else
-        {
-            Z_ = new Vector<Weight, Integer_Type, Fractional_Type>(y_size, accu_segment_row_vec);
-        }
-        populate(Y_, y);
-        Y.push_back(Y_);
-    }
-    
-    
-    if(filtering_type == _NONE_)
-    {
-        list.resize(rank_ncolgrps);
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
-            list[i].resize(tile_height);
-        
-    }
-    else if(filtering_type == _SOME_)
-    {
-        list.resize(rank_ncolgrps);
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
-            list[i].resize(tile_height);
-        x_sizes = nnz_col_sizes_loc;
-    }
-    */
+
+	if(not stationary)
+	{
+		Z.resize(rank_nrowgrps);
+		for(uint32_t j = 0; j < rank_nrowgrps; j++)
+		{  
+			Z[j].resize(y_sizes[j]);
+		}  
+		
+		W.resize(tile_height);
+		
+		if(VProgram)
+		{
+			Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
+			std::vector<std::vector<Integer_Type>> W_ = VP->W;
+			R = W_;
+		}
+		else
+			R.resize(tile_height);	
+		
+		Z_SIZE.resize(rank_nrowgrps);
+		for(uint32_t j = 0; j < rank_nrowgrps; j++)
+		{
+			if(local_row_segments[j] == owned_segment)
+			{
+				yy_sizes.resize(rowgrp_nranks, y_sizes[j]);
+				Z_SIZE[j].resize(rowgrp_nranks);
+				for(uint32_t i = 0; i < rowgrp_nranks; i++)
+					Z_SIZE[j][i].resize(yy_sizes[i] + 1); // 0 + items
+			}
+			else
+			{
+				y_size = {y_sizes[j]};
+				Z_SIZE[j].resize(1);
+				Z_SIZE[j][0].resize(y_size[0] + 1); // 0 + items
+			}        
+		}
+		inboxes.resize(rowgrp_nranks - 1);
+		outboxes.resize(rowgrp_nranks - 1);
+	}
+
     t2 = Env::clock();
     Env::print_time("Init", t2 - t1);
 }
@@ -702,8 +602,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
     uint32_t so = 0;
     Fractional_Type *s_data = (Fractional_Type *) S->data[so];
     Integer_Type s_nitems = S->nitems[so];
-    
-    
     
     if(filtering_type == _NONE_)
     {
@@ -1215,7 +1113,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
                     {
                         Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
                         Integer_Type yj_nitems = Yp->nitems[accu];
-                        printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, yj_nitems);
+                        //printf("%d <-- %d, tag=%d and nitems=%d\n", my_rank, follower, pair_idx, yj_nitems);
                         MPI_Irecv(yj_data, yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                         in_requests.push_back(request);
                     }
@@ -1391,6 +1289,74 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             inbox.clear();
             inbox.shrink_to_fit();
         }
+		
+		
+		if(filtering_type == _NONE_)
+        {
+			std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+			std::vector<std::vector<Integer_Type>> &w_data = W;
+			w_data = z_data;
+			//W = Z[yi];
+        }
+        else if(filtering_type == _SOME_)
+        {
+			std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+			std::vector<std::vector<Integer_Type>> &w_data = W;
+			Integer_Type w_nitems = W.size();
+            char *i_data = (char *) I->data[yi];        
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < w_nitems; i++)
+            {
+                if(i_data[i])
+                {
+                    w_data[i] = z_data[j];
+                    j++;
+                }
+            }
+        }
+		
+		
+		
+		
+		if(Env::rank == -1)
+		{
+			std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+			Integer_Type z_nitems = z_data.size();
+			for(uint32_t i = 0; i < z_nitems; i++)
+			{
+				printf("zi=%d: ", i);
+				auto &z_d = z_data[i];
+				for(uint32_t j: z_d)
+					printf("%d ", j);
+				printf("\n");
+			}
+			printf("\n");
+			std::vector<std::vector<Integer_Type>> &w_data = W;
+			Integer_Type w_nitems = W.size();
+			for(uint32_t i = 0; i < w_nitems; i++)
+			{
+				printf("wi=%d: ", i);
+				auto &w_d = w_data[i];
+				for(uint32_t j: w_d)
+					printf("%d ", j);
+				printf("\n");
+			}
+			printf("\n");
+			std::vector<std::vector<Integer_Type>> &r_data = R;
+			Integer_Type r_nitems = R.size();
+			for(uint32_t i = 0; i < r_nitems; i++)
+			{
+				printf("ri=%d: ", i);
+				auto &r_d = r_data[i];
+				for(uint32_t j: r_d)
+					printf("%d ", j);
+				printf("\n");
+			}
+		}
+		
+		
+		R = W;
+		
     
         for(uint32_t j = 0; j < rank_nrowgrps; j++)
         {
