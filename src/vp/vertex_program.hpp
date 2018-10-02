@@ -588,7 +588,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
                    (Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
 	
-	/*
+	
 	struct Triple<Weight, Integer_Type> triple, triple1, pair;
 	std::vector<std::vector<Integer_Type>> &r_data = R;
 	Integer_Type r_nitems = R.size();
@@ -597,10 +597,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
     std::vector<std::vector<Triple<Weight, Integer_Type>>> inboxes(Env::nranks);
     std::vector<uint32_t> inbox_sizes(Env::nranks);
 	
+	std::vector<std::vector<struct Triple<Weight, Integer_Type>>> triples;
+	triples.resize(r_nitems);
+	std::vector<std::vector<Integer_Type>> ranks;
+	ranks.resize(r_nitems);
 	
 	if(filtering_type == _NONE_)
     {
-		if(Env::rank == 3)
+		if(Env::rank == 0)
 		{
 		
 		printf("%d %lu\n", Env::rank, r_nitems);
@@ -610,14 +614,31 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
 			for(uint32_t j = 0; j < r_data[i].size(); j++)
 			{
 				triple = {i + (owned_segment * tile_height), r_data[i][j]};
+				pair = A->tile_of_triple(triple);
+				uint32_t rank = A->owner_of_tile(pair);
 			    //triple1 = A->rebase(triple);
 				printf("(%d %d) ", triple.row, triple.col);
+				triples[i].push_back(triple);
+				ranks[i].push_back(rank);
 				//printf("[%d %d %d %d %d]", r_data[i][j], triple.row, triple.col, triple1.row, triple1.col);
 			}
 			printf("\n");
 		}
 		printf("\n");
 		
+		/*
+		for(uint32_t i = 0; i < r_nitems; i++)
+		{
+			printf("i=%d\n", i);
+			for(uint32_t j = 0; j < r_data[i].size(); j++)
+			{
+				
+			}
+			
+		}
+		*/
+		
+		//for (auto& triple : *(tile.triples))
 		
 		for(uint32_t i = 0; i < r_nitems; i++)
 		{
@@ -665,7 +686,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
 			printf("\n");
 		}
 	}
-	*/
+	
+	triples.clear();
+	triples.shrink_to_fit();
+	ranks.clear();
+	ranks.shrink_to_fit();
 	
 	
     double t1, t2;
