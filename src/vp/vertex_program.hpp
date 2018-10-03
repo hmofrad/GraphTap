@@ -254,6 +254,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
         R.clear();
         R.shrink_to_fit();
         
+        Q.clear();
+        Q.shrink_to_fit();
+        
         for (uint32_t j = 0; j < rank_nrowgrps; j++)
         {
             Z_SIZE[j].clear();
@@ -417,6 +420,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(Fractional_Type
             std::vector<std::vector<Integer_Type>> W_ = VP->W;
             R = W_;
         }
+        //Q.resize(tile_height);
         //else
         //    R.resize(tile_height);    
         
@@ -595,14 +599,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
     {
         for(uint32_t i = 0; i < r_nitems; i++)
         {
-            printf("i=%d: ", i);
+            //printf("i=%d: ", i);
             //auto &r_d = r_data[i];
             for(uint32_t j = 0; j < r_data[i].size(); j++)
             {
                 triple = {i + (owned_segment * tile_height), r_data[i][j]};
-                printf("[%d %d]", triple.row, triple.col);
+                //printf("[%d]", triple.col);
+                //printf("[%d %d]", triple.row, triple.col);
             }
-            printf("\n");
+            //printf("\n");
         }
     }
     
@@ -636,6 +641,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
         //{
         
         //printf("%d %lu\n", Env::rank, r_nitems);
+        
+    if(Env::rank == 0)
+    {
+        for(uint32_t i = 0; i < r_nitems; i++)
+        {
+            printf("i=%d ", i);
+            for(uint32_t j = 0; j < r_data[i].size(); j++)
+            {
+                printf("[%d]", r_data[i][j]);
+            }
+            printf("\n");
+        }
+    }        
+        
     for(uint32_t i = 0; i < r_nitems; i++)
     {
         //printf("ri=%d:", i);
@@ -788,22 +807,63 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
         
         
       
-            
+           
         Env::barrier(); 
-        if(Env::rank == 0)
-        {            
+        Q.resize(r_nitems);
+        //Q.resize(A->nr);
+        //if(Env::rank == 0)
+        //{            
             for(uint32_t r = 0; r < Env::nranks; r++)
             {
-                 printf("r=%d: ", r);
+                // printf("r=%d: ", r);
                 auto &inbox = inboxes[r];
                 auto &inbox_col = inboxes_col[r];
                 for(uint32_t i = 0; i < inbox.size(); i++)
                 {
-                    printf("[%d, %d %d]", inbox_col[i], inbox[i].row, inbox[i].col);
+                    auto tirple2 = A->rebase({0, inbox_col[i]});
+                    if(!Env::rank)
+                    printf("[%d %d, %d %d]", inbox_col[i], tirple2.col, inbox[i].row, inbox[i].col);
+                    //Q[inbox_col[i]].push_back(inbox[i].col);
+                    Q[tirple2.col].push_back(inbox[i].col);
                 }
                 printf("\n");
             }
+        
+                Env::barrier(); 
+        if(!Env::rank)
+        {
+            for(uint32_t i = 0; i < r_nitems; i++)
+            {
+                printf("i=%d %d: ", i, Q[i].size());
+                for(uint32_t j = 0; j < Q[i].size(); j++)
+                    printf("[%d] ", Q[i][j]);
+                printf("\n");
+            }
         }
+        
+        uint32_t l = 0;
+        uint64_t num_triangles_local = 0;
+        uint64_t num_triangles_global = 0;
+        for(uint32_t i = 0; i < r_nitems; i++)
+        {
+            for(uint32_t j = 0; j < Q[i].size(); j++)
+            {
+                for(uint32_t k = 0; k < R[i].size(); k++)
+                {
+                    if(Q[i][j] == R[i][k])
+                        num_triangles_local++;
+                }
+            }
+        }
+        
+        
+        MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        
+        if(!Env::rank)
+            printf("Num_triangles = %lu %d\n", num_triangles_global, num_triangles_global/6);
+        
+        
+        //}
         
         
         /*
@@ -1592,9 +1652,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         
         
         
-        if(Env::rank == -1)
+        if(Env::rank == 0)
         {
-            
+            /*
             std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
             Integer_Type z_nitems = z_data.size();
             for(uint32_t i = 0; i < z_nitems; i++)
@@ -1606,6 +1666,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                 printf("\n");
             }
             printf("\n");
+            */
+            /*
             std::vector<std::vector<Integer_Type>> &w_data = W;
             Integer_Type w_nitems = W.size();
             for(uint32_t i = 0; i < w_nitems; i++)
@@ -1628,6 +1690,34 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     printf("%d ", j);
                 printf("\n");
             }
+            */
+        }
+        std::vector<std::vector<Integer_Type>> &w_data = W;
+        Integer_Type w_nitems = W.size();
+        std::vector<std::vector<Integer_Type>> &r_data = R;
+        Integer_Type r_nitems = R.size();
+        if(r_nitems)
+        {                
+            uint32_t l = 0;
+            uint64_t num_triangles_local = 0;
+            uint64_t num_triangles_global = 0;
+            for(uint32_t i = 0; i < r_nitems; i++)
+            {
+                for(uint32_t j = 0; j < W[i].size(); j++)
+                {
+                    //uint32_t l = R[i][j];
+                    //uint32_t s = W[l].size() > R[i].size
+                    for(uint32_t k = 0; k < R[i].size(); k++)
+                    {
+                        for(uint32_t l = 0; l < R[W[i][j]].size(); l++)
+                        {
+                            if(R[i][k] == R[W[i][j]][l])
+                                num_triangles_local++;
+                        }
+                    }
+                }
+            }
+            printf("num_triangles_local=%d\n", num_triangles_local);
         }
         
         
