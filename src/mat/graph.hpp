@@ -335,7 +335,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         }
     }
     
-	
     fin.close();
     assert(offset == filesize);   
     
