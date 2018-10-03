@@ -167,8 +167,9 @@ class Matrix
         struct Triple<Weight, Integer_Type> tile_of_local_tile(const uint32_t local_tile);
         struct Triple<Weight, Integer_Type> tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
         uint32_t local_tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
-        
         uint32_t segment_of_tile(const struct Triple<Weight, Integer_Type> &pair);
+		uint32_t owner_of_tile(const struct Triple<Weight, Integer_Type> &pair);
+		
         struct Triple<Weight, Integer_Type> base(const struct Triple<Weight, Integer_Type> &pair, Integer_Type rowgrp, Integer_Type colgrp);
         struct Triple<Weight, Integer_Type> rebase(const struct Triple<Weight, Integer_Type> &pair);
         void insert(const struct Triple<Weight, Integer_Type> &triple);
@@ -224,6 +225,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 uint32_t Matrix<Weight, Integer_Type, Fractional_Type>::segment_of_tile(const struct Triple<Weight, Integer_Type> &pair)
 {
     return(pair.col);
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+uint32_t Matrix<Weight, Integer_Type, Fractional_Type>::owner_of_tile(const struct Triple<Weight, Integer_Type> &pair)
+{
+    return(tiles[pair.row][pair.col].rank);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1520,7 +1527,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 i++;
                 //printf("%d %d\n", pair.row, pair.col);
             }
-            while(j < tile_height + 1)
+            while(j + 1 < tile_height)
             {
                 j++;
                 IA[j] = IA[j - 1];
@@ -1579,7 +1586,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 i++;
                 //printf("%d %d\n", pair.row, pair.col);
             }
-            while(j < tile_width + 1)
+            while(j + 1< tile_width)
             {
                 j++;
                 JA[j] = JA[j - 1];
@@ -1662,7 +1669,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 JA[i] = jv_data[pair1.col];    
                 i++;
             }
-            while(j < r_nitems + 1)
+            while(j + 1 < r_nitems)
             {
                 j++;
                 IA[j] = IA[j - 1];
@@ -1739,7 +1746,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 IA[i] = iv_data[pair1.row];
                 i++;
             }
-            while(j < c_nitems + 1)
+            while(j + 1 < c_nitems)
             {
                 j++;
                 JA[j] = JA[j - 1];
