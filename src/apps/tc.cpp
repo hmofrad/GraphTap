@@ -91,6 +91,7 @@ int main(int argc, char **argv)
     Ordering_type OT = _ROW_;
     double time1 = 0;
     double time2 = 0;
+    
 
     /* Triangle counting execution */
     time1 = Env::clock();
