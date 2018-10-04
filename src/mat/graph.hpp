@@ -508,8 +508,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         
         if(acyclic)
         {
-          if((not transpose and triple.col < triple.row) or
-             (transpose and triple.col > triple.row))
+            if(triple.row > triple.col)
+          //if((not transpose and triple.col < triple.row) or
+            // (transpose and triple.col > triple.row))
             std::swap(triple.row, triple.col);
         }
         
@@ -593,8 +594,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         
         if(acyclic)
         {
-          if((not transpose and triple.col < triple.row) or
-             (transpose and triple.col > triple.row))
+          //if((not transpose and triple.col < triple.row) or
+           //  (transpose and triple.col > triple.row))
+           if(triple.row > triple.col)
             std::swap(triple.row, triple.col);
         }
 
@@ -605,7 +607,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             std::swap(triple.row, triple.col);
             A->insert(triple);
         }
-        
+        //printf("%d %d\n", triple.row, triple.col);
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
