@@ -35,7 +35,8 @@ struct Tile2D
     struct CSR<Weight, Integer_Type> *tcsr;
     struct CSC<Weight, Integer_Type> *tcsc;
     uint32_t rg, cg; // Row group, Column group
-    // ith row, jth column, nth local row order tile, mth local column order tile, and kth global tile
+    // ith row, jth column, nth local row order tile, 
+    // mth local column order tile, and kth global tile
     uint32_t ith, jth, nth, mth, kth;
     uint32_t rank;
     uint32_t leader_rank_rg, leader_rank_cg;
@@ -131,7 +132,9 @@ class Matrix
         std::vector<int32_t> follower_colgrp_ranks_accu_seg_cg;
         
         int32_t owned_segment, accu_segment_rg, accu_segment_cg, accu_segment_row, accu_segment_col;
-        // In case of owning multiple segments
+        
+        // In case ranks own multiple segments.
+        // P.S. we don't support this in the current implementation
         std::vector<int32_t> owned_segment_vec;
         std::vector<int32_t> accu_segment_rg_vec;
         std::vector<int32_t> accu_segment_cg_vec;
@@ -824,6 +827,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
                 std::sort(tile.triples->begin(), tile.triples->end(), f_row);
             if(compression_type == Compression_type::_CSC_)
                 std::sort(tile.triples->begin(), tile.triples->end(), f_col);
+            /* remove duplicate edges */
 			auto last = std::unique(tile.triples->begin(), tile.triples->end(), f_comp);
 			tile.triples->erase(last, tile.triples->end());
         }
@@ -1534,7 +1538,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 i++;
                 //printf("%d %d\n", pair.row, pair.col);
             }
-            while(j + 1 < tile_height)
+            while((j + 1) < (tile_height + 1))
             {
                 j++;
                 IA[j] = IA[j - 1];
@@ -1593,7 +1597,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 i++;
                 //printf("%d %d\n", pair.row, pair.col);
             }
-            while(j + 1< tile_width)
+            while((j + 1) < (tile_width + 1))
             {
                 j++;
                 JA[j] = JA[j - 1];
@@ -1676,7 +1680,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
                 JA[i] = jv_data[pair1.col];    
                 i++;
             }
-            while(j + 1 < r_nitems)
+            while((j + 1) < (r_nitems + 1))
             {
                 j++;
                 IA[j] = IA[j - 1];
@@ -1753,7 +1757,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 IA[i] = iv_data[pair1.row];
                 i++;
             }
-            while(j + 1 < c_nitems)
+            while((j + 1) < (c_nitems + 1))
             {
                 j++;
                 JA[j] = JA[j - 1];
