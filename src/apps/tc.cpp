@@ -64,7 +64,6 @@ struct Generic_functions
     }
 };
 
-
 int main(int argc, char **argv)
 {
     bool comm_split = true;
@@ -86,7 +85,7 @@ int main(int argc, char **argv)
     bool acyclic = true;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _NONE_; // Do not turn on
     bool parread = true;
     bool stationary = false;
     Ordering_type OT = _ROW_;
@@ -94,206 +93,31 @@ int main(int argc, char **argv)
     double time2 = 0;
 
     /* Triangle counting execution */
-    //if(!Env::rank)
-    //    printf("Reading acyclic ...\n");
-    //if(!Env::rank)
-        //Env::tick();
+    time1 = Env::clock();
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
-    //if(!Env::rank)
-        //Env::tock("Ingress");
-    //Env::tick();
-	
-    time1 = Env::clock();
     Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
     V.init(x, y, v, s);
-    //V.bcast1(f.zeros);
     V.combine();
-    V.apply(f.zeros);
-    //V.checksum();
-    //V.display();
-    
+    V.apply(f.zeros);    
     G.free();
-    
 	Env::barrier();
+    
 	transpose = false;
 	Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
-	//printf(">>>>> VR\n");
 	Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);  
-	//printf("<<<<<< VR.init\n");
 	VR.init(x, y, v, s, &V);
 	V.free();
-	//VR.bcast1(f.zeros);
 	VR.combine();
     VR.apply(f.zeros);
-	
 	VR.free();
 	GR.free();
 	
-	
     time2 = Env::clock();
     Env::print_time("Triangle couting", time2 - time1);
-    Env::finalize();
-    return(0);
-    
-    
-
-    
-    if(!Env::rank)
-    {
-        printf("Degree execution\n");
-        time1 = Env::clock();
-    }
-    if(comm_split)
-    {
-        if(!Env::rank)
-            Env::tick();
-        V.bcast(f.ones);
-        if(!Env::rank)
-            Env::tock("Bcast"); 
-    }
-    else
-    {
-        if(!Env::rank)
-            Env::tick();
-        V.scatter(f.ones);    
-        if(!Env::rank)
-            Env::tock("Scatter"); 
-        
-        if(!Env::rank)
-            Env::tick();
-        V.gather();
-        if(!Env::rank)
-            Env::tock("Gather"); 
-    }
-    
-    if(!Env::rank)
-        Env::tick();
-    V.combine();
-    if(!Env::rank)
-        Env::tock("Combine stacked"); 
-    
-
-
-    if(!Env::rank)
-        Env::tick();
-    V.apply(f.assign);
-    if(!Env::rank)
-        Env::tock("Apply"); 
-    
-    if(!Env::rank)
-    {
-        time2 = Env::clock();
-        printf("Degree time: %fseconds\n", time2 - time1);
-    }
-
-    //V.checksum_degree();
-    //V.checksum();
-    //V.free();
-    G.free();
-    //Env::finalize();
-    //return(1);
-
-    Env::barrier(); 
-    if(!Env::rank)
-        printf("\n");
-    
-    /* Vertex execution */
-    if(!Env::rank)
-        printf("Computing PageRank ...\n");
-    
-    transpose = true;
-    //if(!Env::rank)
-    //    Env::tick();
-    //Graph<wp, ip, fp> GR;
-    //GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
-    //Env::barrier();
-    //if(!Env::rank)
-    //    Env::tock("Ingress transpose");
-    
-    fp alpha = 0.15;
-    x = 0, y = 0, v = alpha, s = 0;
-    //Vertex_Program<wp, ip, fp> VR(GR);
-    
-    
-    /*
-    OT = _COL_;
-    fp alpha = 0.15;
-    x = 0, y = 0, v = alpha, s = 0;
-    Vertex_Program<wp, ip, fp> VR(G, OT);
-    */
-    
-    if(!Env::rank)
-        Env::tick();
-    VR.init(x, y, v, s, &V);
-    V.free();
-    if(!Env::rank)
-        Env::tock("Init");
-    
-    uint32_t iter = 0;
-    uint32_t niters = num_iterations;
-    
-    if(!Env::rank)
-        time1 = Env::clock();
-    while(iter < niters)
-    {
-        iter++;
-        if(comm_split)
-        {
-            if(!Env::rank)
-                Env::tick();
-            VR.bcast(f.div);
-            if(!Env::rank)
-                Env::tock("Bcast"); 
-        }
-        else
-        {        
-            if(!Env::rank)
-                Env::tick();
-            VR.scatter(f.div);
-            if(!Env::rank)
-                Env::tock("Scatter"); 
-            
-            if(!Env::rank)
-                Env::tick();
-            VR.gather();
-            if(!Env::rank)
-                Env::tock("Gather"); 
-        }
-        
-        if(!Env::rank)
-            Env::tick();
-        VR.combine();        
-        if(!Env::rank)
-            Env::tock("Combine"); 
-        
-        if(!Env::rank)
-                Env::tick();
-        VR.apply(f.rank);
-        if(!Env::rank)
-            Env::tock("Apply"); 
-        
-        if(!Env::rank)
-            printf("Pagerank, iter: %d\n", iter);
-    }
-    
-    if(!Env::rank)
-    {
-        time2 = Env::clock();
-        printf("Pagerank time: %f seconds\n", time2 - time1);
-    }
-    
-    //VR.checksum();
-    //VR.free();
-    //V.free();
-    //G.free();
-    
-    VR.free();
-    GR.free();
-    
     Env::finalize();
     return(0);
 }
