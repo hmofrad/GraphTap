@@ -230,6 +230,11 @@ void Env::affinity()
     int cpu_name_len;
     MPI_Get_processor_name(core_name, &cpu_name_len);
     core_id = sched_getcpu();
+	if(core_id == -1)
+	{
+		fprintf(stderr, "sched_getcpu() returns a negative CPU number");
+		core_id = 0;
+	}
 
     std::vector<int> core_ids = std::vector<int>(nranks);
     MPI_Gather(&core_id, 1, MPI_INT, core_ids.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -283,7 +288,7 @@ void Env::affinity()
         int idx1 = it - machines_all.begin();
 
         machines_ranks[idx].push_back(idx1);
-        assert((core_ids[idx1] >= 0) && (core_ids[idx1] < NUM_CORES_PER_MACHINE));
+        assert((core_ids[idx1] >= 0) and (core_ids[idx1] < NUM_CORES_PER_MACHINE));
         machines_cores[idx].push_back(core_ids[idx1]);
         machines_cores_uniq[idx].insert(core_ids[idx1]);
     }  
