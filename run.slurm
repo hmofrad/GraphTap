@@ -2,16 +2,16 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=32
-#SBATCH --nodes=8
+#SBATCH --ntasks=16
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=50000
+##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
 #SBATCH --time=00:10:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=opa
+#SBATCH --partition=ib
 
 ##SSBATCH ---ntasks-per-core=1
 ##SBATCH --distribution cyclic:cyclic
@@ -29,8 +29,8 @@ echo "working directory = "$SLURM_SUBMIT_DIR
 echo "************************************************"
 
 #MPI="mpich"
-#MPI="intel"
-MPI="openmpi"
+MPI="intel"
+#MPI="openmpi"
 if [ "${MPI}" = "mpich" ]
 then
     echo "MPI"=${MPI}
@@ -67,7 +67,8 @@ export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
-APP=./main
+APP=bin/./tc
+#APP=./main
 
 if [ "$SLURM_NNODES" = "4" ]
 then
