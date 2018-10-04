@@ -1238,8 +1238,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     outboxes_cols_data[r].insert(outboxes_cols_data[r].end(), r_data[i].begin(), r_data[i].end());
                 }
             }
+           
             /*
-            Env::barrier();  
+            
             int test_rank = -1;
             if(Env::rank == test_rank)
             {
@@ -1287,7 +1288,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             Env::barrier(); 
         }
         */
-        
+        Env::barrier(); 
         for (uint32_t r = 0; r < Env::nranks; r++)
         {
             if (r != Env::rank)
@@ -1365,6 +1366,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         in_requests.clear();
         out_requests.clear();  
         
+        
         for (uint32_t i = 0; i < Env::nranks; i++)
         {
             uint32_t r = (Env::rank + i) % Env::nranks;
@@ -1433,7 +1435,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
         in_requests.clear();
         out_requests.clear();         
-        
+        Env::barrier();
         /*
         Env::barrier();
         if(Env::rank == -1)
@@ -1470,15 +1472,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                
                ////uint32_t count = v_nitems < NUM ? v_nitems : NUM;
                 //uint32_t inbox_sizes_cols_num = (inboxes_sizes_cols_num[i]) ? inboxes_sizes_cols_num[i] - 1: 0;
-                for(uint32_t j = 0; j < inboxes_cols_num[i].size() -1; j++)
+                auto &inbox_rows = inboxes_rows[i];
+                auto &inbox_cols_num = inboxes_cols_num[i];
+                
+                auto inbox_cols_data = inboxes_cols_data[i];
+                for(uint32_t j = 0; j < inbox_cols_num.size() -1; j++)
                 {
                     //printf("<<row=%d num=%d ",  inboxes_rows[i][j], inboxes_cols_num[i][j+1] - inboxes_cols_num[i][j]);
-                    for(uint32_t k = inboxes_cols_num[i][j]; k < inboxes_cols_num[i][j+1]; k++)
+                    for(uint32_t k = inbox_cols_num[j]; k < inbox_cols_num[j+1]; k++)
                     {
                         //printf("[%d]",  inboxes_cols_data[i][k]);
-                        for(uint32_t l = 0; l < r_data[inboxes_rows[i][j]].size(); l++)
+                        for(uint32_t l = 0; l < r_data[inbox_rows[j]].size(); l++)
                         {
-                            if(r_data[inboxes_rows[i][j]][l] == inboxes_cols_data[i][k])
+                            if(r_data[inbox_rows[j]][l] == inbox_cols_data[k])
                                 num_triangles_local++;
                         }
                     }
@@ -1488,7 +1494,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         //}
         //printf("[%d] num_triangles_local=%lu\n", Env::rank, num_triangles_local);
         //}
-        //Env::barrier();
+        Env::barrier();
         MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         
         if(!Env::rank)
@@ -1521,9 +1527,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             printf("[%d] num_triangles_local=%lu\n", Env::rank, num_triangles_local);
             */
         }
-        
-        
-        R = W;
+        else
+            R = W;
         
     
         for(uint32_t j = 0; j < rank_nrowgrps; j++)
