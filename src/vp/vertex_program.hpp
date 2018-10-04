@@ -860,7 +860,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast1(Fractional_Ty
         MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         
         if(!Env::rank)
-            printf("Num_triangles = %lu %d\n", num_triangles_global, num_triangles_global/6);
+            printf("Num_triangles = %lu %lu\n", num_triangles_global, num_triangles_global/6);
         
         
         //}
@@ -1667,7 +1667,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             }
             printf("\n");
             */
-            /*
+            
             std::vector<std::vector<Integer_Type>> &w_data = W;
             Integer_Type w_nitems = W.size();
             for(uint32_t i = 0; i < w_nitems; i++)
@@ -1690,14 +1690,76 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     printf("%d ", j);
                 printf("\n");
             }
-            */
+            
         }
+        Env::barrier();
+
+
         std::vector<std::vector<Integer_Type>> &w_data = W;
         Integer_Type w_nitems = W.size();
         std::vector<std::vector<Integer_Type>> &r_data = R;
         Integer_Type r_nitems = R.size();
         if(r_nitems)
-        {                
+        {              
+
+        
+        
+        Triple<Weight, Integer_Type> triple, triple1, pair;
+        //std::vector<Integer_Type> receiver_ranks;
+        std::vector<std::vector<Integer_Type>> outbox_rows(Env::nranks);
+        std::vector<std::vector<Integer_Type>> outbox_cols_num(Env::nranks);
+        std::vector<std::vector<Integer_Type>> outbox_cols_data(Env::nranks);
+        uint32_t receiver_rank;
+        for(uint32_t i = 0; i < Env::nranks; i++)
+            outbox_cols_num[i].push_back(0);
+        for(uint32_t i = 0; i < w_nitems; i++)
+        {
+            //printf("ri=%d:", i);
+            for(uint32_t j = 0; j < w_data[i].size(); j++)
+            {
+                
+                triple = {w_data[i][j], 0};
+                pair = A->tile_of_triple(triple);
+                uint32_t r = A->row_leader_of_tile(pair);
+                triple1 = A->rebase(triple);
+                //printf("(%d %d) ", triple.row, triple.col);
+                //triples[i].push_back(triple);
+                //if(receiver_rank
+                //receiver_ranks.push_back(receiver_rank);
+                
+                outbox_cols_num[r].push_back(outbox_cols_num[r].back() + r_data[i].size());
+                outbox_rows[r].push_back(triple1.row);
+                outbox_cols_data[r].insert(outbox_cols_data[r].end(), r_data[i].begin(), r_data[i].end());
+                //if(!Env::rank)
+                //    printf("[%d %d %d %d %d %d]", w_data[i][j], triple.row, triple.col, triple1.row, triple1.col, r);
+                
+            }
+            //printf("\n");
+        }
+            
+        if(!Env::rank)
+        {
+            for(uint32_t i = 0; i < Env::nranks; i++)
+            {
+                printf("i=%d ", i);
+                for(uint32_t j = 0; j < outbox_cols_num[i].size() - 1; j++)
+                {
+                    printf("row=%d num=%d ",  outbox_rows[i][j], outbox_cols_num[i][j+1] - outbox_cols_num[i][j]);
+                    for(uint32_t k = outbox_cols_num[i][j]; k < outbox_cols_num[i][j+1]; k++)
+                    {
+                        printf("[%d]",  outbox_cols_data[i][k]);
+                    }
+                    
+                }
+                printf("\n");
+            }
+        }
+        
+        
+        
+        
+        
+            /*
             uint32_t l = 0;
             uint64_t num_triangles_local = 0;
             uint64_t num_triangles_global = 0;
@@ -1717,7 +1779,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     }
                 }
             }
-            printf("num_triangles_local=%d\n", num_triangles_local);
+            
+            printf("[%d] num_triangles_local=%lu\n", Env::rank, num_triangles_local);
+            */
         }
         
         
