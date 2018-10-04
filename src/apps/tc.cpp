@@ -33,6 +33,11 @@ struct Generic_functions
     {
         return(1);
     }
+	
+	static fp zeros(fp x, fp y, fp v, fp s)
+    {
+        return(0);
+    }
     
     static fp div(fp x, fp y, fp v, fp s)
     {
@@ -77,13 +82,13 @@ int main(int argc, char **argv)
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
     bool directed = true;
-    bool transpose = false;
-    bool acyclic = false;
+    bool transpose = true;
+    bool acyclic = true;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _NONE_;
     bool parread = true;
-    bool stationary = true;
+    bool stationary = false;
     Ordering_type OT = _ROW_;
     double time1 = 0;
     double time2 = 0;
@@ -98,19 +103,37 @@ int main(int argc, char **argv)
     //if(!Env::rank)
         //Env::tock("Ingress");
     //Env::tick();
+	
     time1 = Env::clock();
     Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
     V.init(x, y, v, s);
-    V.bcast(f.ones);
+    //V.bcast1(f.zeros);
     V.combine();
-    V.apply(f.assign);
-    V.checksum();
-    V.display();
+    V.apply(f.zeros);
+    //V.checksum();
+    //V.display();
     
-    V.free();
     G.free();
+    
+	Env::barrier();
+	transpose = false;
+	Graph<wp, ip, fp> GR;    
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
+	//printf(">>>>> VR\n");
+	Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);  
+	//printf("<<<<<< VR.init\n");
+	VR.init(x, y, v, s, &V);
+	V.free();
+	//VR.bcast1(f.zeros);
+	VR.combine();
+    VR.apply(f.zeros);
+	
+	VR.free();
+	GR.free();
+	
+	
     time2 = Env::clock();
     Env::print_time("Triangle couting", time2 - time1);
     Env::finalize();
@@ -185,15 +208,15 @@ int main(int argc, char **argv)
     transpose = true;
     //if(!Env::rank)
     //    Env::tick();
-    Graph<wp, ip, fp> GR;
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
-    Env::barrier();
+    //Graph<wp, ip, fp> GR;
+    //GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
+    //Env::barrier();
     //if(!Env::rank)
     //    Env::tock("Ingress transpose");
     
     fp alpha = 0.15;
     x = 0, y = 0, v = alpha, s = 0;
-    Vertex_Program<wp, ip, fp> VR(GR);
+    //Vertex_Program<wp, ip, fp> VR(GR);
     
     
     /*
