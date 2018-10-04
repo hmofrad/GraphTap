@@ -169,6 +169,7 @@ class Matrix
         uint32_t local_tile_of_triple(const struct Triple<Weight, Integer_Type> &triple);
         uint32_t segment_of_tile(const struct Triple<Weight, Integer_Type> &pair);
 		uint32_t owner_of_tile(const struct Triple<Weight, Integer_Type> &pair);
+        uint32_t row_leader_of_tile(const struct Triple<Weight, Integer_Type> &pair);
 		
         struct Triple<Weight, Integer_Type> base(const struct Triple<Weight, Integer_Type> &pair, Integer_Type rowgrp, Integer_Type colgrp);
         struct Triple<Weight, Integer_Type> rebase(const struct Triple<Weight, Integer_Type> &pair);
@@ -231,6 +232,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 uint32_t Matrix<Weight, Integer_Type, Fractional_Type>::owner_of_tile(const struct Triple<Weight, Integer_Type> &pair)
 {
     return(tiles[pair.row][pair.col].rank);
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+uint32_t Matrix<Weight, Integer_Type, Fractional_Type>::row_leader_of_tile(const struct Triple<Weight, Integer_Type> &pair)
+{
+    return(tiles[pair.row][pair.row].rank);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
