@@ -705,6 +705,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     #endif
                     pair = A->base({IA[i] + (owned_segment * tile_height), j}, tile.rg, tile.cg);
                     z_data[IA[i]].push_back(pair.col);
+                    //printf("<%d %d>\n", Env::rank, z_data[IA[i]].back());
                 }
             }
         }
@@ -1081,11 +1082,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     t1 = Env::clock();
     uint32_t accu;
     uint32_t yi = accu_segment_row;
+    uint32_t yo = accu_segment_rg;
 
     if(stationary)
     {
         auto *Yp = Y[yi];
-        uint32_t yo = accu_segment_rg;
+
         Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
         Integer_Type y_nitems = Yp->nitems[yo];
                    
@@ -1138,7 +1140,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
     else
     {
         std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-    
         for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
         {
             if(Env::comm_split)
@@ -1149,10 +1150,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             std::vector<Integer_Type> &zj_size = Z_SIZE[yi][accu];
             Integer_Type zj_nitems = zj_size.size() - 1;
             std::vector<Integer_Type> &inbox = inboxes[j];
+               
             for(uint32_t i = 0; i < zj_nitems; i++)
             {
                 for(uint32_t j = zj_size[i]; j < zj_size[i+1]; j++)
+                {
                     z_data[i].push_back(inbox[j]);  
+                }
             }
             
             inbox.clear();
@@ -1168,23 +1172,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         }
         else if(filtering_type == _SOME_)
         {
-            std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-            std::vector<std::vector<Integer_Type>> &w_data = W;
-            Integer_Type w_nitems = W.size();
-            char *i_data = (char *) I->data[yi];                 
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < w_nitems; i++)
-            {
-                if(i_data[i])
-                {
-                    w_data[i] = z_data[j];
-                    j++;
-                }
-            }
+            Env::exit(1);
         }
         
-        
-        /*
         Env::barrier();
         if(Env::rank == -1)
         {
@@ -1211,15 +1201,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                 printf("\n");
             }
         }
-        Env::barrier();
-        */
+        Env::barrier();  
+        
 
+        
         std::vector<std::vector<Integer_Type>> &w_data = W;
         Integer_Type w_nitems = W.size();
         std::vector<std::vector<Integer_Type>> &r_data = R;
-        Integer_Type r_nitems = R.size();
+        Integer_Type r_nitems = R.size();        
         if(r_nitems)
         {
+
+            
+            
+
+            
+    
             yi = owned_segment;
             std::vector<MPI_Request> out_requests;
             std::vector<MPI_Request> in_requests;
@@ -1240,7 +1237,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             for(uint32_t i = 0; i < nrowgrps; i++)
                 D_SIZE[i].resize(r_nitems + 1);
             
-            std::vector<Integer_Type> &d_size = D_SIZE[yi];
+            std::vector<Integer_Type> &d_size = D_SIZE[owned_segment];
             Integer_Type d_s_nitems = d_size.size();
             d_size[0] = 0;
             for(Integer_Type i = 1; i < d_s_nitems; i++)
@@ -1281,7 +1278,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             
             Integer_Type outbox_nitems = d_size[d_s_nitems - 1];
             std::vector<std::vector<Integer_Type>> boxes(nrows);
-            auto &outbox = boxes[yi];
+            auto &outbox = boxes[owned_segment];
             outbox.resize(outbox_nitems);
             Integer_Type k = 0;
             for(Integer_Type i = 0; i < d_s_nitems - 1; i++)
@@ -1296,16 +1293,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             }
             //if(Env::rank == 1)
             //    printf("\n");
-            /*
-            for(uint32_t i = 0; i < nrowgrps; i++)  
-            {
-
-                std::vector<Integer_Type> &dj_size = D_SIZE[i];
-                Integer_Type dj_s_nitems = dj_size.size();
-                printf("r=%d i=%d size=%d on=%d yi=%d\n", Env::rank, i, dj_size[dj_s_nitems - 1], outbox_nitems, yi);
-            }
-            */
-            
+ 
             
             Env::barrier();
             for(uint32_t i = 0; i < nrowgrps; i++)  
@@ -1313,7 +1301,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                 uint32_t r = (Env::rank + i) % Env::nranks;
                 if(r != Env::rank)
                 {
-                    printf("Send[%d --> %d]acc=%d size=%lu\n", Env::rank, r, i, outbox.size());
+                    //printf("Send[%d --> %d]acc=%d size=%lu\n", Env::rank, r, i, outbox.size());
                     MPI_Isend(outbox.data(), outbox.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
                 }
@@ -1333,13 +1321,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     auto &inbox = boxes[i];
                     Integer_Type inbox_nitems = dj_size[dj_s_nitems - 1];
                     inbox.resize(inbox_nitems);
-                    printf("Recv[%d <-- %d]accu=%d size=%d\n", Env::rank, leader, i, inbox_nitems);
+                    //printf("Recv[%d <-- %d]accu=%d size=%d\n", Env::rank, leader, i, inbox_nitems);
                     MPI_Irecv(inbox.data(), inbox.size(), TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
                     in_requests.push_back(request);   
                 }
             }
-            
-            
             MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
             MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
             in_requests.clear();
@@ -1348,33 +1334,105 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             
             
             //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-        Env::barrier();
-            std::vector<std::vector<Integer_Type>> D(nrows); 
-            for(uint32_t i = 0; i < rowgrp_nranks; i++)
+            Env::barrier();
+            std::vector<std::vector<Integer_Type>> D(tile_height * Env::nranks); 
+            for(uint32_t i = 0; i < nrowgrps; i++)
             {
-                leader = leader_ranks[i];
-                my_rank = Env::rank;
+                //if(Env::rank)
+                //    printf("%d ", i);
                 auto &box = boxes[i];
-                
                 std::vector<Integer_Type> &dj_size = D_SIZE[i];
                 Integer_Type dj_nitems = dj_size.size() - 1;
                 for(uint32_t j = 0; j < dj_nitems; j++)
                 {
                     for(uint32_t k = dj_size[j]; k < dj_size[j+1]; k++)
                     {
-                        Integer_Type row = j + (owned_segment * tile_height);
-                        if(Env::rank)
-                            printf("[%d %d]", row, box[k]);
+                        Integer_Type row = j + (i * tile_height);
+                        //if(Env::rank)
+                        //    printf("[%d %d]", row, box[k]);
                         D[row].push_back(box[k]);
                     }
-                    if(Env::rank)
-                    printf("\n");
+                    
+                    
                 }
+                //if(Env::rank)
+                //   printf("\n");
                 
                 box.clear();
                 box.shrink_to_fit();
             }
             Env::barrier();
+
+            
+            
+            uint64_t num_triangles_local = 0;
+            uint64_t num_triangles_global = 0;
+            int c = 0;
+            for(uint32_t i = 0; i < w_nitems; i++)
+            {
+                for(uint32_t j = 0; j < W[i].size(); j++)
+                {
+                    //uint32_t l = R[i][j];
+                    //uint32_t s = W[l].size() > R[i].size
+                    for(uint32_t k = 0; k < R[i].size(); k++)
+                    {
+                        for(uint32_t l = 0; l < D[W[i][j]].size(); l++)
+                        {
+                            if(R[i][k] == D[W[i][j]][l])
+                            {
+                                num_triangles_local++;
+                                //printf("%d %d %lu \n", R[i][k], D[W[i][j]][l], num_triangles_local);
+                            }
+                        }
+                    }
+                }
+            }
+            
+ 
+            
+            
+            
+            Env::barrier();
+            MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+            if(!Env::rank)
+                printf("Num_triangles = %lu\n", num_triangles_global);    
+
+            Env::barrier();
+            /*
+            if(!Env::rank)
+            {            
+                for(uint32_t i = 0; i < D.size(); i++)
+                {
+                    printf("%d: ", i);
+                    for(uint32_t j = 0; j < D[i].size(); j++)
+                        printf("%d ", D[i][j]);
+                    printf("\n");
+                }
+            }
+            Env::barrier();
+            */
+            /*
+
+    
+            for(uint32_t i = 0; i < W.size(); i++)
+            {
+                printf("%d: ", i);
+                for(uint32_t j = 0; j < W[i].size(); j++)
+                    printf("%d ", W[i][j]);
+                printf("\n");
+            }
+            
+            
+            printf("\n");
+            for(uint32_t i = 0; i < D.size(); i++)
+            {
+                printf("%d: ", i);
+                for(uint32_t j = 0; j < D[i].size(); j++)
+                    printf("%d ", D[i][j]);
+                printf("\n");
+            }
+            */
+            
            /* 
            
             for(Integer_Type i = 0; i < r_nitems; i++)
