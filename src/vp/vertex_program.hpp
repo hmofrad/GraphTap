@@ -64,6 +64,8 @@ class Vertex_Program
         Tiling_type tiling_type;
         Compression_type compression_type;
         Filtering_type filtering_type;
+        Integer_Type nrows, ncols;
+        uint32_t nrowgrps, ncolgrps;
         uint32_t rowgrp_nranks, colgrp_nranks;
         uint32_t rank_nrowgrps, rank_ncolgrps;
         Integer_Type tile_height, tile_width;
@@ -146,6 +148,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
 
     if(ordering_type == _ROW_)
     {
+        nrows = A->nrows;
+        ncols = A->ncols;
+        nrowgrps = A->nrowgrps;
+        ncolgrps = A->ncolgrps;
         rowgrp_nranks = A->tiling->rowgrp_nranks;
         colgrp_nranks = A->tiling->colgrp_nranks;
         rank_nrowgrps = A->tiling->rank_nrowgrps;
@@ -182,6 +188,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(Graph<Weig
     }
     else if (ordering_type == _COL_)
     {
+        nrows = A->ncols;
+        ncols = A->nrows;
+        nrowgrps = A->ncolgrps;
+        ncolgrps = A->nrowgrps;
         rowgrp_nranks = A->tiling->colgrp_nranks;
         colgrp_nranks = A->tiling->rowgrp_nranks;
         rank_nrowgrps = A->tiling->rank_ncolgrps;
@@ -1209,14 +1219,343 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         std::vector<std::vector<Integer_Type>> &r_data = R;
         Integer_Type r_nitems = R.size();
         if(r_nitems)
-        {              
+        {
+            yi = owned_segment;
+            std::vector<MPI_Request> out_requests;
+            std::vector<MPI_Request> in_requests;
+            MPI_Request request;
+            MPI_Status status;
+            uint32_t my_rank, leader, follower, accu;
+            Triple<Weight, Integer_Type> triple, triple1, pair;
+            std::vector<std::vector<Integer_Type>> D(nrows);
+            
+            //D.resize(nrows);
+            //printf("%d %d\n", Env::rank, owned_segment);
+            Env::barrier();
+            //if(Env::rank == 1)
+            //{
+                
+            for(Integer_Type i = 0; i < r_nitems; i++)
+            {
+                Integer_Type row = i + (owned_segment * tile_height);
+                if(R[i].size())
+                    D[row] = R[i];
+            }    
+            
+            //uint32_t my_row = Env::rank;
+            std::vector<std::vector<Integer_Type>> D_SIZE(nrows);
+            for(uint32_t i = 0; i < nrowgrps; i++)
+                D_SIZE[i].resize(r_nitems + 1);
+            
+            std::vector<Integer_Type> &d_size = D_SIZE[yi];
+            Integer_Type d_s_nitems = d_size.size();
+            d_size[0] = 0;
+            for(Integer_Type i = 1; i < d_s_nitems; i++)
+            {
+                d_size[i] = d_size[i-1] + r_data[i-1].size();
+            }   
+
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                uint32_t r = (Env::rank + i) % Env::nranks;
+                if(r != Env::rank)
+                {
+                    //printf("Send[%d --> %d]acc=%d size=%d num=%d\n", Env::rank, r, i, d_s_nitems, d_size[d_s_nitems - 1]);
+                    MPI_Isend(d_size.data(), d_s_nitems, TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+            
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                leader = leader_ranks[i];
+                my_rank = Env::rank;
+                //uint32_t r = (Env::rank + i) % Env::nranks;
+                //if(r != Env::rank)
+                if(my_rank != leader)
+                {
+                    std::vector<Integer_Type> &dj_size = D_SIZE[i];
+                    Integer_Type dj_s_nitems = dj_size.size();
+                    //printf("Recv[%d <-- %d]accu=%d size=%d\n", Env::rank, leader, i, dj_s_nitems);
+                    MPI_Irecv(dj_size.data(), dj_s_nitems, TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
+                    in_requests.push_back(request);
+                }
+            }
+            MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+            MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+            in_requests.clear();
+            out_requests.clear();      
+            
+            Integer_Type outbox_nitems = d_size[d_s_nitems - 1];
+            std::vector<std::vector<Integer_Type>> boxes(nrows);
+            auto &outbox = boxes[yi];
+            outbox.resize(outbox_nitems);
+            Integer_Type k = 0;
+            for(Integer_Type i = 0; i < d_s_nitems - 1; i++)
+            {
+                for(auto j: r_data[i])
+                {
+                    outbox[k] = j;
+                    k++;
+                    //if(Env::rank == 1)
+                    //    printf("%d ", j);
+                }
+            }
+            //if(Env::rank == 1)
+            //    printf("\n");
+            /*
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+
+                std::vector<Integer_Type> &dj_size = D_SIZE[i];
+                Integer_Type dj_s_nitems = dj_size.size();
+                printf("r=%d i=%d size=%d on=%d yi=%d\n", Env::rank, i, dj_size[dj_s_nitems - 1], outbox_nitems, yi);
+            }
+            */
+            
+            
+            Env::barrier();
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                uint32_t r = (Env::rank + i) % Env::nranks;
+                if(r != Env::rank)
+                {
+                    printf("Send[%d --> %d]acc=%d size=%lu\n", Env::rank, r, i, outbox.size());
+                    MPI_Isend(outbox.data(), outbox.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                }
+            }
+            
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                leader = leader_ranks[i];
+                my_rank = Env::rank;
+                //uint32_t r = (Env::rank + i) % Env::nranks;
+                //if(r != Env::rank)
+                if(my_rank != leader)
+                {
+                    std::vector<Integer_Type> &dj_size = D_SIZE[i];
+                    Integer_Type dj_s_nitems = dj_size.size();
+                    
+                    auto &inbox = boxes[i];
+                    Integer_Type inbox_nitems = dj_size[dj_s_nitems - 1];
+                    inbox.resize(inbox_nitems);
+                    printf("Recv[%d <-- %d]accu=%d size=%d\n", Env::rank, leader, i, inbox_nitems);
+                    MPI_Irecv(inbox.data(), inbox.size(), TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
+                    in_requests.push_back(request);   
+                }
+            }
+            
+            
+            MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+            MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+            in_requests.clear();
+            out_requests.clear(); 
+            Env::barrier();
+            
+            /*
+            
+            
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                uint32_t r = (Env::rank + i) % Env::nranks;
+                if(r != Env::rank)
+                {
+                    MPI_Isend(outbox.data(), outbox.size(), TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);  
+                }
+            }
+            
+            for(uint32_t i = 0; i < nrowgrps; i++)  
+            {
+                uint32_t r = (Env::rank + i) % Env::nranks;
+                if(r != Env::rank)
+                {
+                    std::vector<Integer_Type> &dj_size = D_SIZE[r];
+                    Integer_Type dj_s_nitems = dj_size.size();
+                    auto &inbox = boxes[i];
+                    Integer_Type inbox_nitems = dj_size[dj_s_nitems - 1];
+                    inbox.resize(inbox_nitems);
+                    MPI_Irecv(inbox.data(), inbox.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
+                    in_requests_.push_back(request);   
+                }
+            }
+            MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+            MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+            in_requests.clear();
+            out_requests.clear(); 
+            */
+            
+            /*
+            for(uint32_t i = 0; i < nrowgrps; i++)
+            {
+                my_rank = Env::rank;
+                leader = leader_ranks[i];
+                if(my_rank != leader)
+                {
+                    accu = i;
+                    std::vector<Integer_Type> &dj_size = D_SIZE[accu];
+                    Integer_Type dj_s_nitems = dj_size.size();
+                    printf("Recv[%d <-- %d]accu=%d\n", my_rank, leader, accu);
+                    MPI_Irecv(dj_size.data(), dj_s_nitems, TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
+                    in_requests.push_back(request);
+                }
+                else
+                {
+
+                    
+                }
+            }
+*/       
+
+            /*
+            for(uint32_t i = 0; i < nrowgrps; i++)
+            {
+                my_rank = Env::rank;
+                leader = leader_ranks[i];
+                if(my_rank == leader)
+                {            
+                    for(uint32_t j = 0; j < nrowgrps - 1; j++)  
+                    {
+                        follower = follower_rowgrp_ranks[j];
+                        MPI_Isend(d_size.data(), d_s_nitems, TYPE_INT, follower, 0, Env::MPI_WORLD, &request);
+                        out_requests.push_back(request);
+                    }
+                }
+                else
+                {            
+                    //follower = follower_rowgrp_ranks[j];
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                    std::vector<Integer_Type> &dj_size = D_SIZE[accu];
+                    Integer_Type dj_s_nitems = dj_size.size();
+                    MPI_Recv(dj_size.data(), dj_s_nitems, TYPE_INT, leader, 0, Env::MPI_WORLD, &status);
+                    in_requests.push_back(request);
+                }
+            }
+                */
+            
+            
+            
+
+            
+
+            
+            /*
+                
+                for(uint32_t i = 0; i < nrowgrps; i++)
+                {
+                    my_rank = Env::rank;
+                    leader = leader_ranks[i];
+                    if(my_rank == leader)
+                    {
+                        for(uint32_t j = 0; j < nrowgrps - 1; j++)  
+                        {
+                            std::vector<Integer_Type> &d_size = D_SIZE[i];
+                            Integer_Type d_s_nitems = d_size.size();
+                            follower = follower_rowgrp_ranks[j];
+                            //MPI_Send(d_size.data(), d_s_nitems, TYPE_INT, follower, 0, Env::MPI_WORLD);
+                        }
+                        
+                        for(uint32_t j = 0; j < nrowgrps - 1; j++) 
+                        {
+                            //uint32_t r = (Env::rank + j) % Env::nranks;
+                            //if(r != Env::rank)
+                            //{
+                                follower = follower_rowgrp_ranks[j];
+                                accu = follower_rowgrp_ranks_accu_seg[j];
+                                std::vector<Integer_Type> &dj_size = D_SIZE[accu];
+                                Integer_Type dj_s_nitems = dj_size.size();
+                                //MPI_Recv(dj_size.data(), dj_s_nitems, TYPE_INT, follower, 0, Env::MPI_WORLD, &status);
+                            //}
+                        }
+                        
+                        for(uint32_t j = 0; j < nrowgrps; j++) 
+                        {
+                            uint32_t r = (Env::rank + j) % Env::nranks;
+                            if(r != Env::rank)
+                            {
+                                accu = follower_rowgrp_ranks_accu_seg[j];
+                                auto &inbox = boxes[j];
+                            }
+                        }
+                        
+                        //Integer_Type inbox_nitems = zj_size[sj_s_nitems - 1];
+                        //inbox.resize(inbox_nitems);
+                        //MPI_Irecv(inbox.data(), inbox.size(), TYPE_INT, follower, pair_idx, communicator, &request);
+                        //in_requests_.push_back(request);
+                        
+                        ;
+           
+                    }
+                    else
+                    {
+                        std::vector<Integer_Type> &d_size = D_SIZE[yi];
+                        Integer_Type d_s_nitems = d_size.size();
+                        //for(uint32_t j = 0; j < nrowgrps - 1; j++)   
+                        //{
+                            //uint32_t r = (Env::rank + j) % Env::nranks;                            
+                            //if(r != Env::rank)
+                            //{
+                               // follower = follower_rowgrp_ranks[j];
+                                //MPI_Send(d_size.data(), d_s_nitems, TYPE_INT, follower, 0, Env::MPI_WORLD);
+                            //}
+                        //}
+                        
+              
+                        //MPI_Isend(outbox.data(), outbox.size(), TYPE_INT, leader, 0, Env::MPI_WORLD, &request);
+                        //out_requests.push_back(request);      
+                    }
+                }
+                
+                
+                for(uint32_t i = 0; i < nrows; i++)
+                {
+                    printf("%d:", i);
+                    for(uint32_t j = 0; j < D[i].size(); j++)
+                        printf("%d ", D[i][j]);
+                    printf("\n");
+                }
+                
+            //}
+            //Env::barrier();
+            
+            */
+            
+            
+            
+            
+            
+            /*
+            for(uint32_t r = 0; r < Env::nranks; r++)
+            {
+                outboxes_list[r].resize(w_nitems);
+                for(uint32_t i = 0; i < w_nitems; i++)
+                {
+                    for(uint32_t j = 0; j < w_data[i].size(); j++)
+                    {
+                        triple = {w_data[i][j], 0};
+                        pair = A->tile_of_triple(triple);
+                        uint32_t r = A->row_leader_of_tile(pair);
+                        triple1 = A->rebase(triple);
+                        
+                        
+                    }
+                }
+            }
+            */
+            
+            
+            
+            
+            
+            /*
             Triple<Weight, Integer_Type> triple, triple1, pair;
             std::vector<std::vector<Integer_Type>> outboxes_rows(Env::nranks);
             std::vector<std::vector<Integer_Type>> outboxes_cols_num(Env::nranks);
             std::vector<std::vector<Integer_Type>> outboxes_cols_data(Env::nranks);
             std::vector<std::vector<Integer_Type>> inboxes_rows(Env::nranks);
             std::vector<std::vector<Integer_Type>> inboxes_cols_num(Env::nranks);
-            std::vector<std::vector<Integer_Type>> inboxes_cols_data(Env::nranks);        
+            std::vector<std::vector<Integer_Type>> inboxes_cols_data(Env::nranks);
             std::vector<uint32_t> inboxes_sizes_rows(Env::nranks);
             std::vector<uint32_t> inboxes_sizes_cols_num(Env::nranks);
             std::vector<uint32_t> inboxes_sizes_cols_data(Env::nranks);
@@ -1224,6 +1563,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             
             for(uint32_t i = 0; i < Env::nranks; i++)
                 outboxes_cols_num[i].push_back(0);
+            
             for(uint32_t i = 0; i < w_nitems; i++)
             {
                 for(uint32_t j = 0; j < w_data[i].size(); j++)
@@ -1233,34 +1573,43 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     pair = A->tile_of_triple(triple);
                     uint32_t r = A->row_leader_of_tile(pair);
                     triple1 = A->rebase(triple);
-                    outboxes_rows[r].push_back(triple1.row);
-                    outboxes_cols_num[r].push_back(outboxes_cols_num[r].back() + r_data[i].size());
-                    outboxes_cols_data[r].insert(outboxes_cols_data[r].end(), r_data[i].begin(), r_data[i].end());
+                    
+
+                    if(r_data[i].size())
+                    {
+                        bool is_there = std::find(outboxes_rows[r].begin(), outboxes_rows[r].end(), triple1.row) != outboxes_rows[r].end();
+                        if(not is_there)
+                        {
+                            outboxes_rows[r].push_back(triple1.row);
+                            outboxes_cols_num[r].push_back(outboxes_cols_num[r].back() + r_data[i].size());
+                            outboxes_cols_data[r].insert(outboxes_cols_data[r].end(), r_data[i].begin(), r_data[i].end());
+                        }
+                    }
                 }
             }
            
-            /*
             
-            int test_rank = -1;
-            if(Env::rank == test_rank)
-            {
-                for(uint32_t i = 0; i < Env::nranks; i++)
-                {
-                    printf("i=%d ", i);
-                    for(uint32_t j = 0; j < outboxes_cols_num[i].size() - 1; j++)
-                    {
-                        printf("row=%d num=%d ",  outboxes_rows[i][j], outboxes_cols_num[i][j+1] - outboxes_cols_num[i][j]);
-                        for(uint32_t k = outboxes_cols_num[i][j]; k < outboxes_cols_num[i][j+1]; k++)
-                        {
-                            printf("[%d]",  outboxes_cols_data[i][k]);
-                        }
+            
+            //int test_rank = -1;
+           // if(Env::rank == test_rank)
+            //{
+              //  for(uint32_t i = 0; i < Env::nranks; i++)
+                //{
+                  //  printf("i=%d ", i);
+                    //for(uint32_t j = 0; j < outboxes_cols_num[i].size() - 1; j++)
+                    //{
+                      //  printf("row=%d num=%d ",  outboxes_rows[i][j], outboxes_cols_num[i][j+1] - outboxes_cols_num[i][j]);
+                       // for(uint32_t k = outboxes_cols_num[i][j]; k < outboxes_cols_num[i][j+1]; k++)
+                       // {
+                     //       printf("[%d]",  outboxes_cols_data[i][k]);
+                   //     }
                         
-                    }
-                    printf("\n");
-                }
-            }
-            Env::barrier();
-            */
+                 //   }
+               //     printf("\n");
+             //   }
+           // }
+            ///Env::barrier();
+            
         //std::vector<std::vector<Integer_Type>> *outboxes_all = new std::vector<std::vector<Integer_Type>>(3);
         //outboxes_all[0] = outboxes_rows;
         //outboxes_all[1] = outboxes_cols_num;
@@ -1271,23 +1620,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         //inboxes_sizes_all[2] = inboxes_sizes_cols_data;
         
         
-        /*
-        for(uint32_t i = 0; i < 3; i++)
-        {
-            outboxes = outboxes_all[0];
-            for (uint32_t r = 0; r < Env::nranks; r++)
-            {
-                if (r != Env::rank)
-                {
-                    auto &outbox = outboxes[r];
-                    uint32_t outbox_size = outbox.size();
-                    MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inboxes_sizes_rows[r], 1, MPI_UNSIGNED, 
-                                                                r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
-                }
-            }
-            Env::barrier(); 
-        }
-        */
+
+        
         Env::barrier(); 
         for (uint32_t r = 0; r < Env::nranks; r++)
         {
@@ -1299,7 +1633,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                                                             r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
             }
         }
-        Env::barrier(); 
+        //Env::barrier(); 
         
         for (uint32_t r = 0; r < Env::nranks; r++)
         {
@@ -1311,7 +1645,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                                                             r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
             }
         }
-        Env::barrier(); 
+        //Env::barrier(); 
         
         
         for (uint32_t r = 0; r < Env::nranks; r++)
@@ -1435,33 +1769,38 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
         in_requests.clear();
         out_requests.clear();         
-        Env::barrier();
-        /*
-        Env::barrier();
-        if(Env::rank == -1)
-        {
-            printf("\n\n");
-            for(uint32_t i = 0; i < Env::nranks; i++)
-            {
-                printf("i=%d ", i);
-                for(uint32_t j = 0; j < inboxes_cols_num[i].size() - 1; j++)
-                {
-                    printf("row=%d num=%d ",  inboxes_rows[i][j], inboxes_cols_num[i][j+1] - inboxes_cols_num[i][j]);
-                    for(uint32_t k = inboxes_cols_num[i][j]; k < inboxes_cols_num[i][j+1]; k++)
-                    {
-                        printf("[%d]",  inboxes_cols_data[i][k]);
-                    }
-                    
-                }
-                printf("\n");
-            }
-        }
         
-        Env::barrier();
-        */
+        
+        //Env::barrier();
+        //if(Env::rank == -1)
+        //{
+          //  printf("\n\n");
+           // for(uint32_t i = 0; i < Env::nranks; i++)
+            //{
+             //   printf("i=%d ", i);
+              //  for(uint32_t j = 0; j < inboxes_cols_num[i].size() - 1; j++)
+               // {
+                 //   printf("row=%d num=%d ",  inboxes_rows[i][j], inboxes_cols_num[i][j+1] - inboxes_cols_num[i][j]);
+                  //  for(uint32_t k = inboxes_cols_num[i][j]; k < inboxes_cols_num[i][j+1]; k++)
+                   // {
+                    //    printf("[%d]",  inboxes_cols_data[i][k]);
+                   // }
+                 //   
+                //}
+                //printf("\n");
+            //}
+        //}
+        
+       // Env::barrier();
+        
         //if(Env::rank == 0)
         //{
-          // printf("\n\n");
+          
+          //printf("heheh\n\n");
+          
+          
+        
+      Env::barrier();
         uint64_t num_triangles_local = 0;
         uint64_t num_triangles_global = 0;
         //for(uint32_t i = 0; i < Env::nranks; i++)
@@ -1499,7 +1838,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
         
         if(!Env::rank)
             printf("Num_triangles = %lu\n", num_triangles_global);
-            
+
+
+        outboxes_rows.clear();
+        outboxes_rows.shrink_to_fit();
+        outboxes_cols_num.clear();
+        outboxes_cols_num.shrink_to_fit();
+        outboxes_cols_data.clear();
+        outboxes_cols_data.shrink_to_fit();
+        inboxes_rows.clear();
+        inboxes_rows.shrink_to_fit();
+        inboxes_cols_num.clear();
+        inboxes_cols_num.shrink_to_fit();
+        inboxes_cols_data.clear();
+        inboxes_cols_data.shrink_to_fit();
+        
+        inboxes_sizes_rows.clear();
+        inboxes_sizes_rows.shrink_to_fit();
+        inboxes_sizes_cols_num.clear();
+        inboxes_sizes_cols_num.shrink_to_fit();
+        inboxes_sizes_cols_data.clear();
+        inboxes_sizes_cols_data.shrink_to_fit();
+        */
             /*
             uint64_t num_triangles_local = 0;
             uint64_t num_triangles_global = 0;
