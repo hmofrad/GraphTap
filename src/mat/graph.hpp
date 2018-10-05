@@ -296,10 +296,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         nedges++;
         offset = fin.tellg();
         
-        // Remove self-loops
-        if (triple.row == triple.col)
-            continue;
-        
         // Transpose
         if(transpose)
         {
@@ -317,6 +313,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
             iss >> triple.row >> triple.col;
             #endif
         }
+        
+        // Remove self-loops
+        if (triple.row == triple.col)
+            continue;
         
         // Remove cycles
         if(acyclic)
@@ -506,10 +506,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         nedges_local++;
         offset++;
         
-        // Remove self-loops
-        if (triple.row == triple.col)
-            continue;
-        
         // Transpose
         if(transpose)
         {
@@ -527,6 +523,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
             iss >> triple.row >> triple.col;
             #endif
         }
+        
+        // Remove self-loops
+        if (triple.row == triple.col)
+            continue;
+        
+        
         
         // Remove cycles
         if(acyclic)
@@ -553,6 +555,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
                 fflush(stdout);
             }
         }
+        
     }
     fin.close();
     assert(offset == endpos);   
