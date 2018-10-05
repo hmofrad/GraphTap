@@ -624,6 +624,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     // Print tiling assignment
     if(Env::is_master)
     {
+        printf("Tiling Info: %d x %d [nrows x ncols]\n", nrows, ncols);
         printf("Tiling Info: %d x %d [rowgrps x colgrps] with height of %d\n", nrowgrps, ncolgrps, tile_height);
         printf("Tiling Info: %d x %d [rowgrp_nranks x colgrp_nranks]\n", tiling->rowgrp_nranks, tiling->colgrp_nranks);
         printf("Tiling Info: %d x %d [rank_nrowgrps x rank_ncolgrps]\n", tiling->rank_nrowgrps, tiling->rank_ncolgrps);
