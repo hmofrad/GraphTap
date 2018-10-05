@@ -1368,6 +1368,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             uint64_t num_triangles_local = 0;
             uint64_t num_triangles_global = 0;
             int c = 0;
+            /*
             for(uint32_t i = 0; i < w_nitems; i++)
             {
                 for(uint32_t j = 0; j < W[i].size(); j++)
@@ -1387,9 +1388,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                     }
                 }
             }
-            
- 
-            
+            */
+            for(uint32_t i = 0; i < w_nitems; i++)
+            {
+                for(uint32_t j = 0; j < W[i].size(); j++)
+                {
+                    int it1 = 0, it2 = 0;
+                    int it1_end = R[i].size(); // message.neighbors[it1]
+                    int it2_end = D[W[i][j]].size(); //vertexprop.neighbors[it2]
+                    while (it1 != it1_end && it2 != it2_end){
+                      if (R[i][it1] == D[W[i][j]][it2]) {
+                        num_triangles_local++;
+                        ++it1; ++it2;
+                      } else if (R[i][it1] < D[W[i][j]][it2]) {
+                        ++it1;
+                      } else {
+                        ++it2;
+                      }
+                    }
+                }
+            }
+                
+                
+                
+
+
+                
+        
             
             
             Env::barrier();
