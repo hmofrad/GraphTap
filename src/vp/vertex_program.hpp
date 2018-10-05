@@ -1227,23 +1227,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             MPI_Status status;
             uint32_t my_rank, leader, follower, accu;
             Triple<Weight, Integer_Type> triple, triple1, pair;
-            std::vector<std::vector<Integer_Type>> D(nrows);
+            
             
             //D.resize(nrows);
             //printf("%d %d\n", Env::rank, owned_segment);
             Env::barrier();
             //if(Env::rank == 1)
             //{
-                
-            for(Integer_Type i = 0; i < r_nitems; i++)
-            {
-                Integer_Type row = i + (owned_segment * tile_height);
-                if(R[i].size())
-                    D[row] = R[i];
-            }    
             
             //uint32_t my_row = Env::rank;
-            std::vector<std::vector<Integer_Type>> D_SIZE(nrows);
+            std::vector<std::vector<Integer_Type>> D_SIZE(nrowgrps);
             for(uint32_t i = 0; i < nrowgrps; i++)
                 D_SIZE[i].resize(r_nitems + 1);
             
@@ -1353,6 +1346,44 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             out_requests.clear(); 
             Env::barrier();
             
+            
+            std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+        
+            for(uint32_t i = 0; i < rowgrp_nranks; i++)
+            {
+                leader = leader_ranks[i];
+                my_rank = Env::rank;
+                auto &box = boxes[i];
+                /*
+                if(my_rank != leader)
+                {
+                    std::vector<Integer_Type> &dj_size = D_SIZE[i];
+                    Integer_Type dj_nitems = dj_size.size() - 1;
+                    for(uint32_t j = 0; j < dj_nitems; j++)
+                    {
+                        for(uint32_t k = zj_size[j]; k < zj_size[j+1]; k++)
+                            d_data[j].push_back(inbox[k]);  
+                    }
+                    
+                }
+                else
+                {
+                    
+                }
+                */
+                box.clear();
+                box.shrink_to_fit();
+            }
+        
+           /* 
+           std::vector<std::vector<Integer_Type>> D(nrows); 
+            for(Integer_Type i = 0; i < r_nitems; i++)
+            {
+                Integer_Type row = i + (owned_segment * tile_height);
+                if(R[i].size())
+                    D[row] = R[i];
+            }    
+*/
             /*
             
             
