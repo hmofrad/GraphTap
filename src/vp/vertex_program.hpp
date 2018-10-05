@@ -1347,36 +1347,36 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             Env::barrier();
             
             
-            std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
-        
+            //std::vector<std::vector<Integer_Type>> &z_data = Z[yi];
+        Env::barrier();
+            std::vector<std::vector<Integer_Type>> D(nrows); 
             for(uint32_t i = 0; i < rowgrp_nranks; i++)
             {
                 leader = leader_ranks[i];
                 my_rank = Env::rank;
                 auto &box = boxes[i];
-                /*
-                if(my_rank != leader)
+                
+                std::vector<Integer_Type> &dj_size = D_SIZE[i];
+                Integer_Type dj_nitems = dj_size.size() - 1;
+                for(uint32_t j = 0; j < dj_nitems; j++)
                 {
-                    std::vector<Integer_Type> &dj_size = D_SIZE[i];
-                    Integer_Type dj_nitems = dj_size.size() - 1;
-                    for(uint32_t j = 0; j < dj_nitems; j++)
+                    for(uint32_t k = dj_size[j]; k < dj_size[j+1]; k++)
                     {
-                        for(uint32_t k = zj_size[j]; k < zj_size[j+1]; k++)
-                            d_data[j].push_back(inbox[k]);  
+                        Integer_Type row = j + (owned_segment * tile_height);
+                        if(Env::rank)
+                            printf("[%d %d]", row, box[k]);
+                        D[row].push_back(box[k]);
                     }
-                    
+                    if(Env::rank)
+                    printf("\n");
                 }
-                else
-                {
-                    
-                }
-                */
+                
                 box.clear();
                 box.shrink_to_fit();
             }
-        
+            Env::barrier();
            /* 
-           std::vector<std::vector<Integer_Type>> D(nrows); 
+           
             for(Integer_Type i = 0; i < r_nitems; i++)
             {
                 Integer_Type row = i + (owned_segment * tile_height);
