@@ -1367,7 +1367,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
             
             uint64_t num_triangles_local = 0;
             uint64_t num_triangles_global = 0;
-            int c = 0;
+            //int c = 0;
             /*
             for(uint32_t i = 0; i < w_nitems; i++)
             {
@@ -1389,6 +1389,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                 }
             }
             */
+            for(uint32_t i = 0; i < W.size(); i++)
+            {
+                if(W[i].size())
+                    std::sort(W[i].begin(), W[i].end());
+            }
+            
+            for(uint32_t i = 0; i < W.size(); i++)
+            {
+                if(R[i].size())
+                    std::sort(R[i].begin(), R[i].end());
+            }
+            
+            for(uint32_t i = 0; i < D.size(); i++)
+            {
+                if(D[i].size())
+                    std::sort(D[i].begin(), D[i].end());
+            }
+            
+
+            
+            
+            
             for(uint32_t i = 0; i < w_nitems; i++)
             {
                 for(uint32_t j = 0; j < W[i].size(); j++)
@@ -1405,6 +1427,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                       } else {
                         ++it2;
                       }
+                    }
+                }
+                if(Env::is_master)
+                {
+                    if ((i & ((1L << 10) - 1L)) == 0)
+                    {
+                        printf("|");
                     }
                 }
             }
