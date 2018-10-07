@@ -1491,11 +1491,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(Fractional_Typ
                 
                 //uint32_t ii = i + (owned_segment * tile_height);
                 //uint32_t ii = i
+                std::vector<Integer_Type> &in_neighbors = D[owned_segment][i];
                 for(uint32_t j = 0; j < W[i].size(); j++)
                 {
                     uint32_t other_segment = W[i][j] / tile_height;
                     uint32_t jj = W[i][j] % tile_height;
-                    std::vector<Integer_Type> &in_neighbors = D[owned_segment][i];
                     std::vector<Integer_Type> &out_neighbors = D[other_segment][jj];
                     
                     
