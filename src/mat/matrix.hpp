@@ -76,7 +76,7 @@ class Matrix
     friend class Vertex_Program;
     
     public:    
-        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, 
+        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool parallel_edges_,
                Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
         ~Matrix();
 
@@ -87,8 +87,9 @@ class Matrix
         
         Tiling *tiling;
         Compression_type compression_type;
-        bool parread;
         Filtering_type filtering_type;
+        bool parallel_edges;
+        bool parread;
         
         Vector<Weight, Integer_Type, char> *I = nullptr; // Row indices
         Vector<Weight, Integer_Type, Integer_Type> *IV = nullptr; // Row indices values
@@ -185,7 +186,7 @@ class Matrix
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
-    Integer_Type ncols_, uint32_t ntiles_, Tiling_type tiling_type_, 
+    Integer_Type ncols_, uint32_t ntiles_, bool parallel_edges_, Tiling_type tiling_type_, 
     Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     nrows = nrows_;
@@ -195,6 +196,7 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     ncolgrps = ntiles_ / nrowgrps;
     tile_height = (nrows_ / nrowgrps) + 1;
     tile_width = (ncols_ / ncolgrps) + 1;
+    parallel_edges = parallel_edges_;
     parread = parread_;
     
     // Initialize tiling 
@@ -828,9 +830,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
                 std::sort(tile.triples->begin(), tile.triples->end(), f_row);
             if(compression_type == Compression_type::_CSC_)
                 std::sort(tile.triples->begin(), tile.triples->end(), f_col);
-            /* remove duplicate edges, necessary for triangle couting */
-			auto last = std::unique(tile.triples->begin(), tile.triples->end(), f_comp);
-			tile.triples->erase(last, tile.triples->end());
+            /* remove parallel edges (duplicates), necessary for triangle couting */
+            if(not parallel_edges)
+            {
+                auto last = std::unique(tile.triples->begin(), tile.triples->end(), f_comp);
+                tile.triples->erase(last, tile.triples->end());
+            }
         }
 		tile.nedges = tile.triples->size();
     }
