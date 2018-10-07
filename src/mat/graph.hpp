@@ -528,8 +528,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         if (triple.row == triple.col)
             continue;
         
-        
-        
         // Remove cycles
         if(acyclic)
         {
@@ -585,7 +583,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     uint64_t filesize = 0, skip = 0,share = 0, offset = 0, endpos = 0;
     fin.seekg (0, std::ios_base::end);
     filesize = (uint64_t) fin.tellg();
-    //fin.seekg(0, std::ios_base::beg);
     nedges = filesize / sizeof(Triple<Weight, Integer_Type>);
     
     
