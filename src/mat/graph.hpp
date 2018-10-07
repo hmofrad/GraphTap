@@ -41,13 +41,14 @@ class Graph
         ~Graph();
         
         void load(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
-            bool directed_ = true, bool transpose_ = false, bool acyclic_ = false, Tiling_type tiling_type_ = _2D_,
-            Compression_type compression_type_ = _CSC_, Filtering_type filtering_type_ = _NONE_, bool parread_ = true);
+            bool directed_ = true, bool transpose_ = false, bool acyclic_ = false, bool parallel_edges_ = false,
+            Tiling_type tiling_type_ = _2D_, Compression_type compression_type_ = _CSC_, 
+            Filtering_type filtering_type_ = _NONE_, bool parread_ = true);
         void load_binary(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
-            bool directed_, bool transpose_, bool acycic_, Tiling_type tiling_type_, 
+            bool directed_, bool transpose_, bool acycic_, bool parallel_edges_, Tiling_type tiling_type_, 
             Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
         void load_text(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
-            bool directed_, bool transpose_, bool acycic_, Tiling_type tiling_type_, 
+            bool directed_, bool transpose_, bool acycic_, bool parallel_edges_, Tiling_type tiling_type_, 
             Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
             
         void free();
@@ -59,11 +60,12 @@ class Graph
         bool directed;
         bool transpose;
         bool acyclic;
+        bool parallel_edges;
         bool parread;
         Matrix<Weight, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_, 
-               bool directed_, bool transpose_, bool acyclic_, Tiling_type tiling_type, 
+               bool directed_, bool transpose_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type, 
                Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
         void read_text();
         void read_binary();
@@ -93,8 +95,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepath_, 
            Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
-           bool acyclic_, Tiling_type tiling_type_, Compression_type compression_type_, 
-           Filtering_type filtering_type_, bool parread_)
+           bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_,
+           Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     
     filepath  = filepath_;
@@ -104,11 +106,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     directed  = directed_;
     transpose = transpose_;
     acyclic = acyclic_;
+    parallel_edges = parallel_edges_;
     parread = parread_;
     
     // Initialize matrix
-    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, 
-                                Env::nranks * Env::nranks, tiling_type_, compression_type_, filtering_type_, parread_);
+    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, 
+                                                          parallel_edges_, tiling_type_, compression_type_,
+                                                          filtering_type_, parread_);
 }
 
 /* The read_text and read_binary functions can be called indivdually from the user program.
@@ -117,8 +121,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
-        bool acyclic_, Tiling_type tiling_type_, Compression_type compression_type_,
-        Filtering_type filtering_type_, bool parread_)
+        bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
+        Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     double t1, t2;
     t1 = Env::clock();
@@ -149,11 +153,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* data1 = "Hitachi";
     if(!strcmp(token, text))
     {
-        load_text(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, tiling_type_, compression_type_, filtering_type_, parread_);
+        load_text(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, parallel_edges_, tiling_type_, compression_type_, filtering_type_, parread_);
     }
     else if(!strcmp(token, data) or !strcmp(token, data1))
     {
-        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, tiling_type_, compression_type_, filtering_type_, parread_);
+        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, parallel_edges_, tiling_type_, compression_type_, filtering_type_, parread_);
     }
     else
     {
@@ -167,11 +171,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool acyclic_,
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool acyclic_, bool parallel_edges_,
         Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     // Initialize graph
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, tiling_type_, compression_type_, filtering_type_, parread_);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, parallel_edges_,
+               tiling_type_, compression_type_, filtering_type_, parread_);
  
     // Read graph
     if(parread_)
@@ -209,11 +214,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
-        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool acyclic_,
+        Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool acyclic_, bool parallel_edges_,
         Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     // Initialize graph
-    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, tiling_type_, compression_type_, filtering_type_, parread_);
+    init_graph(filepath_, nrows_, ncols_, directed_, transpose_, acyclic_, parallel_edges_, 
+               tiling_type_, compression_type_, filtering_type_, parread_);
  
     // Read graph
     if(parread_)
