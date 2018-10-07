@@ -1,5 +1,5 @@
 /*
- * Degree.cpp: Degree benchmark
+ * Degree.cpp: Degree benchmark (Outgoing)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -57,84 +57,35 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = false;
     bool acyclic = false;
+    bool parallel_edges = true;
     Tiling_type TT = _2D_;
-    Ordering_type OT = _ROW_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
+    bool stationary = true;
     bool parread = true;
+    Ordering_type OT = _ROW_;
     double time1 = 0;
     double time2 = 0;
 
     /* Degree execution */
-    if(!Env::rank)
-        printf("Computing Degree ...\n");
-    if(!Env::rank)
-        Env::tick();
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
-    if(!Env::rank)
-        Env::tock("Ingress");
-    
-    if(!Env::rank)
-        Env::tick();
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
+    Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
-    Vertex_Program<wp, ip, fp> V(G, OT);
+    
+    time1 = Env::clock();
     V.init(x, y, v, s);
-    if(!Env::rank)
-        Env::tock("Init");
-    
-    if(!Env::rank)
-    {
-        printf("Degree execution\n");
-        time1 = Env::clock();
-    }
-    if(comm_split)
-    {
-        if(!Env::rank)
-            Env::tick();
-        V.bcast(f.ones);
-        if(!Env::rank)
-            Env::tock("Bcast"); 
-    }
-    else
-    {
-        if(!Env::rank)
-            Env::tick();
-        V.scatter(f.ones);    
-        if(!Env::rank)
-            Env::tock("Scatter"); 
-        
-        if(!Env::rank)
-            Env::tick();
-        V.gather();
-        if(!Env::rank)
-            Env::tock("Gather"); 
-    }
-    
-    if(!Env::rank)
-        Env::tick();
+    V.scatter_gather(f.ones);
     V.combine();
-    if(!Env::rank)
-        Env::tock("Combine stacked"); 
-
-    if(!Env::rank)
-        Env::tick();
-    V.apply(f.assign);
-    if(!Env::rank)
-        Env::tock("Apply"); 
+    V.apply(f.assign);  
+    time2 = Env::clock();
+    Env::print_time("Degree execution", time2 - time1);
     
-    if(!Env::rank)
-    {
-        time2 = Env::clock();
-        printf("Degree time: %fseconds\n", time2 - time1);
-    }
-
-    V.checksum_degree();
     V.checksum();
+    V.display();
     V.free();
     G.free();
-    
     Env::finalize();
     return(0);
 }
