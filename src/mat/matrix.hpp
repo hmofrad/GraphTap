@@ -828,7 +828,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
                 std::sort(tile.triples->begin(), tile.triples->end(), f_row);
             if(compression_type == Compression_type::_CSC_)
                 std::sort(tile.triples->begin(), tile.triples->end(), f_col);
-            /* remove duplicate edges */
+            /* remove duplicate edges, necessary for triangle couting */
 			auto last = std::unique(tile.triples->begin(), tile.triples->end(), f_comp);
 			tile.triples->erase(last, tile.triples->end());
         }
@@ -1537,24 +1537,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
                 IA[j]++;
                 JA[i] = pair.col;    
                 i++;
-                //printf("%d %d\n", pair.row, pair.col);
             }
             while((j + 1) < (tile_height + 1))
             {
                 j++;
                 IA[j] = IA[j - 1];
             }
-            /*
-            for(uint32_t i = 0; i < tile_width; i++)
-            {
-                printf("%d: ", i);
-                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                {
-                    printf("[%d %d]", j, JA[j]);                
-                }
-                printf("\n");                        
-            }    
-            */
         }
     }
 }
@@ -1596,24 +1584,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
                 JA[j]++;
                 IA[i] = pair.row;
                 i++;
-                //printf("%d %d\n", pair.row, pair.col);
             }
             while((j + 1) < (tile_width + 1))
             {
                 j++;
                 JA[j] = JA[j - 1];
             }
-            /*
-            for(uint32_t i = 0; i < tile_width; i++)
-            {
-                printf("%d: ", i);
-                for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                {
-                    printf("[%d %d]", j, JA[j]);                
-                }
-                printf("\n");                        
-            } 
-            */
         }
     }
 }
@@ -1838,5 +1814,4 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
         }
     } 
 }
-
 #endif
