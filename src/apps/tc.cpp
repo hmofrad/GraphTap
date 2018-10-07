@@ -29,38 +29,9 @@ using fp = double;   // Fractional precision (default is float)
 
 struct Generic_functions
 {
-    static fp ones(fp x, fp y, fp v, fp s)
-    {
-        return(1);
-    }
-	
 	static fp zeros(fp x, fp y, fp v, fp s)
     {
         return(0);
-    }
-    
-    static fp div(fp x, fp y, fp v, fp s)
-    {
-        if(v and s)
-        {
-            return(v / s);
-        }
-        else
-        {
-            return(0);
-        }
-    }
-    
-    static fp assign(fp x, fp y, fp v, fp s)
-    {
-        return(y);
-    }
-    
-    static fp rank(fp x, fp y, fp v, fp s)
-    {
-        //fp tol = 1e-5;
-        fp alpha = 0.15;
-        return(alpha + (1.0 - alpha) * y);
     }
 };
 
@@ -92,7 +63,6 @@ int main(int argc, char **argv)
     double time1 = 0;
     double time2 = 0;
     
-
     /* Triangle counting execution */
     time1 = Env::clock();
     Graph<wp, ip, fp> G;    
