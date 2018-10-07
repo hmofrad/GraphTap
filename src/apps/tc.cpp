@@ -54,11 +54,12 @@ int main(int argc, char **argv)
     bool directed = true;
     bool transpose = true;
     bool acyclic = true;
+    bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _NONE_; // Do not turn on
-    bool parread = true;
     bool stationary = false;
+    bool parread = true;
     Ordering_type OT = _ROW_;
     double time1 = 0;
     double time2 = 0;
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
     /* Triangle counting execution */
     time1 = Env::clock();
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
     fp x = 0, y = 0, v = 0, s = 0;
     Generic_functions f;
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
     
 	transpose = false;
 	Graph<wp, ip, fp> GR;    
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, TT, CT, FT, parread);
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
 	Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);  
 	VR.init(x, y, v, s, &V);
 	V.free();
