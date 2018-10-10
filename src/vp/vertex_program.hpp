@@ -25,10 +25,10 @@ class Vertex_Program
         Vertex_Program();
         Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, 
                         //Vertex_State<Weight, Integer_Type, Fractional_Type> *VState = nullptr,
-                        bool stationary_ = false, Ordering_type = _ROW_);
+                        bool stationary_ = false, bool gather_depends_on_apply_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
-        void init(std::function<bool(Fractional_Type&, Fractional_Type&)> init_func, bool init_flag = false,
+        void init(std::function<bool(Fractional_Type&, Fractional_Type&)> init_func,
              Fractional_Type v = 0, Fractional_Type s = 0,
              Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
         //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s,
@@ -45,7 +45,7 @@ class Vertex_Program
         void display();
         void free();
         bool stationary;
-        bool gather_depends_on_state;
+        bool gather_depends_on_apply;
         
         //void apply(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
     
@@ -151,13 +151,13 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
          Graph<Weight,Integer_Type, Fractional_Type> &Graph,
          //Vertex_State<Weight, Integer_Type, Fractional_Type> *VState,
-         bool stationary_, Ordering_type ordering_type_)
+         bool stationary_, bool gather_depends_on_apply_, Ordering_type ordering_type_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
     //VS = VState;
     stationary = stationary_;
-    //gather_depends_on_state = gather_depends_on_state_;
+    gather_depends_on_apply = gather_depends_on_apply_;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
@@ -362,13 +362,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
-        std::function<bool(Fractional_Type&, Fractional_Type&)> init_func, 
-        bool init_flag, Fractional_Type v, Fractional_Type s, 
+        std::function<bool(Fractional_Type&, Fractional_Type&)> init_func, Fractional_Type v, Fractional_Type s, 
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 //init(Fractional_Type x, Fractional_Type y, 
 //     Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
-    gather_depends_on_state = init_flag;
+    //gather_depends_on_state = init_flag;
     double t1, t2;
     t1 = Env::clock();
     
@@ -399,7 +398,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     {
         Fractional_Type tmp = 0;
         bool ret = 0;
-        if(gather_depends_on_state)
+        if(gather_depends_on_apply)
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
@@ -469,7 +468,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
         //populate(Y_, y);
         Y.push_back(Y_);
     }    
-    if(gather_depends_on_state)
+    if(gather_depends_on_apply)
     {
         uint32_t yi = 0;
         uint32_t yo = 0;
@@ -1279,7 +1278,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
                     //v_data[i] = (*f)(0, 0, 0, 0);
             }
         }
-        if(not gather_depends_on_state)
+        if(not gather_depends_on_apply)
         {
             for(uint32_t i = 0; i < rank_nrowgrps; i++)
                 clear(Y[i]);
