@@ -28,22 +28,24 @@ class Vertex_Program
                         bool stationary_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
-        void init(std::function<Fractional_Type(Fractional_Type, Fractional_Type)> ini_func, bool init_flag = false,
+        void init(std::function<bool(Fractional_Type&, Fractional_Type&)> init_func, bool init_flag = false,
              Fractional_Type v = 0, Fractional_Type s = 0,
              Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
         //void init(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s,
         //                    Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);                  
-        void scatter_gather(std::function<Fractional_Type(Fractional_Type, Fractional_Type)> msg_func);//, Fractional_Type v, Fractional_Type s);
+        void scatter_gather(std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> message_func);//, Fractional_Type v, Fractional_Type s);
         //void scatter_gather(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
         void bcast();
         void scatter();
         void gather();
-        void combine(std::function<void(Fractional_Type&, Fractional_Type&)> com_func);
+        void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combine_func);
         //void combine(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
-        void apply(std::function<Fractional_Type(Fractional_Type, Fractional_Type)> app_func);
+        void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> apply_func);
         void checksum();
         void display();
         void free();
+        bool stationary;
+        bool gather_depends_on_state;
         
         //void apply(Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, Fractional_Type v, Fractional_Type s));
     
@@ -74,7 +76,6 @@ class Vertex_Program
                        const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);  
         MPI_Comm communicator_info();  
                        
-        bool stationary;
         Ordering_type ordering_type;
         Tiling_type tiling_type;
         Compression_type compression_type;
@@ -156,6 +157,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
     A = Graph.A;
     //VS = VState;
     stationary = stationary_;
+    //gather_depends_on_state = gather_depends_on_state_;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
@@ -360,12 +362,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
-        std::function<Fractional_Type(Fractional_Type, Fractional_Type)> init_fun, 
+        std::function<bool(Fractional_Type&, Fractional_Type&)> init_func, 
         bool init_flag, Fractional_Type v, Fractional_Type s, 
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 //init(Fractional_Type x, Fractional_Type y, 
 //     Fractional_Type v, Fractional_Type s, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
+    gather_depends_on_state = init_flag;
     double t1, t2;
     t1 = Env::clock();
     
@@ -394,18 +397,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     Integer_Type v_nitems = V->nitems[vo];
     if((filtering_type == _NONE_) or (filtering_type == _SOME_))
     {
-        if(init_flag)
+        Fractional_Type tmp = 0;
+        bool ret = 0;
+        if(gather_depends_on_state)
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
-                v_data[i] = init_fun(i + (owned_segment * tile_height) + 1, 0); // make sure messages are all nonzero
+                 // make sure messages are all nonzero
+                //v_data[i] = init_fun(i + (owned_segment * tile_height) + 1, 0);
+                tmp = i + (owned_segment * tile_height) + 1;
+                ret = init_func(v_data[i], tmp);
             }
         }
         else
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
-                v_data[i] = init_fun(v, 0);
+                //v_data[i] = init_fun(v, 0);
+                ret = init_func(v_data[i], v);
             }
         }
     }
@@ -460,7 +469,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
         //populate(Y_, y);
         Y.push_back(Y_);
     }    
-    if(init_flag)
+    if(gather_depends_on_state)
     {
         uint32_t yi = 0;
         uint32_t yo = 0;
@@ -598,7 +607,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
-        std::function<Fractional_Type(Fractional_Type, Fractional_Type)> msg_func) 
+        std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> message_func) 
                                       //Fractional_Type v, Fractional_Type s)
 //Fractional_Type (*f)(Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
@@ -622,7 +631,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            x_data[i] = msg_func(v_data[i], s_data[i]);
+            printf("1.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
+            x_data[i] = message_func(v_data[i], s_data[i]);
+            printf("2.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
             //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
@@ -636,7 +647,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
         {
             if(j_data[i])
             {
-                x_data[j] = msg_func(v_data[i], s_data[i]);
+                x_data[j] = message_func(v_data[i], s_data[i]);
                 //x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
                 j++;
             }               
@@ -912,9 +923,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         if(x_data[j])
                         {
-                            printf("%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                            printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             combiner(y_data[IA[i]], x_data[j]);
-                            printf("%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                            printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             //y_data[IA[i]] += x_data[j];
                         }
                         #endif
@@ -945,11 +956,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(
-        std::function<void(Fractional_Type&, Fractional_Type&)> com_func)
+        std::function<void(Fractional_Type&, Fractional_Type&)> combine_func)
                 //Fractional_Type (*f)(Fractional_Type x, Fractional_Type y, 
                 //Fractional_Type v, Fractional_Type s))
 {
-    combiner = com_func;
+    combiner = combine_func;
     double t1, t2;
     t1 = Env::clock();
     if(tiling_type == Tiling_type::_1D_ROW)
@@ -1202,7 +1213,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
-                            std::function<Fractional_Type(Fractional_Type, Fractional_Type)> app_func)
+                            std::function<bool(Fractional_Type&, Fractional_Type&)> apply_func)
 //Fractional_Type (*f)(Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     double t1, t2;
@@ -1243,31 +1254,36 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
-                printf("%d %f %f\n", i, v_data[i], y_data[i]);
-                v_data[i] = app_func(y_data[i], v_data[i]);
-                printf("%d %f %f\n", i, v_data[i], y_data[i]);
+                printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
+                //v_data[i] = 
+                bool ret = apply_func(y_data[i], v_data[i]);
+                printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[i], 0, 0); 
             }
         }
         else if(filtering_type == _SOME_)
         {
+            Fractional_Type tmp = 0;
             char *i_data = (char *) I->data[yi];        
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 if(i_data[i])
                 {
-                    v_data[i] = app_func(y_data[j], v_data[i]);
+                    v_data[i] = apply_func(y_data[j], v_data[i]);
                     //v_data[i] = (*f)(0, y_data[j], 0, 0);
                     j++;
                 }
                 else
-                    v_data[i] = app_func(0, v_data[i]);
+                    v_data[i] = apply_func(tmp, v_data[i]);
                     //v_data[i] = (*f)(0, 0, 0, 0);
             }
         }
-        for(uint32_t i = 0; i < rank_nrowgrps; i++)
-            clear(Y[i]);
+        if(not gather_depends_on_state)
+        {
+            for(uint32_t i = 0; i < rank_nrowgrps; i++)
+                clear(Y[i]);
+        }
     }
     else
     {
