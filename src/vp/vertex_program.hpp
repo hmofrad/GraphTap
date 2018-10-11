@@ -27,7 +27,7 @@ class Vertex_Program
         ~Vertex_Program();
         
         void init(std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_,
-             Fractional_Type v = 0, Fractional_Type s = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
+             Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
         void scatter_gather(std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_);
         void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combiner_);
         void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
@@ -40,11 +40,11 @@ class Vertex_Program
         bool tc_family;
     
     protected:
-        void specialized_nonstationary_init(Fractional_Type v, Fractional_Type s, 
+        void specialized_nonstationary_init(Fractional_Type v, 
                 Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);        
-        void specialized_stationary_init(Fractional_Type v, Fractional_Type s,
+        void specialized_stationary_init(Fractional_Type v,
                 Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);
-        void specialized_tc_init(Fractional_Type v, Fractional_Type s, 
+        void specialized_tc_init(Fractional_Type v, 
                 Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);  
         
         void bcast();
@@ -73,7 +73,7 @@ class Vertex_Program
         void optimized_2d_for_tc();
         
         std::function<bool(Fractional_Type&, Fractional_Type&)> initializer;
-        std::function<void(Fractional_Type&, Fractional_Type&)> messenger;
+        std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger;
         std::function<void(Fractional_Type&, Fractional_Type&)> combiner;
         std::function<bool(Fractional_Type&, Fractional_Type&)> applicator;
         
@@ -377,7 +377,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
-        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_, Fractional_Type v, Fractional_Type s, 
+        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_, Fractional_Type v, 
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
     double t1, t2;
@@ -386,14 +386,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
     initializer = initializer_;
     if(stationary)
     {
-        specialized_stationary_init(v, s, VProgram);;
+        specialized_stationary_init(v, VProgram);;
     }
     else
     {    
         if(tc_family)
-            specialized_tc_init(v, s, VProgram);
+            specialized_tc_init(v, VProgram);
         else
-            specialized_nonstationary_init(v, s, VProgram);
+            specialized_nonstationary_init(v, VProgram);
     }
 
     t2 = Env::clock();
@@ -402,8 +402,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationary_init(
-        Fractional_Type v, Fractional_Type s, 
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+        Fractional_Type v, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
     /* Initialize messages */
     std::vector<Integer_Type> x_sizes;
@@ -470,8 +469,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstationary_init(
-        Fractional_Type v, Fractional_Type s, 
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+        Fractional_Type v, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
     /* Initialize messages */
     std::vector<Integer_Type> x_sizes;
@@ -628,8 +626,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
-        Fractional_Type v, Fractional_Type s, 
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+        Fractional_Type v, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
     std::vector<Integer_Type> d_sizes;
     std::vector<Integer_Type> z_size;
@@ -997,9 +994,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #else
                         if(x_data[j])
                         {
-                            printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                            //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             combiner(y_data[IA[i]], x_data[j]);
-                            printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                            //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             //y_data[IA[i]] += x_data[j];
                         }
                         #endif
@@ -1400,7 +1397,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
-            bool ret = applicator(y_data[i], v_data[i]);
+            bool ret = applicator(v_data[i], y_data[i]);
             printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
@@ -1414,12 +1411,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             if(i_data[i])
             {
-                v_data[i] = applicator(y_data[j], v_data[i]);
+                bool ret = applicator(v_data[i], y_data[j]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
             }
             else
-                v_data[i] = applicator(tmp, v_data[i]);
+                bool ret = applicator(v_data[i], tmp);
                 //v_data[i] = (*f)(0, 0, 0, 0);
         }
     }
