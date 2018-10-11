@@ -847,7 +847,141 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
 {
-    /* Sanity check on # of edges */
+   /* Sanity check on # of edges */
+    uint64_t nedges_start_local = 0, nedges_end_local = 0,
+             nedges_start_global = 0, nedges_end_global = 0;
+             
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+            if(tile.triples->size() > 0)
+            {
+                nedges_start_local += tile.triples->size();
+            }
+        }
+    }
+
+    MPI_Datatype MANY_TRIPLES;
+    const uint32_t many_triples_size = 1;
+    
+    MPI_Type_contiguous(many_triples_size * sizeof(Triple<Weight, Integer_Type>), MPI_BYTE, &MANY_TRIPLES);
+    MPI_Type_commit(&MANY_TRIPLES);
+    
+    std::vector<std::vector<Triple<Weight, Integer_Type>>> outboxes(Env::nranks);
+    std::vector<std::vector<Triple<Weight, Integer_Type>>> inboxes(Env::nranks);
+    std::vector<uint32_t> inbox_sizes(Env::nranks);
+    
+    for (uint32_t i = 0; i < nrowgrps; i++)
+    {
+        for (uint32_t j = 0; j < ncolgrps; j++)  
+        {
+            auto &tile = tiles[i][j];
+            if(tile.rank != Env::rank)
+            {
+                auto &outbox = outboxes[tile.rank];
+                outbox.insert(outbox.end(), tile.triples->begin(), tile.triples->end());
+                tile.free_triples();
+            }
+        }
+    }
+    
+    std::vector<MPI_Request> out_requests;
+    std::vector<MPI_Request> in_requests;
+    MPI_Request request;
+    MPI_Status status;
+    
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            auto &outbox = outboxes[r];
+            uint32_t outbox_size = outbox.size();
+            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
+                                                        r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+        }
+    }
+    Env::barrier();
+
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &outbox = outboxes[r];
+            uint32_t outbox_bound = outbox.size() + many_triples_size;
+            outbox.resize(outbox_bound);
+            /* Send the triples with many_triples_size padding. */
+            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            out_requests.push_back(request);
+        }
+    }     
+     
+     
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
+            auto &inbox = inboxes[r];
+            uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
+            inbox.resize(inbox_bound);
+            /* Recv the triples with many_triples_size padding. */
+            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);    
+            in_requests.push_back(request);
+        }
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+
+    for (uint32_t r = 0; r < Env::nranks; r++)
+    {
+        if (r != Env::rank)
+        {
+            auto &inbox = inboxes[r];
+            for (uint32_t i = 0; i < inbox_sizes[r]; i++)
+            {
+                test(inbox[i]);
+                insert(inbox[i]);
+            }
+
+            inbox.clear();
+            inbox.shrink_to_fit();
+        }
+    }
+    
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    out_requests.clear();
+    Env::barrier();    
+    
+
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        nedges_end_local += tile.triples->size();
+    }
+    
+    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    assert(nedges_start_global == nedges_end_global);
+    if(Env::is_master)
+        printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
+    
+    auto retval = MPI_Type_free(&MANY_TRIPLES);
+    assert(retval == MPI_SUCCESS);   
+    Env::barrier(); 
+    
+    
+    
+    
+    
+    
+    
+    
+    /*
     uint64_t nedges_start_local = 0, nedges_end_local = 0,
              nedges_start_global = 0, nedges_end_global = 0;
              
@@ -873,10 +1007,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Datatype TYPE_WEIGHT = Types<Weight, Integer_Type, Weight>::get_data_type();
     #endif
     
-    /* We serialize MPI fields separately  to avoid any possible problem that
-       might happen between different machines because of endianness difference.
-       The easy way is to use MPI_Type_contiguous and serialize the struct triple.*/
-       
     std::vector<std::vector<Integer_Type>> outboxes_row(Env::nranks);
     std::vector<std::vector<Integer_Type>> outboxes_col(Env::nranks);
     std::vector<std::vector<Integer_Type>> inboxes_row(Env::nranks);
@@ -1079,6 +1209,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     }
     assert(nedges_start_global == nedges_end_global);
     Env::barrier();
+    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
