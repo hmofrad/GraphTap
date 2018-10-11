@@ -892,6 +892,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Request request;
     MPI_Status status;
     
+    Env::barrier();
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
         if (r != Env::rank)
@@ -1462,6 +1463,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     nnz_sizes_all.resize(Env::nranks);
     nnz_sizes_all[owned_segment] = nnz_local;
 
+    Env::barrier();     
     for (uint32_t j = 0; j < Env::nranks; j++)
     {
         uint32_t r = leader_ranks[j];
