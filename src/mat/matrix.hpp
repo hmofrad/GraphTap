@@ -924,6 +924,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
+    Env::barrier();
     
     for (uint32_t i = 0; i < Env::nranks; i++)
     {
