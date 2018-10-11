@@ -1,18 +1,19 @@
 /*
- * cc.hpp: Triangle counting benchmark helper
+ * cc.h: Connected component benchmark helper
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef CC_HPP
-#define CC_HPP 
+#ifndef CC_H
+#define CC_H
 
-#include "vp/vertex_state.hpp"
- 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class CC_state : public Vertex_State<Weight, Integer_Type, Fractional_Type>
+class CC_state
 {
-    public:        
+    public:  
+        CC_state();
+        ~CC_state();
+        
         bool init_func(Fractional_Type &v1, Fractional_Type &v2) 
         {
             v1 = v2;
@@ -24,11 +25,6 @@ class CC_state : public Vertex_State<Weight, Integer_Type, Fractional_Type>
             return(v);
         }
 
-        void add(Fractional_Type &y1, Fractional_Type &y2) 
-        {
-            y1 += y2;
-        }
-        
         void combine_func(Fractional_Type &y1, Fractional_Type &y2) 
         {
             y1 = (y1 < y2) ? y1 : y2;
@@ -41,5 +37,11 @@ class CC_state : public Vertex_State<Weight, Integer_Type, Fractional_Type>
             return(t != v);
         }      
 };
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+CC_state<Weight, Integer_Type, Fractional_Type>::CC_state() {};
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+CC_state<Weight, Integer_Type, Fractional_Type>::~CC_state() {};
 
 #endif
