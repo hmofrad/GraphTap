@@ -55,7 +55,7 @@ class PR_state
         {
             Fractional_Type tmp = v;
             v = alpha + (1.0 - alpha) * y;
-            return fabs(v - tmp) > tol;  
+            return (fabs(v - tmp) > tol);  
         }
 };
 #endif
