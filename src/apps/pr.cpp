@@ -90,6 +90,7 @@ int main(int argc, char **argv)
     V.checksum();
     V.display();
     G.free();
+    Env::barrier();
     
     /* Vertex execution */
     transpose = true;
