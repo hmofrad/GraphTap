@@ -128,12 +128,17 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *S; // Scores (States)
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y; //Accumulators
         Vector<Weight, Integer_Type, bool> *B; //Activity pattern bitvector
-
+        
+        char **I;
+        Integer_Type **IV;
+        char **J;
+        Integer_Type **JV;
+        /*
         Vector<Weight, Integer_Type, char> *I;
         Vector<Weight, Integer_Type, Integer_Type> *IV;
         Vector<Weight, Integer_Type, char> *J;
         Vector<Weight, Integer_Type, Integer_Type> *JV;
-       
+        */
         std::vector<Integer_Type> nnz_row_sizes_loc;
         std::vector<Integer_Type> nnz_col_sizes_loc;
         std::vector<Integer_Type> nnz_row_sizes_all;
@@ -517,9 +522,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     }
     else if(filtering_type == _SOME_)
     {
-        
-        char *j_data = (char *) J->data[bo];
-        Integer_Type j_nitems = J->nitems[bo];
+        auto &j_data = J[bo];
+        //char *j_data = (char *) J->data[bo];
+        //Integer_Type j_nitems = J->nitems[bo];
         if(gather_depends_on_apply)
         {
             Integer_Type j = 0;
@@ -611,8 +616,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             }
             else if(filtering_type == _SOME_)
             {
-                char *i_data = (char *) I->data[yi];        
-                Integer_Type j = 0;
+                auto &i_data = I[yi];
+                //char *i_data = (char *) I->data[yi];        
+                //Integer_Type j = 0;
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     if(i_data[i])
@@ -726,8 +732,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
     }
     else if(filtering_type == _SOME_)
     {
-        char *j_data = (char *) J->data[xo];
-        Integer_Type j_nitems = J->nitems[xo];
+        auto &j_data = J[xo];
+        //char *j_data = (char *) J->data[xo];
+        //Integer_Type j_nitems = J->nitems[xo];
         
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -1402,7 +1409,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     else if(filtering_type == _SOME_)
     {
         Fractional_Type tmp = 0;
-        char *i_data = (char *) I->data[yi];        
+        auto &i_data = I[yi];
+        
+        //char *i_data = (char *) I->data[yi];        
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
         {
