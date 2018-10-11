@@ -8,13 +8,11 @@
 #include <unistd.h>
 #include <functional>
 
-#include "cc.hpp"
+#include "cc.h"
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
-
-#define TRIANGLE_COUNTING
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -62,14 +60,15 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     
-    
+    /* Register connected components function pointer handles */
     CC_state<wp, ip, fp> Cc_state;
     auto init_func    = std::bind(&CC_state<wp, ip, fp>::init_func, Cc_state, std::placeholders::_1, std::placeholders::_2);    
     auto message_func = std::bind(&CC_state<wp, ip, fp>::message_func, Cc_state, std::placeholders::_1, std::placeholders::_2);
     auto combine_func = std::bind(&CC_state<wp, ip, fp>::combine_func, Cc_state, std::placeholders::_1, std::placeholders::_2);    
     auto apply_func   = std::bind(&CC_state<wp, ip, fp>::apply_func, Cc_state, std::placeholders::_1, std::placeholders::_2);
 
-    bool stationary = true;
+    bool stationary = false;
+    bool tc_family = false;
     bool gather_depends_on_apply = true;
     Ordering_type OT = _ROW_;
     Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, OT);    
@@ -91,7 +90,7 @@ int main(int argc, char **argv)
     time2 = Env::clock();    
     Env::print_time("Vertex execution", time2 - time1);
     
-    //V.display(); 
+    V.display(); 
     
     V.free();
     G.free();
