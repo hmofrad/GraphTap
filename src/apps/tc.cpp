@@ -6,12 +6,13 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <functional>
+
+#include "tc.h" 
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
-
-#define TRIANGLE_COUNTING
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -24,16 +25,17 @@ using wp = uint32_t;
 using wp = em;
 #endif
 
-using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = double;   // Fractional precision (default is float)
+/*  Integer precision (default is uint32_t)
+    Controls the number of vertices,
+    the engine can possibly process
+*/
+using ip = uint32_t;
 
-struct Generic_functions
-{
-	static fp zeros(fp x, fp y, fp v, fp s)
-    {
-        return(0);
-    }
-};
+/*
+    Fractional precision (default is float)
+    Controls the precision of values.
+*/
+using fp = double; 
 
 int main(int argc, char **argv)
 {
@@ -48,6 +50,7 @@ int main(int argc, char **argv)
         Env::exit(1);
     }
     
+    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
@@ -58,36 +61,42 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _NONE_; // Do not turn on
-    bool stationary = false;
     bool parread = true;
-    Ordering_type OT = _ROW_;
     double time1 = 0;
     double time2 = 0;
-    
+
+    /* Register triangle counting function pointer handles */
+    TC_state<wp, ip, fp> Tc_state;
+    auto initializer = std::bind(&TC_state<wp, ip, fp>::initializer, Tc_state, std::placeholders::_1, std::placeholders::_2);
+    auto combiner    = std::bind(&TC_state<wp, ip, fp>::combiner,    Tc_state, std::placeholders::_1, std::placeholders::_2);    
+    auto applicator  = std::bind(&TC_state<wp, ip, fp>::applicator,  Tc_state, std::placeholders::_1, std::placeholders::_2);
+        
     /* Triangle counting execution */
     time1 = Env::clock();
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
-    fp x = 0, y = 0, v = 0, s = 0;
-    Generic_functions f;
-    V.init(x, y, v, s);
-    V.combine();
-    V.apply(f.zeros);    
+    bool stationary = false;
+    bool tc_family = true;
+    bool gather_depends_on_apply = false;
+    Ordering_type OT = _ROW_;
+    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.init(initializer);
+    V.combine(combiner);
+    V.apply(applicator);  
     G.free();
-	Env::barrier();
     
-	transpose = false;
-	Graph<wp, ip, fp> GR;    
+    fp v = 0, s = 0;
+    transpose = false;
+    Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-	Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);  
-	VR.init(x, y, v, s, &V);
-	V.free();
-	VR.combine();
-    VR.apply(f.zeros);
-	VR.free();
+	Vertex_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);  
+    VR.init(initializer, v, s, &V);
+    V.free();
+    VR.combine(combiner);
+    VR.apply(applicator);  
+    VR.free();
 	GR.free();
-	
+
     time2 = Env::clock();
     Env::print_time("Triangle couting", time2 - time1);
     Env::finalize();
