@@ -96,8 +96,9 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     // Register triangle counting function pointer handles
-    auto messenger1   = std::bind(&PR_state<wp, ip, fp>::messenger,   Pr_state, std::placeholders::_1, std::placeholders::_2);
-    auto applicator1  = std::bind(&PR_state<wp, ip, fp>::applicator,  Pr_state, std::placeholders::_1, std::placeholders::_2);
+    auto messenger1  = std::bind(&PR_state<wp, ip, fp>::messenger1,   Pr_state, std::placeholders::_1, std::placeholders::_2);
+    auto applicator1  = std::bind(&PR_state<wp, ip, fp>::applicator1,  Pr_state, std::placeholders::_1, std::placeholders::_2);
+    time1 = Env::clock();
     Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);   
     fp alpha = 0.15;
     fp v = alpha;
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
         iter++;
         VR.scatter_gather(messenger1);
         VR.combine(combiner);   
-        VR.apply(applicator);
+        VR.apply(applicator1);
         Env::print_me("Pagerank iteration: ", iter);
     }
     time2 = Env::clock();    
