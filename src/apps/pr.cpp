@@ -6,6 +6,9 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <functional>
+
+#include "pr.h"
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
@@ -22,41 +25,18 @@ using wp = uint32_t;
 using wp = em;
 #endif
 
-using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = double;   // Fractional precision (default is float)
 
-struct Generic_functions
-{
-    static fp ones(fp x, fp y, fp v, fp s)
-    {
-        return(1);
-    }
-    
-    static fp div(fp x, fp y, fp v, fp s)
-    {
-        if(v and s)
-        {
-            return(v / s);
-        }
-        else
-        {
-            return(0);
-        }
-    }
-    
-    static fp assign(fp x, fp y, fp v, fp s)
-    {
-        return(y);
-    }
-    
-    static fp rank(fp x, fp y, fp v, fp s)
-    {
-        //fp tol = 1e-5;
-        fp alpha = 0.15;
-        return(alpha + (1.0 - alpha) * y);
-    }
-};
+/*  Integer precision (default is uint32_t)
+    Controls the number of vertices,
+    the engine can possibly process
+*/
+using ip = uint32_t;
 
+/*
+    Fractional precision (default is float)
+    Controls the precision of values.
+*/
+using fp = double;
 
 int main(int argc, char **argv)
 {
@@ -81,24 +61,29 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
-    bool stationary = true;
     bool parread = true;
-    Ordering_type OT = _ROW_;
-    double time1 = 0;
-    double time2 = 0;
-
+    double time1 = 0, time2 = 0;
+    
     /* Degree execution */
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
-    fp x = 0, y = 0, v = 0, s = 0;
-    Generic_functions f;
-    
+    bool stationary = true;
+    bool tc_family = false;
+    bool gather_depends_on_apply = false;
+    Ordering_type OT = _ROW_;
+    // Register triangle counting function pointer handles
+    PR_state<wp, ip, fp> Pr_state;
+    auto initializer = std::bind(&PR_state<wp, ip, fp>::initializer, Pr_state, std::placeholders::_1, std::placeholders::_2);
+    auto messenger   = std::bind(&PR_state<wp, ip, fp>::messenger,   Pr_state, std::placeholders::_1, std::placeholders::_2);
+    auto combiner    = std::bind(&PR_state<wp, ip, fp>::combiner,    Pr_state, std::placeholders::_1, std::placeholders::_2);    
+    auto applicator  = std::bind(&PR_state<wp, ip, fp>::applicator,  Pr_state, std::placeholders::_1, std::placeholders::_2);
+    // Run vertex program
     time1 = Env::clock();
-    V.init(x, y, v, s);
-    V.scatter_gather(f.ones);
-    V.combine();
-    V.apply(f.assign);  
+    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.init(initializer);
+    V.scatter_gather(messenger);
+    V.combine(combiner);
+    V.apply(applicator);  
     time2 = Env::clock();
     Env::print_time("Degree execution", time2 - time1);
     
@@ -110,28 +95,30 @@ int main(int argc, char **argv)
     transpose = true;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    fp alpha = 0.15;
-    x = 0, y = 0, v = alpha, s = 0;
+    // Register triangle counting function pointer handles
+    auto messenger1   = std::bind(&PR_state<wp, ip, fp>::messenger,   Pr_state, std::placeholders::_1, std::placeholders::_2);
+    auto applicator1  = std::bind(&PR_state<wp, ip, fp>::applicator,  Pr_state, std::placeholders::_1, std::placeholders::_2);
     Vertex_Program<wp, ip, fp> VR(GR, stationary, OT);   
-    
-    time1 = Env::clock();
-    VR.init(x, y, v, s, &V);
+    fp alpha = 0.15;
+    fp v = alpha;
+    VR.init(initializer, v, &V);
     V.free();
     uint32_t iter = 0;
     uint32_t niters = num_iterations;
     while(iter < niters)
     {
         iter++;
-        VR.scatter_gather(f.div);
-        VR.combine();   
-        VR.apply(f.rank);
+        VR.scatter_gather(messenger1);
+        VR.combine(combiner);   
+        VR.apply(applicator);
         Env::print_me("Pagerank iteration: ", iter);
     }
     time2 = Env::clock();    
     Env::print_time("Vertex execution", time2 - time1);
-    
+
     VR.checksum();
     VR.display(); 
+    
     VR.free();
     GR.free();
     Env::finalize();
