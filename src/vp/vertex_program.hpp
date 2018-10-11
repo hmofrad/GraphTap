@@ -58,6 +58,7 @@ class Vertex_Program
                 struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
         void spmv(std::vector<std::vector<Integer_Type>> &z_data, 
                 struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
+                
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
         
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
@@ -140,6 +141,7 @@ class Vertex_Program
         
         MPI_Datatype TYPE_DOUBLE;
         MPI_Datatype TYPE_INT;
+        
         /* Specialized vectors for triangle counting */
         std::vector<std::vector<Integer_Type>> W; // Values (Outgoing edges)
         std::vector<std::vector<Integer_Type>> R; // Scores (Ingoing edges)
@@ -419,7 +421,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
     /* Initialize values and activity pattern */
     std::vector<Integer_Type> v_s_size = {tile_height};
     V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
-    populate(V, v);
+    //populate(V, v);
     uint32_t vo = 0;
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
     Integer_Type v_nitems = V->nitems[vo];
@@ -695,8 +697,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
         std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_) 
-                                      //Fractional_Type v, Fractional_Type s)
-//Fractional_Type (*f)(Fractional_Type, Fractional_Type, Fractional_Type, Fractional_Type))
 {
     double t1, t2;
     t1 = Env::clock();
@@ -718,9 +718,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            printf("1.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
+           // printf("1.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
             x_data[i] = messenger(v_data[i], s_data[i]);
-            printf("2.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
+            //printf("2.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
             //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
@@ -942,11 +942,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                     {
                         #ifdef HAS_WEIGHT
-                        if(x_data[JA[j]] and A[j])
+                        //if(x_data[JA[j]] and A[j])
                             combiner(y_data[i], A[j] * x_data[JA[j]]);
                             //y_data[i] += A[j] * x_data[JA[j]];
                         #else
-                        if(x_data[JA[j]])
+                        //if(x_data[JA[j]])
                             combiner(y_data[i], x_data[JA[j]]);
                             //y_data[i] += x_data[JA[j]];
                         #endif   
@@ -960,11 +960,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                     {       
                         #ifdef HAS_WEIGHT
-                        if(x_data[i] and A[j])
+                       //if(x_data[i] and A[j])
                             combiner(y_data[JA[j]], A[j] * x_data[i]);
                             //y_data[JA[j]] += A[j] * x_data[i];
                         #else
-                        if(x_data[i])
+                        //if(x_data[i])
                             combiner(y_data[JA[j]], x_data[i]);
                             //y_data[JA[j]] += x_data[i];
                         #endif                        
@@ -988,17 +988,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                     {
                         #ifdef HAS_WEIGHT
-                        if(x_data[j] and A[i])
+                        //if(x_data[j] and A[i])
                             combiner(y_data[IA[i]], A[i] * x_data[j]);
                             //y_data[IA[i]] += A[i] * x_data[j];
                         #else
-                        if(x_data[j])
-                        {
+                        //if(x_data[j])
+                        ////{
                             //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             combiner(y_data[IA[i]], x_data[j]);
                             //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                             //y_data[IA[i]] += x_data[j];
-                        }
+                        //}
                         #endif
                     }
                 }
@@ -1010,11 +1010,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                     {
                         #ifdef HAS_WEIGHT
-                        if(x_data[IA[i]] and A[i])
+                       /// if(x_data[IA[i]] and A[i])
                             combiner(y_data[j], A[i] * x_data[IA[i]]);   
                             //y_data[j] += A[i] * x_data[IA[i]];   
                         #else
-                        if(x_data[IA[i]])
+                       // if(x_data[IA[i]])
                             combiner(y_data[j], x_data[IA[i]]);   
                             //y_data[j] += x_data[IA[i]];
                         #endif
@@ -1342,9 +1342,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
     double t1, t2;
     t1 = Env::clock();
     applicator = applicator_;
-    uint32_t accu;
-    uint32_t yi = accu_segment_row;
-    uint32_t yo = accu_segment_rg;
 
     if(tc_family)
     {
@@ -1395,10 +1392,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
+            //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
             bool ret = applicator(v_data[i], y_data[i]);
-            printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
+            //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
     }
