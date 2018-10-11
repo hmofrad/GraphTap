@@ -6,6 +6,9 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <functional>
+
+#include "deg.h"
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
@@ -22,21 +25,17 @@ using wp = uint32_t;
 using wp = em;
 #endif
 
-using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = double;   // Fractional precision (default is float)
+/*  Integer precision (default is uint32_t)
+    Controls the number of vertices,
+    the engine can possibly process
+*/
+using ip = uint32_t;
 
-struct Generic_functions
-{
-    static fp ones(fp x, fp y, fp v, fp s)
-    {
-        return(1);
-    }
-    
-    static fp assign(fp x, fp y, fp v, fp s)
-    {
-        return(y);
-    }
-};
+/*
+    Fractional precision (default is float)
+    Controls the precision of values.
+*/
+using fp = double;
 
 int main(int argc, char **argv)
 {
@@ -61,24 +60,29 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
-    bool stationary = true;
     bool parread = true;
-    Ordering_type OT = _ROW_;
-    double time1 = 0;
-    double time2 = 0;
-
+    double time1 = 0, time2 = 0;
+    
     /* Degree execution */
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    Vertex_Program<wp, ip, fp> V(G, stationary, OT);    
-    fp x = 0, y = 0, v = 0, s = 0;
-    Generic_functions f;
-    
+    bool stationary = true;
+    bool tc_family = false;
+    bool gather_depends_on_apply = false;
+    Ordering_type OT = _ROW_;
+    // Register triangle counting function pointer handles
+    DEG_state<wp, ip, fp> Deg_state;
+    auto initializer = std::bind(&DEG_state<wp, ip, fp>::initializer, Deg_state, std::placeholders::_1, std::placeholders::_2);
+    auto messenger   = std::bind(&DEG_state<wp, ip, fp>::messenger,   Deg_state, std::placeholders::_1, std::placeholders::_2);
+    auto combiner    = std::bind(&DEG_state<wp, ip, fp>::combiner,    Deg_state, std::placeholders::_1, std::placeholders::_2);    
+    auto applicator  = std::bind(&DEG_state<wp, ip, fp>::applicator,  Deg_state, std::placeholders::_1, std::placeholders::_2);
+    // Run vertex program
     time1 = Env::clock();
-    V.init(x, y, v, s);
-    V.scatter_gather(f.ones);
-    V.combine();
-    V.apply(f.assign);  
+    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.init(initializer);
+    V.scatter_gather(messenger);
+    V.combine(combiner);
+    V.apply(applicator);  
     time2 = Env::clock();
     Env::print_time("Degree execution", time2 - time1);
     
