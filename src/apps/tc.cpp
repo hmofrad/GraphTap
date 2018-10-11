@@ -51,6 +51,8 @@ int main(int argc, char **argv)
     }
     
     
+
+    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
@@ -62,35 +64,35 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _NONE_; // Do not turn on
     bool parread = true;
-    double time1 = 0;
-    double time2 = 0;
-
-    /* Register triangle counting function pointer handles */
-    TC_state<wp, ip, fp> Tc_state;
-    auto initializer = std::bind(&TC_state<wp, ip, fp>::initializer, Tc_state, std::placeholders::_1, std::placeholders::_2);
-    auto combiner    = std::bind(&TC_state<wp, ip, fp>::combiner,    Tc_state, std::placeholders::_1, std::placeholders::_2);    
-    auto applicator  = std::bind(&TC_state<wp, ip, fp>::applicator,  Tc_state, std::placeholders::_1, std::placeholders::_2);
-        
+    double time1 = 0, time2 = 0;
+    
     /* Triangle counting execution */
-    time1 = Env::clock();
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = false;
     bool tc_family = true;
     bool gather_depends_on_apply = false;
     Ordering_type OT = _ROW_;
+    // Register triangle counting function pointer handles
+    TC_state<wp, ip, fp> Tc_state;
+    auto initializer = std::bind(&TC_state<wp, ip, fp>::initializer, Tc_state, std::placeholders::_1, std::placeholders::_2);
+    auto combiner    = std::bind(&TC_state<wp, ip, fp>::combiner,    Tc_state, std::placeholders::_1, std::placeholders::_2);    
+    auto applicator  = std::bind(&TC_state<wp, ip, fp>::applicator,  Tc_state, std::placeholders::_1, std::placeholders::_2);
+    // Run 1st vertex program and calculate ingoing adjacency list
+    time1 = Env::clock();
     Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
     V.init(initializer);
     V.combine(combiner);
     V.apply(applicator);  
     G.free();
     
-    fp v = 0, s = 0;
+    fp v = 0;
     transpose = false;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
+    // Run 2nd vertex program and calculate outgoing adjacency list
 	Vertex_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);  
-    VR.init(initializer, v, s, &V);
+    VR.init(initializer, v, &V);
     V.free();
     VR.combine(combiner);
     VR.apply(applicator);  
