@@ -1667,11 +1667,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             }
             else
             {
-                (*K)[ko][i] = 0;
-                (*KV)[ko][i] = NA;
+                //(*K)[ko][i] = 0;
+                //(*KV)[ko][i] = NA;
                 
-                //kj_data[i] = 0;
-                //kvj_data[i] = NA; // Don't put -1 because Integer_Type might be unsigned int
+                kj_data[i] = 0;
+                kvj_data[i] = NA; // Don't put -1 because Integer_Type might be unsigned int
             }
         }
         assert(j == nnz_sizes_all[owned_segment]);
