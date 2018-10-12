@@ -1286,6 +1286,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         JV.resize(tiling->rank_ncolgrps);
         for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
             JV[i].resize(tile_width);
+        if(Env::is_master)
+            printf("Vertex filtering: SNKS - Filtering isolated columns\n");     
         filter(_SNKS_);
         //filter(_SNKS_, J, JV);
     }
