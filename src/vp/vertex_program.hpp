@@ -285,7 +285,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
 {
     if(tc_family)
     {
-        /*
+        
         for (uint32_t j = 0; j < rank_nrowgrps; j++)
         {
             Z[j].clear();
@@ -307,7 +307,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
         }
         Z_SIZE.clear();
         Z_SIZE.shrink_to_fit();
-        */
     } 
     else
     {
@@ -320,8 +319,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
             delete Y[j];
         }   
         
-        //Y.clear();
-        //Y.shrink_to_fit();
+        Y.clear();
+        Y.shrink_to_fit();
         if(not stationary)
             delete B;
     }   
@@ -1457,8 +1456,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
         std::vector<Integer_Type> &zj_size = Z_SIZE[yi][accu];
         std::vector<Integer_Type> &inbox = inboxes[j];
         Comm<Weight, Integer_Type, Fractional_Type>::unpack_adjacency(zj_size, z_data, inbox);
-        //inbox.clear();
-        //inbox.shrink_to_fit();
+        inbox.clear();
+        inbox.shrink_to_fit();
     }
     
     if(filtering_type == _NONE_)
@@ -1564,17 +1563,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
                         dj_data[j].push_back(box[k]);
                     }
                 }
-                //box.clear();
-                //box.shrink_to_fit();
+                box.clear();
+                box.shrink_to_fit();
             }
         }
-        /*
+        
         for(uint32_t i = 0; i < nrowgrps; i++)
         {
             D_SIZE[i].clear();
             D_SIZE[i].shrink_to_fit();
         }
-        */
+        
         Env::barrier();
 
         for(uint32_t i = 0; i < nrowgrps; i++)
@@ -1632,15 +1631,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
         MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(Env::is_master)
             printf("Num_triangles = %lu\n", num_triangles_global);   
-        /*
+        
         for (uint32_t i = 0; i < rank_nrowgrps; i++)
         {
             D[i].clear();
             D[i].shrink_to_fit();
         }
-        */
     }
-    /*
+    
     for(uint32_t j = 0; j < rank_nrowgrps; j++)
     {
         std::vector<std::vector<Integer_Type>> &zj_size = Z_SIZE[j];
@@ -1665,7 +1663,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
         outbox.clear();
         outbox.shrink_to_fit();
     }
-    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
