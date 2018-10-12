@@ -11,7 +11,7 @@
 ##SBATCH --ntasks-per-socket=8
 #SBATCH --time=00:10:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=ib
+#SBATCH --partition=opa
 
 ##SSBATCH ---ntasks-per-core=1
 ##SBATCH --distribution cyclic:cyclic
@@ -67,7 +67,7 @@ export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
-APP=bin/./tc
+APP=bin/./pr
 #APP=./main
 
 if [ "$SLURM_NNODES" = "4" ]
