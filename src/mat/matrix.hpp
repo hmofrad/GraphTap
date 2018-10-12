@@ -173,6 +173,7 @@ class Matrix
         void del_dcsr();
         void del_compression();
         void del_filtering();
+        void del_filtering_indices();
         void print(std::string element);
         void distribute();
         void filter(Filtering_type filtering_type_);//, std::vector<std::vector<char>> &K, std::vector<std::vector<Integer_Type>> &KV);
@@ -2000,6 +2001,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             yi++;
         }
     }
+    del_filtering_indices();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -2090,6 +2092,28 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             yi++;
         }  
     }    
+    del_filtering_indices();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering_indices()
+{
+    if(filtering_type == _SOME_)
+    {
+        for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        {   
+            IV[i].clear();
+            IV[i].shrink_to_fit();
+        }
+        IV.clear();
+        
+        for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
+        {   
+            JV[i].clear();
+            JV[i].shrink_to_fit();
+        }
+        JV.clear();
+    }
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -2101,23 +2125,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
         {
             I[i].clear();
             I[i].shrink_to_fit();
-            
-            IV[i].clear();
-            IV[i].shrink_to_fit();
         }
         I.clear();
-        IV.clear();
         
-        for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         {
             J[i].clear();
             J[i].shrink_to_fit();
-            
-            JV[i].clear();
-            JV[i].shrink_to_fit();
         }
         J.clear();
-        JV.clear();
         
         /*
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
