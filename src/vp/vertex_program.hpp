@@ -129,10 +129,18 @@ class Vertex_Program
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y; //Accumulators
         Vector<Weight, Integer_Type, bool> *B; //Activity pattern bitvector
         
-        char **I;
+        std::vector<std::vector<char>> *I;
+        std::vector<std::vector<Integer_Type>> *IV;
+        std::vector<std::vector<char>> *J;
+        std::vector<std::vector<Integer_Type>> *JV;
+        
+        
+        /*
+        unsigned char **I;
         Integer_Type **IV;
-        char **J;
+        unsigned char **J;
         Integer_Type **JV;
+        */
         /*
         Vector<Weight, Integer_Type, char> *I;
         Vector<Weight, Integer_Type, Integer_Type> *IV;
@@ -217,10 +225,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
         nnz_col_sizes_loc = A->nnz_col_sizes_loc;
         nnz_row_sizes_all = A->nnz_row_sizes_all;
         nnz_col_sizes_all = A->nnz_col_sizes_all;
-        I = Graph.A->I;
-        IV= Graph.A->IV;
-        J = Graph.A->J;
-        JV= Graph.A->JV;
+        I = &(Graph.A->I);
+        IV= &(Graph.A->IV);
+        J = &(Graph.A->J);
+        JV= &(Graph.A->JV);
     }
     else if (ordering_type == _COL_)
     {
@@ -259,10 +267,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
         nnz_col_sizes_loc = A->nnz_row_sizes_loc;
         nnz_row_sizes_all = A->nnz_col_sizes_all;
         nnz_col_sizes_all = A->nnz_row_sizes_all;
-        I = Graph.A->J;
-        IV= Graph.A->JV;
-        J = Graph.A->I;
-        JV= Graph.A->IV;
+        I = &(Graph.A->J);
+        IV= &(Graph.A->JV);
+        J = &(Graph.A->I);
+        JV= &(Graph.A->IV);
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
@@ -290,6 +298,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
         
         R.clear();
         R.shrink_to_fit();
+        
         /*
         for (uint32_t j = 0; j < rank_nrowgrps; j++)
         {
@@ -318,6 +327,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
         
         Y.clear();
         Y.shrink_to_fit();
+        if(not stationary)
+            delete B;
     }   
 }
 
@@ -522,7 +533,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     }
     else if(filtering_type == _SOME_)
     {
-        auto &j_data = J[bo];
+        auto &j_data = (*J)[bo];
         //char *j_data = (char *) J->data[bo];
         //Integer_Type j_nitems = J->nitems[bo];
         if(gather_depends_on_apply)
@@ -616,7 +627,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             }
             else if(filtering_type == _SOME_)
             {
-                auto &i_data = I[yi];
+                auto &i_data = (*I)[yi];
                 //char *i_data = (char *) I->data[yi];        
                 //Integer_Type j = 0;
                 for(uint32_t i = 0; i < v_nitems; i++)
@@ -732,7 +743,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
     }
     else if(filtering_type == _SOME_)
     {
-        auto &j_data = J[xo];
+        auto &j_data = (*J)[xo];
         //char *j_data = (char *) J->data[xo];
         //Integer_Type j_nitems = J->nitems[xo];
         
@@ -1409,7 +1420,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     else if(filtering_type == _SOME_)
     {
         Fractional_Type tmp = 0;
-        auto &i_data = I[yi];
+        auto &i_data = (*I)[yi];
         
         //char *i_data = (char *) I->data[yi];        
         Integer_Type j = 0;
