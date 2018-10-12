@@ -130,9 +130,9 @@ class Vertex_Program
         Vector<Weight, Integer_Type, bool> *B; //Activity pattern bitvector
         
         std::vector<std::vector<char>> *I;
-        std::vector<std::vector<Integer_Type>> *IV;
+        //std::vector<std::vector<Integer_Type>> *IV;
         std::vector<std::vector<char>> *J;
-        std::vector<std::vector<Integer_Type>> *JV;
+        //std::vector<std::vector<Integer_Type>> *JV;
         
         
         /*
@@ -226,9 +226,9 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
         nnz_row_sizes_all = A->nnz_row_sizes_all;
         nnz_col_sizes_all = A->nnz_col_sizes_all;
         I = &(Graph.A->I);
-        IV= &(Graph.A->IV);
+        //IV= &(Graph.A->IV);
         J = &(Graph.A->J);
-        JV= &(Graph.A->JV);
+        //JV= &(Graph.A->JV);
     }
     else if (ordering_type == _COL_)
     {
@@ -268,9 +268,9 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
         nnz_row_sizes_all = A->nnz_col_sizes_all;
         nnz_col_sizes_all = A->nnz_row_sizes_all;
         I = &(Graph.A->J);
-        IV= &(Graph.A->JV);
+        //IV= &(Graph.A->JV);
         J = &(Graph.A->I);
-        JV= &(Graph.A->IV);
+        //JV= &(Graph.A->IV);
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
