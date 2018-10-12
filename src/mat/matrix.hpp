@@ -958,8 +958,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                 insert(inbox[i]);
             }
 
-            //inbox.clear();
-            //inbox.shrink_to_fit();
+            inbox.clear();
+            inbox.shrink_to_fit();
         }
     }
     
@@ -1805,8 +1805,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     */
     
     
-    //F.clear();
-    //F.shrink_to_fit();
+    F.clear();
+    F.shrink_to_fit();
     
     Env::barrier();
 }
@@ -2095,8 +2095,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
 {
     if(filtering_type == _SOME_)
     {
-        ;
-        /*
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         {
             I[i].clear();
@@ -2118,7 +2116,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
         }
         J.clear();
         JV.clear();
-        */
+        
         /*
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
             delete [] I[i];
