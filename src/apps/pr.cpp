@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     bool parallel_edges = true;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _SOME_;
+    Filtering_type FT = _NONE_;
     bool parread = true;
     double time1 = 0, time2 = 0;
     
