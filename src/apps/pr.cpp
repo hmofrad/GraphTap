@@ -67,8 +67,6 @@ int main(int argc, char **argv)
     // Degree execution 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    
-    
     bool stationary = true;
     bool tc_family = false;
     bool gather_depends_on_apply = false;
@@ -82,8 +80,9 @@ int main(int argc, char **argv)
     // Run vertex program
     time1 = Env::clock();
     
-    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);    
+    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT); 
     V.init(initializer);
+    
     V.scatter_gather(messenger);
     V.combine(combiner);
     V.apply(applicator);  
