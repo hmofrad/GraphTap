@@ -21,16 +21,27 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class Vertex_Program
 {
     public:
-        Vertex_Program();
+        //Vertex_Program();
         Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, 
                         bool stationary_ = false, bool gather_depends_on_apply_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
-        void init(std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_,
-             Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
-        void scatter_gather(std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_);
-        void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combiner_);
-        void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
+        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) { return(stationary);}
+        virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
+        virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) { ; }
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) { return(true); }
+        
+        void execute(uint32_t niters = 0, Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
+        
+        //void init(std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_,
+        //     Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
+        //void scatter_gather(std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_);
+        //void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combiner_);
+        //void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
+        void initialize(Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
+        void scatter_gather();
+        void combine();
+        void apply();
         void checksum();
         void display();
         void free();
@@ -38,6 +49,7 @@ class Vertex_Program
         bool stationary;
         bool gather_depends_on_apply;
         bool tc_family;
+        bool already_initialized = false;
     
     protected:
         void specialized_nonstationary_init(Fractional_Type v, 
@@ -73,10 +85,10 @@ class Vertex_Program
         void optimized_2d();
         void optimized_2d_for_tc();
         
-        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer;
-        std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger;
-        std::function<void(Fractional_Type&, Fractional_Type&)> combiner;
-        std::function<bool(Fractional_Type&, Fractional_Type&)> applicator;
+        //std::function<bool(Fractional_Type&, Fractional_Type&)> initializer;
+        //std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger;
+        //std::function<void(Fractional_Type&, Fractional_Type&)> combiner;
+        //std::function<bool(Fractional_Type&, Fractional_Type&)> applicator;
         
         
         struct Triple<Weight, Integer_Type> tile_info( 
@@ -166,8 +178,8 @@ class Vertex_Program
         std::vector<std::vector<Integer_Type>> outboxes;// Temporary buffers for  serializing the adjacency lists
 };
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program() {};
+//template<typename Weight, typename Integer_Type, typename Fractional_Type>
+//Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program() {};
 
 /* Support or row-wise tile processing designated to original matrix and 
    column-wise tile processing designated to transpose of the matrix. */                
@@ -388,17 +400,42 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::init(
-        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_, Fractional_Type v, 
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t niters, Fractional_Type v, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
 {
     double t1, t2;
     t1 = Env::clock();
 
-    initializer = initializer_;
+    //if(not already_initialized)
+    initialize(v, VProgram);
+    uint32_t iter = 0;
+    while(iter < niters)
+    {
+        scatter_gather();
+        combine();
+        apply();
+        iter++;
+    }
+    
+    t2 = Env::clock();
+    Env::print_time("Execute", t2 - t1);
+}
+
+
+
+//template<typename Weight, typename Integer_Type, typename Fractional_Type>
+//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::initialize(
+//        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_, Fractional_Type v, 
+//        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::initialize(Fractional_Type v, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+{
+    double t1, t2;
+    t1 = Env::clock();
+
+    //initializer = initializer_;
     if(stationary)
     {
-        specialized_stationary_init(v, VProgram);;
+        specialized_stationary_init(v, VProgram);
     }
     else
     {    
@@ -437,6 +474,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
     Integer_Type v_nitems = V->nitems[vo];
     for(uint32_t i = 0; i < v_nitems; i++)
         (void)initializer(v_data[i], v);
+        //(void)initializer(v_data[i], v);
 
     /* Initialiaze scores/states */
     S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
@@ -445,6 +483,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
         Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
         populate(S, V_);
+        already_initialized = true;
     }
     
     /* Initialiaze accumulators */
@@ -517,11 +556,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             {
                 tmp = i + (owned_segment * tile_height);
                 b_data[i] = initializer(v_data[i], tmp);
+                //b_data[i] = initializer(v_data[i], tmp);
             }
         }
         else
         {
             for(uint32_t i = 0; i < v_nitems; i++)
+                //b_data[i] = initializer(v_data[i], v);
                 b_data[i] = initializer(v_data[i], v);
         }
     }
@@ -538,6 +579,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
                 if(j_data[i])
                 {
                     tmp = i + (owned_segment * tile_height);    
+                    //b_data[j] = initializer(v_data[i], tmp);
                     b_data[j] = initializer(v_data[i], tmp);
                     j++;
                 }               
@@ -550,6 +592,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             {
                 if(j_data[i])
                 {
+                    //b_data[j] = initializer(v_data[i], v);
                     b_data[j] = initializer(v_data[i], v);
                     j++;
                 }               
@@ -564,6 +607,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
         Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
         populate(S, V_);
+        already_initialized = true;
     }
     
     /* Initialiaze accumulators */
@@ -668,6 +712,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
         Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
         std::vector<std::vector<Integer_Type>> W_ = VP->W;
         R = W_;
+        already_initialized = true;
         
         /* Initialiaze BIG 2D scores/states vector */
         D.resize(nrowgrps);
@@ -706,12 +751,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather(
-        std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_) 
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
 {
     double t1, t2;
     t1 = Env::clock();
-    messenger = messenger_;
+    //messenger = messenger_;
     uint32_t leader;
     uint32_t xo = accu_segment_col;
     Fractional_Type *x_data = (Fractional_Type *) X->data[xo];
@@ -1037,14 +1081,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     }    
 }
 
+//template<typename Weight, typename Integer_Type, typename Fractional_Type>
+//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(
+//        std::function<void(Fractional_Type&, Fractional_Type&)> combiner_)
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(
-        std::function<void(Fractional_Type&, Fractional_Type&)> combiner_)
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
 {
     double t1, t2;
     t1 = Env::clock();
     
-    combiner = combiner_;
+    //combiner = combiner_;
     if(tiling_type == Tiling_type::_1D_ROW and stationary)
     {  
         if(ordering_type == _ROW_)
@@ -1346,14 +1392,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     wait_for_all();
 }
 
+//template<typename Weight, typename Integer_Type, typename Fractional_Type>
+//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
+//                            std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_)
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
-                            std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_)
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply()
 {
     double t1, t2;
     t1 = Env::clock();
-    applicator = applicator_;
+    //applicator = applicator_;
 
     if(tc_family)
     {
