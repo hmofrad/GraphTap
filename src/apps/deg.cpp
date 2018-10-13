@@ -6,13 +6,13 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <functional>
-
-#include "deg.h"
+#include <ctime>
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
+
+#include "deg.h"
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -39,8 +39,9 @@ using fp = double;
 
 int main(int argc, char **argv)
 {
+    clock_t begin = clock();
     bool comm_split = true;
-    Env::init(comm_split);    
+    Env::init(comm_split);
     
     if(argc != 4)  {
         if(Env::is_master) {
@@ -61,7 +62,6 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
-    double time1 = 0, time2 = 0;
     
     /* Degree execution */
     Graph<wp, ip, fp> G;    
@@ -70,26 +70,16 @@ int main(int argc, char **argv)
     bool tc_family = false;
     bool gather_depends_on_apply = false;
     Ordering_type OT = _ROW_;
-    // Register triangle counting function pointer handles
-    DEG_state<wp, ip, fp> Deg_state;
-    auto initializer = std::bind(&DEG_state<wp, ip, fp>::initializer, Deg_state, std::placeholders::_1, std::placeholders::_2);
-    auto messenger   = std::bind(&DEG_state<wp, ip, fp>::messenger,   Deg_state, std::placeholders::_1, std::placeholders::_2);
-    auto combiner    = std::bind(&DEG_state<wp, ip, fp>::combiner,    Deg_state, std::placeholders::_1, std::placeholders::_2);    
-    auto applicator  = std::bind(&DEG_state<wp, ip, fp>::applicator,  Deg_state, std::placeholders::_1, std::placeholders::_2);
-    // Run vertex program
-    time1 = Env::clock();
-    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
-    V.init(initializer);
-    V.scatter_gather(messenger);
-    V.combine(combiner);
-    V.apply(applicator);  
-    time2 = Env::clock();
-    Env::print_time("Degree execution", time2 - time1);
-    
+    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.execute(1);
     V.checksum();
     V.display();
     V.free();
     G.free();
+    
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    Env::print_time("Degree end-to-end", elapsed_secs);
     Env::finalize();
     return(0);
 }
