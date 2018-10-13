@@ -16,11 +16,11 @@ class PageRank_Program : public Vertex_Program<Weight, Integer_Type, Fractional_
         Fractional_Type alpha = 0.15;
         virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
         {
-            v1 = v2;
+            v1 = alpha;
             return(true);
         }
 
-        virtual Fractional_Type messenger1(Fractional_Type &v, Fractional_Type &s) 
+        virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) 
         {
             if(v and s)
             {
@@ -37,11 +37,11 @@ class PageRank_Program : public Vertex_Program<Weight, Integer_Type, Fractional_
             y1 += y2;
         }
         
-        virtual bool applicator1(Fractional_Type &v, Fractional_Type &y) 
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
         {
             Fractional_Type tmp = v;
             v = alpha + (1.0 - alpha) * y;
-            return (fabs(v - tmp) > tol);  
+            return (fabs(v - tmp) < tol);            
         }
 };
 #endif
