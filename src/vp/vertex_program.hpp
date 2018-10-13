@@ -11,6 +11,8 @@
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
 
+#define INF 2147483647
+
 enum Ordering_type
 {
   _ROW_,
@@ -39,49 +41,49 @@ class Vertex_Program
         //void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combiner_);
         //void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
         void initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
-        void scatter_gather();
-        void combine();
-        void apply();
-        void checksum();
-        void display();
         void free();
         
         bool stationary;
         bool gather_depends_on_apply;
         bool tc_family;
         bool already_initialized = false;
-        bool has_converged = false;
+        bool check_for_convergence = false;
     
-    protected:
-        void specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);        
-        void specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);
-        void specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);  
-        
-        void bcast();
-        void scatter();
-        void gather();
-                        
-        void specialized_apply();
-        void specialized_tc_apply();
-        
-        void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
-                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
-        void spmv(std::vector<std::vector<Integer_Type>> &z_data, 
-                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
-                
+    protected:        
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
         
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
         void clear(Vector<Weight, Integer_Type, Fractional_Type> *vec);
-        
-        void wait_for_all();
-        void wait_for_sends();
-        void wait_for_recvs();
+        void specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);        
+        void specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);
+        void specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);  
+        void scatter_gather();
+        void scatter();
+        void gather();
+        void bcast();
+        void combine();
         void optimized_1d_row();
         void optimized_1d_col();
         void optimized_2d();
         void optimized_2d_for_tc();
+        void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
+                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
+        void spmv(std::vector<std::vector<Integer_Type>> &z_data, 
+                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
+        void apply();                        
+        void specialized_apply();
+        void specialized_tc_apply();
+        void wait_for_all();
+        void wait_for_sends();
+        void wait_for_recvs();
+        bool has_converged();
+        void checksum();
+        void display();
+        
+
+        
+        
         
         //std::function<bool(Fractional_Type&, Fractional_Type&)> initializer;
         //std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger;
@@ -136,7 +138,7 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *X; // Messages 
         Vector<Weight, Integer_Type, Fractional_Type> *V; // Values
         Vector<Weight, Integer_Type, Fractional_Type> *S; // Scores (States)
-        Vector<Weight, Integer_Type, bool> *C; // Convergence 
+        Vector<Weight, Integer_Type, char> *C; // Convergence 
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y; //Accumulators
         Vector<Weight, Integer_Type, bool> *B; //Activity pattern bitvector
         
@@ -407,6 +409,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
     if(not already_initialized)
         initialize();
     
+    if(!niters)
+    {
+        check_for_convergence = true; 
+        niters = INF;
+    }
+
     uint32_t iter = 0;
     while(iter < niters)
     {
@@ -414,6 +422,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
         combine();
         apply();
         iter++;
+        Env::print_me("Pagerank iteration: ", iter);
+        if(check_for_convergence)
+        {
+            if(has_converged())
+                break;
+        }
     }
     
     t2 = Env::clock();
@@ -490,7 +504,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
     }
     
     /* Array to look for convergence */ 
-    C = new Vector<Weight, Integer_Type, bool>(v_s_size, accu_segment_row_vec);
+    C = new Vector<Weight, Integer_Type, char>(v_s_size, accu_segment_row_vec);
     
     /* Initialiaze accumulators */
     std::vector<Integer_Type> y_size;
@@ -1453,6 +1467,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     uint32_t vo = 0;
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
     Integer_Type v_nitems = V->nitems[vo];
+    
+    uint32_t co = 0;
+    char *c_data = (char *) C->data[vo];
+    Integer_Type c_nitems = C->nitems[co];
 
     if(filtering_type == _NONE_)
     {
@@ -1460,7 +1478,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
-            bool ret = applicator(v_data[i], y_data[i]);
+            c_data[i] = applicator(v_data[i], y_data[i]);
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
@@ -1476,15 +1494,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             if(i_data[i])
             {
-                bool ret = applicator(v_data[i], y_data[j]);
+                c_data[i] = applicator(v_data[i], y_data[j]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
             }
             else
             {
-                bool ret = applicator(v_data[i], tmp);
+                //printf("%f %d\n", v_data[i], fabs(v_data[i] - (0.15 + (1.0 - 0.15) * tmp)) > 1e-5);    
+                c_data[i] = applicator(v_data[i], tmp);
                 //v_data[i] = (*f)(0, 0, 0, 0);
-                printf("%d %f\n", ret, v_data[i]);    
+                //printf("%d %f\n", ret, v_data[i]);    
+                //return fabs(s.rank - tmp) > tol;
             }
         }
     }
@@ -1820,6 +1840,28 @@ MPI_Comm Vertex_Program<Weight, Integer_Type, Fractional_Type>::communicator_inf
     return{comm};
 }
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
+{
+    bool converged = false;
+    uint64_t c_sum_local = 0, c_sum_gloabl = 0;
+
+    uint32_t co = 0;
+    char *c_data = (char *) C->data[co];
+    Integer_Type c_nitems = C->nitems[co];    
+    
+    for(uint32_t i = 0; i < c_nitems; i++)
+       c_sum_local += c_data[i];
+   
+    //printf("%lu %d\n", c_sum_local, tile_height);
+    //if(c_sum_local == tile_height)
+    //{
+        MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        if(c_sum_gloabl == (tile_height * Env::nranks))
+            converged = true;
+    //}
+    return(converged);   
+}
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
