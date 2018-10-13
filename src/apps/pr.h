@@ -7,28 +7,20 @@
 #ifndef PR_H
 #define PR_H 
 
-#include <cmath>
-
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class PR_state
+class PageRank_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
 {
     public: 
-        PR_state(){};
-        ~PR_state(){};   
+        using Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program;  // inherit constructors
         Fractional_Type tol = 1e-5;
         Fractional_Type alpha = 0.15;
-        bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
+        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
         {
             v1 = v2;
             return(true);
         }
 
-        Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) 
-        {
-            return(1);
-        }
-        
-        Fractional_Type messenger1(Fractional_Type &v, Fractional_Type &s) 
+        virtual Fractional_Type messenger1(Fractional_Type &v, Fractional_Type &s) 
         {
             if(v and s)
             {
@@ -40,18 +32,12 @@ class PR_state
             }
         }
         
-        void combiner(Fractional_Type &y1, Fractional_Type &y2) 
+        virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) 
         {
             y1 += y2;
         }
         
-        bool applicator(Fractional_Type &v, Fractional_Type &y) 
-        {
-            v = y;
-            return(true);
-        }  
-
-        bool applicator1(Fractional_Type &v, Fractional_Type &y) 
+        virtual bool applicator1(Fractional_Type &v, Fractional_Type &y) 
         {
             Fractional_Type tmp = v;
             v = alpha + (1.0 - alpha) * y;
