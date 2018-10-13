@@ -6,13 +6,14 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <functional>
-
-#include "pr.h"
+#include <ctime>
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
+
+#include "deg.h"
+#include "pr.h"
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -40,6 +41,7 @@ using fp = double;
 
 int main(int argc, char **argv)
 {
+    clock_t begin = clock();
     bool comm_split = true;
     Env::init(comm_split);    
     
@@ -62,8 +64,45 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
-    double time1 = 0, time2 = 0;
     
+    /* Degree execution */
+    Graph<wp, ip, fp> G;    
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
+    bool stationary = true;
+    bool tc_family = false;
+    bool gather_depends_on_apply = false;
+    Ordering_type OT = _ROW_;
+    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.execute(1);
+    V.checksum();
+    V.display();
+    G.free();
+    Env::barrier();
+    
+    /* Vertex execution */
+    transpose = true;
+    Graph<wp, ip, fp> GR;    
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
+    PageRank_Program<wp, ip, fp> VR(GR, stationary, OT);   
+    fp alpha = 0.15;
+    fp v = alpha;
+    VR.execute(num_iterations, v, &V);
+    VR.checksum();
+    VR.display(); 
+    
+    V.free();
+    
+    
+    GR.free();
+    VR.free();
+    
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    Env::print_time("Degree end-to-end", elapsed_secs);
+    Env::finalize();
+    return(0);
+    
+    /*
     // Degree execution 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
@@ -125,7 +164,7 @@ int main(int argc, char **argv)
     
     VR.free();
     GR.free();
-    
+    */
     Env::finalize();
     return(0);   
 }
