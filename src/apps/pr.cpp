@@ -73,9 +73,10 @@ int main(int argc, char **argv)
     bool gather_depends_on_apply = false;
     Ordering_type OT = _ROW_;
     Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    
     V.execute(1);
-    V.checksum();
-    V.display();
+    //V.checksum();
+    //V.display();
     G.free();
     Env::barrier();
     
@@ -83,12 +84,11 @@ int main(int argc, char **argv)
     transpose = true;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    PageRank_Program<wp, ip, fp> VR(GR, stationary, OT);   
-    fp alpha = 0.15;
-    fp v = alpha;
-    VR.execute(num_iterations, v, &V);
-    VR.checksum();
-    VR.display(); 
+    PageRank_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);
+    VR.initialize(&V);
+    VR.execute(num_iterations);
+    //VR.checksum();
+    //VR.display(); 
     
     V.free();
     
