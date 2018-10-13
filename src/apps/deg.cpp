@@ -72,8 +72,8 @@ int main(int argc, char **argv)
     Ordering_type OT = _ROW_;
     Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
     V.execute(1);
-    V.checksum();
-    V.display();
+    //V.checksum();
+    //V.display();
     V.free();
     G.free();
     
