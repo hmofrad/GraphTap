@@ -405,35 +405,43 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
 {
     double t1, t2;
     t1 = Env::clock();
-
-    if(not already_initialized)
-        initialize();
     
-    if(!niters)
+    if(not already_initialized)
+            initialize();
+        
+    if(not tc_family)
     {
-        check_for_convergence = true; 
-        niters = INF;
-    }
+        if(!niters)
+        {
+            check_for_convergence = true; 
+            niters = INF;
+        }
 
-    uint32_t iter = 0;
-    while(iter < niters)
+        uint32_t iter = 0;
+        while(iter < niters)
+        {
+            scatter_gather();
+            combine();
+            apply();
+            iter++;
+            Env::print_me("Pagerank iteration: ", iter);
+            if(check_for_convergence)
+            {
+                if(has_converged())
+                    break;
+            }
+        }
+        checksum();
+        display();
+    }
+    else if(tc_family)
     {
-        scatter_gather();
         combine();
         apply();
-        iter++;
-        Env::print_me("Pagerank iteration: ", iter);
-        if(check_for_convergence)
-        {
-            if(has_converged())
-                break;
-        }
-    }
+    }        
     
     t2 = Env::clock();
     Env::print_time("Execute", t2 - t1);
-    checksum();
-    display();
 }
 
 
@@ -1697,18 +1705,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
                     }
                 }
             }
-            
             if(Env::is_master)
             {
                 if ((i & ((1L << 13) - 1L)) == 0)
                     printf("|");
             }
         }
-
         MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(Env::is_master)
-            printf("Num_triangles = %lu\n", num_triangles_global);   
-        
+            printf("\nNum_triangles = %lu\n", num_triangles_global);
         for (uint32_t i = 0; i < rank_nrowgrps; i++)
         {
             D[i].clear();
