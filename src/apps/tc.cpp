@@ -6,13 +6,13 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <functional>
-
-#include "tc.h" 
+#include <ctime>
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
+
+#include "tc.h" 
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -39,6 +39,7 @@ using fp = double;
 
 int main(int argc, char **argv)
 {
+    clock_t begin = clock();
     bool comm_split = true;
     Env::init(comm_split);    
     
@@ -73,6 +74,24 @@ int main(int argc, char **argv)
     bool tc_family = true;
     bool gather_depends_on_apply = false;
     Ordering_type OT = _ROW_;
+    // Run 1st vertex program and calculate ingoing adjacency list
+    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    V.execute(1);
+    G.free();
+    Env::barrier();
+    
+    transpose = false;
+    Graph<wp, ip, fp> GR;    
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
+    // Run 2nd vertex program and calculate outgoing adjacency list
+    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);  
+    VR.initialize(&V);
+    V.free();
+    VR.execute(1);
+    VR.free();
+    GR.free();
+    
+    /*
     // Register triangle counting function pointer handles
     TC_state<wp, ip, fp> Tc_state;
     auto initializer = std::bind(&TC_state<wp, ip, fp>::initializer, Tc_state, std::placeholders::_1, std::placeholders::_2);
@@ -98,9 +117,10 @@ int main(int argc, char **argv)
     VR.apply(applicator);  
     VR.free();
 	GR.free();
-
-    time2 = Env::clock();
-    Env::print_time("Triangle couting", time2 - time1);
+    */
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    Env::print_time("Triangle counting end-to-end", elapsed_secs);
     Env::finalize();
     return(0);
 }
