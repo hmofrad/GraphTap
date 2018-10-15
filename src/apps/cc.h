@@ -8,40 +8,31 @@
 #define CC_H
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class CC_state
+class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
 {
     public:  
-        CC_state();
-        ~CC_state();
-        
-        bool init_func(Fractional_Type &v1, Fractional_Type &v2) 
+        using Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program;  // inherit constructors
+        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
         {
             v1 = v2;
             return(true);
         }
         
-        Fractional_Type message_func(Fractional_Type &v, Fractional_Type &s) 
+        virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) 
         {
             return(v);
         }
 
-        void combine_func(Fractional_Type &y1, Fractional_Type &y2) 
+        virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) 
         {
             y1 = (y1 < y2) ? y1 : y2;
         }
         
-        bool apply_func(Fractional_Type &y, Fractional_Type &v) 
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
         {
             Fractional_Type t = v;
             v = (y < v) ? y : v;
             return(t != v);
         }      
 };
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-CC_state<Weight, Integer_Type, Fractional_Type>::CC_state() {};
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-CC_state<Weight, Integer_Type, Fractional_Type>::~CC_state() {};
-
 #endif
