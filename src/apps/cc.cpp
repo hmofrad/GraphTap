@@ -34,7 +34,7 @@ using ip = uint32_t;
     Fractional precision (default is float)
     Controls the precision of values.
 */
-using fp = uint32_t;
+using fp = double;
 
 int main(int argc, char **argv)
 { 
