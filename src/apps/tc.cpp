@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _SOME_; // Do not turn on
+    Filtering_type FT = _NONE_; // Do not turn on
     bool parread = true;
     
     /* Triangle counting execution */
