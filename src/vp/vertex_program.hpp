@@ -68,7 +68,8 @@ class Vertex_Program
         void optimized_2d();
         void optimized_2d_for_tc();
         void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
-                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
+                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
+                char *b_data = nullptr);
         void spmv(std::vector<std::vector<Integer_Type>> &z_data, 
                 struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
         void apply();                        
@@ -138,9 +139,9 @@ class Vertex_Program
         Vector<Weight, Integer_Type, Fractional_Type> *X; // Messages 
         Vector<Weight, Integer_Type, Fractional_Type> *V; // Values
         Vector<Weight, Integer_Type, Fractional_Type> *S; // Scores (States)
-        Vector<Weight, Integer_Type, char> *C; // Convergence 
         std::vector<Vector<Weight, Integer_Type, Fractional_Type> *> Y; //Accumulators
-        Vector<Weight, Integer_Type, bool> *B; //Activity pattern bitvector
+        Vector<Weight, Integer_Type, char> *C; // Convergence vector
+        Vector<Weight, Integer_Type, char> *B; //Activity pattern vector
         
         std::vector<std::vector<char>> *I;
         //std::vector<std::vector<Integer_Type>> *IV;
@@ -167,6 +168,7 @@ class Vertex_Program
         
         MPI_Datatype TYPE_DOUBLE;
         MPI_Datatype TYPE_INT;
+        MPI_Datatype TYPE_CHAR;
         
         /* Specialized vectors for triangle counting */
         std::vector<std::vector<Integer_Type>> W; // Values (Outgoing edges)
@@ -288,6 +290,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
     TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
+    TYPE_CHAR = Types<Weight, Integer_Type, char>::get_data_type();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -326,12 +329,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
         delete X;
         delete V;
         delete S;   
-        
+        delete C;   
         for (uint32_t j = 0; j < rank_nrowgrps; j++)
         {
             delete Y[j];
         }   
-        
         Y.clear();
         Y.shrink_to_fit();
         if(not stationary)
@@ -424,7 +426,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
             combine();
             apply();
             iter++;
-            Env::print_me("Pagerank iteration: ", iter);
+            Env::print_me("Iteration: ", iter);
             if(check_for_convergence)
             {
                 if(has_converged())
@@ -571,9 +573,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
     Integer_Type v_nitems = V->nitems[vo];
     
-    B = new Vector<Weight, Integer_Type, bool>(x_sizes,  local_col_segments);    
+    B = new Vector<Weight, Integer_Type, char>(x_sizes,  local_col_segments);    
     uint32_t bo = accu_segment_col;
-    bool *b_data = (bool *) B->data[bo];
+    char *b_data = (char *) B->data[bo];
     Integer_Type b_nitems = B->nitems[bo];
     
     Fractional_Type tmp = 0;
@@ -605,13 +607,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
             {
+                tmp = i + (owned_segment * tile_height);
                 if(j_data[i])
-                {
-                    tmp = i + (owned_segment * tile_height);    
+                { 
                     //b_data[j] = initializer(v_data[i], tmp);
                     b_data[j] = initializer(v_data[i], tmp);
                     j++;
-                }               
+                }  
+                else                
+                    (void*)initializer(v_data[i], tmp);
             }
         }
         else
@@ -624,7 +628,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
                     //b_data[j] = initializer(v_data[i], v);
                     b_data[j] = initializer(v_data[i], v);
                     j++;
-                }               
+                } 
+                else                
+                    (void*)initializer(v_data[i], v);
             }
         }
     }
@@ -638,6 +644,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         populate(S, V_);
         already_initialized = true;
     }
+    
+    /* Array to look for convergence */ 
+    C = new Vector<Weight, Integer_Type, char>(v_s_size, accu_segment_row_vec);
     
     /* Initialiaze accumulators */
     std::vector<Integer_Type> y_size;
@@ -797,6 +806,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
     Fractional_Type *s_data = (Fractional_Type *) S->data[so];
     Integer_Type s_nitems = S->nitems[so];
     
+    //uint32_t co = 0;
+    //char *c_data = (char *) C->data[co];
+    //Integer_Type c_nitems = C->nitems[co];
+    
     if(filtering_type == _NONE_)
     {
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -821,7 +834,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
                 x_data[j] = messenger(v_data[i], s_data[i]);
                 //x_data[j] = (*f)(0, 0, v_data[i], s_data[i]);
                 j++;
-            }               
+            }
         }
     }
     
@@ -911,7 +924,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
                     in_requests.push_back(request);
                 }
             }
-            
         }
         
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
@@ -952,6 +964,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast()
             {
                 fprintf(stderr, "Invalid communicator\n");
                 Env::exit(1);
+            }
+        }
+        
+        if(not stationary)
+        {
+            for(uint32_t i = 0; i < rank_ncolgrps; i++)
+            {
+                leader = leader_ranks_cg[local_col_segments[i]];
+                char *bj_data = (char *) B->data[i];
+                Integer_Type bj_nitems = B->nitems[i];
+                if(Env::comm_split)
+                {
+                    MPI_Bcast(bj_data, bj_nitems, TYPE_CHAR, leader, colgrps_communicator);
+                }
+                else
+                {
+                    fprintf(stderr, "Invalid communicator\n");
+                    Env::exit(1);
+                }
             }
         }
     }
@@ -1007,7 +1038,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Fractional_Type *y_data, Fractional_Type *x_data,
-            struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile)
+            struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
+            char *b_data)
 {
     if(tile.allocated)
     {
@@ -1067,25 +1099,49 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                if(stationary)
                 {
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
-                        #ifdef HAS_WEIGHT
-                        //if(x_data[j] and A[i])
-                            combiner(y_data[IA[i]], A[i] * x_data[j]);
-                            //y_data[IA[i]] += A[i] * x_data[j];
-                        #else
-                        //if(x_data[j])
-                        ////{
-                            //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
-                            combiner(y_data[IA[i]], x_data[j]);
-                            //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
-                            //y_data[IA[i]] += x_data[j];
-                        //}
-                        #endif
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                            //if(x_data[j] and A[i])
+                                combiner(y_data[IA[i]], A[i] * x_data[j]);
+                                //y_data[IA[i]] += A[i] * x_data[j];
+                            #else
+                            //if(x_data[j])
+                            ////{
+                                //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                                combiner(y_data[IA[i]], x_data[j]);
+                                //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                                //y_data[IA[i]] += x_data[j];
+                            //}
+                            #endif
+                        }
                     }
                 }
+                else
+                {
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                    {
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                                if(b_data[j])
+                                    combiner(y_data[IA[i]], A[i] * x_data[j]);
+                            #else
+                                if(b_data[j])
+                                    combiner(y_data[IA[i]], x_data[j]);
+                                
+                            #endif
+                        }
+                        //printf("[%d %d]", j, b_data[j]);
+                    }
+                    //printf("\n");
+                    
+                }
+                
             }
             else if(ordering_type == _COL_)
             {
@@ -1377,7 +1433,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
         Integer_Type y_nitems = Yp->nitems[yo];
         Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
-        spmv(y_data, x_data, tile);
+        char *b_data = (char *) B->data[xi];
+        
+        if(stationary)
+            spmv(y_data, x_data, tile);
+        else
+            spmv(y_data, x_data, tile, b_data);
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
@@ -1477,7 +1538,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     Integer_Type v_nitems = V->nitems[vo];
     
     uint32_t co = 0;
-    char *c_data = (char *) C->data[vo];
+    char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
 
     if(filtering_type == _NONE_)
@@ -1486,8 +1547,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
+            //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
             c_data[i] = applicator(v_data[i], y_data[i]);
-            //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
+            //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+            //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
+            //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
         }
     }
@@ -1502,17 +1566,54 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             if(i_data[i])
             {
+                //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 c_data[i] = applicator(v_data[i], y_data[j]);
+                //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+                //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
             }
             else
             {
+                Fractional_Type tmp = 0, tmp1 = 0;
                 //printf("%f %d\n", v_data[i], fabs(v_data[i] - (0.15 + (1.0 - 0.15) * tmp)) > 1e-5);    
-                c_data[i] = applicator(v_data[i], tmp);
+                //printf("3.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+                c_data[i] = applicator(tmp1, tmp);
+                //printf("4.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+                //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, 0, 0, 0);
                 //printf("%d %f\n", ret, v_data[i]);    
                 //return fabs(s.rank - tmp) > tol;
+            }
+        }
+    }
+    
+    if(not stationary)
+    {
+        uint32_t bo = accu_segment_col;
+        char *b_data = (char *) B->data[bo];
+        Integer_Type b_nitems = B->nitems[bo];
+        if(filtering_type == _NONE_)
+        {
+            for(uint32_t i = 0; i < c_nitems; i++)
+            {
+                b_data[i] = c_data[i];
+                //printf("[%d %d]", i, b_data[i]);
+            }
+            //printf("\n");
+        }
+        else
+        {
+            Fractional_Type tmp = 0;
+            auto &i_data = (*I)[yi];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < c_nitems; i++)
+            {
+                if(i_data[i])
+                {
+                    b_data[j] = c_data[i];
+                    j++;
+                }
             }
         }
     }
@@ -1856,7 +1957,10 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
     Integer_Type c_nitems = C->nitems[co];    
     
     for(uint32_t i = 0; i < c_nitems; i++)
-       c_sum_local += c_data[i];
+    {
+        if(not c_data[i]) 
+            c_sum_local ++;
+    }
    
     //printf("%lu %d\n", c_sum_local, tile_height);
     //if(c_sum_local == tile_height)
