@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <ctime>
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
@@ -39,9 +38,9 @@ using fp = double;
 
 int main(int argc, char **argv)
 {
-    clock_t begin = clock();
     bool comm_split = true;
-    Env::init(comm_split);    
+    Env::init(comm_split);  
+    double time1 = Env::clock();    
     
     if(argc != 4)  {
         if(Env::is_master) {
@@ -63,7 +62,7 @@ int main(int argc, char **argv)
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _NONE_; // Do not turn on
+    Filtering_type FT = _SOME_; // Do not turn on
     bool parread = true;
     double time1 = 0, time2 = 0;
     
@@ -118,9 +117,9 @@ int main(int argc, char **argv)
     VR.free();
 	GR.free();
     */
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    Env::print_time("Triangle counting end-to-end", elapsed_secs);
+
+    double time2 = Env::clock();    
+    Env::print_time("Triangle counting end-to-end", time2 - time1);
     Env::finalize();
     return(0);
 }
