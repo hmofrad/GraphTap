@@ -50,9 +50,6 @@ int main(int argc, char **argv)
         Env::exit(1);
     }
     
-    
-
-    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
@@ -64,7 +61,6 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_; // Do not turn on
     bool parread = true;
-    double time1 = 0, time2 = 0;
     
     /* Triangle counting execution */
     Graph<wp, ip, fp> G;    
