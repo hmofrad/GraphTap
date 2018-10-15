@@ -24,8 +24,17 @@ using wp = uint32_t;
 using wp = em;
 #endif
 
-using ip = uint32_t; // Integer precision (default is uint32_t)
-using fp = double;   // Fractional precision (default is float)
+/*  Integer precision (default is uint32_t)
+    Controls the number of vertices,
+    the engine can possibly process
+*/
+using ip = uint32_t;
+
+/*
+    Fractional precision (default is float)
+    Controls the precision of values.
+*/
+using fp = uint32_t;
 
 int main(int argc, char **argv)
 { 
@@ -68,34 +77,4 @@ int main(int argc, char **argv)
     Env::print_time("Connected component", time2 - time1);
     Env::finalize();
     return(0);
-
-    /*
-    fp x = 0, y = 0, v = 0, s = 0;
-    bool vid_flag = true;
-    V.init(init_func);
-    
-    uint32_t iter = 0;
-    uint32_t niters = num_iterations;
-    while(iter < niters)
-    {
-        iter++;
-        V.scatter_gather(message_func);
-        V.combine(combine_func);   
-        V.apply(apply_func);
-        Env::print_me("Connected component, iteration: ", iter);
-        //V.display(); 
-    }
-    time2 = Env::clock();    
-    Env::print_time("Vertex execution", time2 - time1);
-    
-    V.display(); 
-    
-    V.free();
-    G.free();
-	
-    time2 = Env::clock();
-    Env::print_time("Triangle couting", time2 - time1);
-    Env::finalize();
-    return(0);
-    */
 }
