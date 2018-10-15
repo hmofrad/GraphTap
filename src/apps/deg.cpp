@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <ctime>
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
@@ -39,9 +38,9 @@ using fp = double;
 
 int main(int argc, char **argv)
 {
-    clock_t begin = clock();
     bool comm_split = true;
     Env::init(comm_split);
+    double time1 = Env::clock();
     
     if(argc != 4)  {
         if(Env::is_master) {
@@ -75,9 +74,8 @@ int main(int argc, char **argv)
     V.free();
     G.free();
     
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    Env::print_time("Degree end-to-end", elapsed_secs);
+    double time2 = Env::clock();
+    Env::print_time("Degree end-to-end", time2 - time1);
     Env::finalize();
     return(0);
 }
