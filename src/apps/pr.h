@@ -41,7 +41,7 @@ class PageRank_Program : public Vertex_Program<Weight, Integer_Type, Fractional_
         {
             Fractional_Type tmp = v;
             v = alpha + (1.0 - alpha) * y;
-            return (fabs(v - tmp) < tol);            
+            return (fabs(v - tmp) > tol);         
         }
 };
 #endif
