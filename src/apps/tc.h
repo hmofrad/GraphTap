@@ -17,7 +17,7 @@ class TC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
             v1 = v2;
             return(true);
         }
-        virtual bool applicator(Fractional_Type &y, Fractional_Type &v) 
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
         {
             return(true);
         }      
