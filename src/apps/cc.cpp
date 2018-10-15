@@ -6,13 +6,12 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <functional>
-
-#include "cc.h"
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
 #include "vp/vertex_program.hpp"
+
+#include "cc.h"
 
 /* HAS_WEIGHT macro will be defined by compiler.
    So, you don't have to change this.   
@@ -29,9 +28,10 @@ using ip = uint32_t; // Integer precision (default is uint32_t)
 using fp = double;   // Fractional precision (default is float)
 
 int main(int argc, char **argv)
-{
+{ 
     bool comm_split = true;
     Env::init(comm_split);    
+    double time1 = Env::clock();   
     
     if(argc != 4)  {
         if(Env::is_master) {
@@ -50,28 +50,26 @@ int main(int argc, char **argv)
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _SOME_;
     bool parread = true;
-    double time1 = 0;
-    double time2 = 0;
     
     /* Connected component execution */
-    time1 = Env::clock();
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    
-    /* Register connected components function pointer handles */
-    CC_state<wp, ip, fp> Cc_state;
-    auto init_func    = std::bind(&CC_state<wp, ip, fp>::init_func, Cc_state, std::placeholders::_1, std::placeholders::_2);    
-    auto message_func = std::bind(&CC_state<wp, ip, fp>::message_func, Cc_state, std::placeholders::_1, std::placeholders::_2);
-    auto combine_func = std::bind(&CC_state<wp, ip, fp>::combine_func, Cc_state, std::placeholders::_1, std::placeholders::_2);    
-    auto apply_func   = std::bind(&CC_state<wp, ip, fp>::apply_func, Cc_state, std::placeholders::_1, std::placeholders::_2);
-
     bool stationary = false;
     bool tc_family = false;
     bool gather_depends_on_apply = true;
     Ordering_type OT = _ROW_;
-    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, OT);    
+    CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);   
+    V.execute(num_iterations);
+    V.free();
+    G.free();
+    double time2 = Env::clock();
+    Env::print_time("Connected component", time2 - time1);
+    Env::finalize();
+    return(0);
+
+    /*
     fp x = 0, y = 0, v = 0, s = 0;
     bool vid_flag = true;
     V.init(init_func);
@@ -99,4 +97,5 @@ int main(int argc, char **argv)
     Env::print_time("Triangle couting", time2 - time1);
     Env::finalize();
     return(0);
+    */
 }
