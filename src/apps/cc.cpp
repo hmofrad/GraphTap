@@ -68,9 +68,12 @@ int main(int argc, char **argv)
     bool stationary = false;
     bool tc_family = false;
     bool gather_depends_on_apply = true;
+    bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
-    CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);   
+    CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
     V.execute(num_iterations);
+    V.checksum();
+    V.display();
     V.free();
     G.free();
     double time2 = Env::clock();
