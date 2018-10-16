@@ -70,9 +70,12 @@ int main(int argc, char **argv)
     bool stationary = true;
     bool tc_family = false;
     bool gather_depends_on_apply = false;
+    bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
-    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
     V.execute(1);
+    V.checksum();
+    V.display();
     G.free();
     Env::barrier();
     
@@ -80,10 +83,12 @@ int main(int argc, char **argv)
     transpose = true;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    PageRank_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);
+    PageRank_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
     VR.initialize(&V);
     V.free();
     VR.execute(num_iterations);
+    VR.checksum();
+    VR.display();
     GR.free();
     VR.free();
     
