@@ -25,7 +25,8 @@ class Vertex_Program
     public:
         //Vertex_Program();
         Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, 
-                        bool stationary_ = false, bool gather_depends_on_apply_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
+                        bool stationary_ = false, bool gather_depends_on_apply_ = false, 
+                        bool gather_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
         virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) { return(stationary);}
@@ -42,12 +43,15 @@ class Vertex_Program
         //void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
         void initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
         void free();
+        void checksum();
+        void display();
         
         bool stationary;
         bool gather_depends_on_apply;
         bool tc_family;
         bool already_initialized = false;
         bool check_for_convergence = false;
+        bool gather_depends_on_iter = false;
     
     protected:        
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
@@ -79,8 +83,6 @@ class Vertex_Program
         void wait_for_sends();
         void wait_for_recvs();
         bool has_converged();
-        void checksum();
-        void display();
         
 
         
@@ -189,12 +191,14 @@ class Vertex_Program
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
          Graph<Weight,Integer_Type, Fractional_Type> &Graph,
-         bool stationary_, bool gather_depends_on_apply_, bool tc_family_, Ordering_type ordering_type_)
+         bool stationary_, bool gather_depends_on_apply_, bool gather_depends_on_iter_, 
+         bool tc_family_, Ordering_type ordering_type_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
     stationary = stationary_;
     gather_depends_on_apply = gather_depends_on_apply_;
+    gather_depends_on_iter = gather_depends_on_iter_;
     tc_family = tc_family_;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
@@ -409,7 +413,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
     t1 = Env::clock();
     
     if(not already_initialized)
-            initialize();
+        initialize();
         
     if(not tc_family)
     {
@@ -433,8 +437,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
                     break;
             }
         }
-        checksum();
-        display();
     }
     else if(tc_family)
     {
@@ -577,16 +579,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     uint32_t bo = accu_segment_col;
     char *b_data = (char *) B->data[bo];
     Integer_Type b_nitems = B->nitems[bo];
-    
+    printf("?????????? %d %d\n", gather_depends_on_apply, gather_depends_on_iter);
     Fractional_Type tmp = 0;
     if(filtering_type == _NONE_)
     {
-        if(gather_depends_on_apply)
+        if(gather_depends_on_apply or gather_depends_on_iter)
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 tmp = i + (owned_segment * tile_height);
                 b_data[i] = initializer(v_data[i], tmp);
+                printf("%d %d %f\n", i, b_data[i], v_data[i]);
                 //b_data[i] = initializer(v_data[i], tmp);
             }
         }
@@ -602,7 +605,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         auto &j_data = (*J)[bo];
         //char *j_data = (char *) J->data[bo];
         //Integer_Type j_nitems = J->nitems[bo];
-        if(gather_depends_on_apply)
+        if(gather_depends_on_apply or gather_depends_on_iter)
         {
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
@@ -681,7 +684,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         Y.push_back(Y_);
     }    
     
-    if(gather_depends_on_apply)
+    if(gather_depends_on_apply or gather_depends_on_iter)
     {
         uint32_t yi = 0;
         uint32_t yo = 0;
@@ -1547,9 +1550,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
-            //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+            printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
             c_data[i] = applicator(v_data[i], y_data[i]);
-            //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+            printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
             //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
@@ -1618,7 +1621,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         }
     }
     
-    if(not gather_depends_on_apply)
+    if(not gather_depends_on_apply or gather_depends_on_iter)
     {
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
             clear(Y[i]);
