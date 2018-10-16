@@ -68,9 +68,10 @@ int main(int argc, char **argv)
     bool stationary = false;
     bool tc_family = true;
     bool gather_depends_on_apply = false;
+    bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     // Run 1st vertex program and calculate ingoing adjacency list
-    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
     V.execute(1);
     G.free();
     Env::barrier();
@@ -79,40 +80,12 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     // Run 2nd vertex program and calculate outgoing adjacency list
-    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);  
+    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);  
     VR.initialize(&V);
     V.free();
     VR.execute(1);
     VR.free();
     GR.free();
-    
-    /*
-    // Register triangle counting function pointer handles
-    TC_state<wp, ip, fp> Tc_state;
-    auto initializer = std::bind(&TC_state<wp, ip, fp>::initializer, Tc_state, std::placeholders::_1, std::placeholders::_2);
-    auto combiner    = std::bind(&TC_state<wp, ip, fp>::combiner,    Tc_state, std::placeholders::_1, std::placeholders::_2);    
-    auto applicator  = std::bind(&TC_state<wp, ip, fp>::applicator,  Tc_state, std::placeholders::_1, std::placeholders::_2);
-    // Run 1st vertex program and calculate ingoing adjacency list
-    time1 = Env::clock();
-    Vertex_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
-    V.init(initializer);
-    V.combine(combiner);
-    V.apply(applicator);  
-    G.free();
-    
-    fp v = 0;
-    transpose = false;
-    Graph<wp, ip, fp> GR;    
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    // Run 2nd vertex program and calculate outgoing adjacency list
-	Vertex_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, tc_family, OT);  
-    VR.init(initializer, v, &V);
-    V.free();
-    VR.combine(combiner);
-    VR.apply(applicator);  
-    VR.free();
-	GR.free();
-    */
 
     double time2 = Env::clock();    
     Env::print_time("Triangle counting end-to-end", time2 - time1);
