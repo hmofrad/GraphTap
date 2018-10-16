@@ -68,9 +68,12 @@ int main(int argc, char **argv)
     bool stationary = true;
     bool tc_family = false;
     bool gather_depends_on_apply = false;
+    bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
-    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, tc_family, OT);
+    Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
     V.execute(1);
+    V.checksum();
+    V.display();
     V.free();
     G.free();
     
