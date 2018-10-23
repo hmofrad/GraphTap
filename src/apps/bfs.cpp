@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     Filtering_type FT = _NONE_;
     bool parread = true;
     
-    // Breadth First Search (BFS) execution 
+    /* Breadth First Search (BFS) execution */
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     G.free();    
 
     double time2 = Env::clock();
-    Env::print_time("Breadth First Search (BFS)", time2 - time1);
+    Env::print_time("Breadth First Search (BFS) end-to-end", time2 - time1);
     Env::finalize();
     return(0);
 }
