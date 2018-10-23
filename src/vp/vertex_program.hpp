@@ -26,15 +26,16 @@ class Vertex_Program
         //Vertex_Program();
         Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, 
                         bool stationary_ = false, bool gather_depends_on_apply_ = false, 
-                        bool gather_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
+                        bool apply_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
         virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) { return(stationary);}
         virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
         virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) { ; }
         virtual bool applicator(Fractional_Type &v, Fractional_Type &y) { return(true); }
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y, Integer_Type iteration_) { return(true); }
         
-        void execute(uint32_t niters = 0);
+        void execute(Integer_Type num_iterations = 0);
         
         //void init(std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_,
         //     Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
@@ -51,7 +52,8 @@ class Vertex_Program
         bool tc_family;
         bool already_initialized = false;
         bool check_for_convergence = false;
-        bool gather_depends_on_iter = false;
+        bool apply_depends_on_iter = false;
+        Integer_Type iteration = 0;
     
     protected:        
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value);
@@ -191,14 +193,14 @@ class Vertex_Program
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
          Graph<Weight,Integer_Type, Fractional_Type> &Graph,
-         bool stationary_, bool gather_depends_on_apply_, bool gather_depends_on_iter_, 
+         bool stationary_, bool gather_depends_on_apply_, bool apply_depends_on_iter_, 
          bool tc_family_, Ordering_type ordering_type_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
     A = Graph.A;
     stationary = stationary_;
     gather_depends_on_apply = gather_depends_on_apply_;
-    gather_depends_on_iter = gather_depends_on_iter_;
+    apply_depends_on_iter = apply_depends_on_iter_;
     tc_family = tc_family_;
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
@@ -407,7 +409,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t niters)
+void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type num_iterations)
 {
     double t1, t2;
     t1 = Env::clock();
@@ -417,25 +419,29 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(uint32_t nit
         
     if(not tc_family)
     {
-        if(!niters)
+        if(!num_iterations)
         {
             check_for_convergence = true; 
-            niters = INF;
+            //num_iterations = INF;
         }
 
-        uint32_t iter = 0;
-        while(iter < niters)
+        //uint32_t iter = 0;
+        //while(iteration < num_iterations)
+        while(true)
         {
             scatter_gather();
             combine();
             apply();
-            iter++;
-            Env::print_me("Iteration: ", iter);
+            iteration++;
+            Env::print_me("Iteration: ", iteration);
+            //printf("num_iteration=%d %d\n", num_iterations, check_for_convergence);
             if(check_for_convergence)
             {
                 if(has_converged())
                     break;
             }
+            else if(iteration >= num_iterations)
+                break;
         }
     }
     else if(tc_family)
@@ -579,17 +585,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     uint32_t bo = accu_segment_col;
     char *b_data = (char *) B->data[bo];
     Integer_Type b_nitems = B->nitems[bo];
-    printf("?????????? %d %d\n", gather_depends_on_apply, gather_depends_on_iter);
+    //printf("?????????? %d %d\n", gather_depends_on_apply, apply_depends_on_iter);
     Fractional_Type tmp = 0;
     if(filtering_type == _NONE_)
     {
-        if(gather_depends_on_apply or gather_depends_on_iter)
+        if(gather_depends_on_apply or apply_depends_on_iter)
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 tmp = i + (owned_segment * tile_height);
                 b_data[i] = initializer(v_data[i], tmp);
-                printf("%d %d %f\n", i, b_data[i], v_data[i]);
+                if(!Env::rank)
+                    printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
+                //if(Env::rank == 1)
+                //    printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
                 //b_data[i] = initializer(v_data[i], tmp);
             }
         }
@@ -605,7 +614,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         auto &j_data = (*J)[bo];
         //char *j_data = (char *) J->data[bo];
         //Integer_Type j_nitems = J->nitems[bo];
-        if(gather_depends_on_apply or gather_depends_on_iter)
+        if(gather_depends_on_apply or apply_depends_on_iter)
         {
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
@@ -684,7 +693,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         Y.push_back(Y_);
     }    
     
-    if(gather_depends_on_apply or gather_depends_on_iter)
+    if(gather_depends_on_apply or apply_depends_on_iter)
     {
         uint32_t yi = 0;
         uint32_t yo = 0;
@@ -809,17 +818,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
     Fractional_Type *s_data = (Fractional_Type *) S->data[so];
     Integer_Type s_nitems = S->nitems[so];
     
-    //uint32_t co = 0;
-    //char *c_data = (char *) C->data[co];
-    //Integer_Type c_nitems = C->nitems[co];
+    uint32_t co = 0;
+    char *c_data = (char *) C->data[co];
+    Integer_Type c_nitems = C->nitems[co];
     
     if(filtering_type == _NONE_)
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-           // printf("1.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
+            //printf("1.msg=i=%d x=%f v=%f s=%f\n", i, x_data[i], v_data[i], s_data[i]);
             x_data[i] = messenger(v_data[i], s_data[i]);
-            //printf("2.msg=%f %f %f\n", x_data[i], v_data[i], s_data[i]);
+            if(!Env::rank)
+            printf("2.msg=i=%d x=%f c=%d v=%f s=%f\n", i, x_data[i], c_data[i], v_data[i], s_data[i]);
             //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
@@ -933,6 +943,39 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
         in_requests.clear();
         MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests.clear();
+        
+        if(not stationary)
+        {
+            for(uint32_t i = 0; i < rank_ncolgrps; i++)
+            {
+                char *bj_data = (char *) B->data[i];
+                Integer_Type bj_nitems = B->nitems[i];
+                int32_t col_group = B->local_segments[i];
+                if(Env::comm_split)
+                {
+                    leader = leader_ranks_cg[col_group];
+                    if(leader != Env::rank_cg)
+                    {
+                        MPI_Irecv(bj_data, bj_nitems, TYPE_CHAR, leader, col_group, colgrps_communicator, &request);
+                        in_requests.push_back(request);
+                    }
+                }
+                else
+                {
+                    leader = leader_ranks[col_group];
+                    if(leader != Env::rank)
+                    {
+                        MPI_Irecv(bj_data, bj_nitems, TYPE_CHAR, leader, col_group, Env::MPI_WORLD, &request);
+                        in_requests.push_back(request);
+                    }
+                }
+            }
+            
+            MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+            in_requests.clear();
+            MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+            out_requests.clear();        
+        }
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -968,8 +1011,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast()
                 fprintf(stderr, "Invalid communicator\n");
                 Env::exit(1);
             }
-        }
-        
+        }        
         if(not stationary)
         {
             for(uint32_t i = 0; i < rank_ncolgrps; i++)
@@ -1117,7 +1159,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                             ////{
                                 //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                                 combiner(y_data[IA[i]], x_data[j]);
-                                //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
+                                //if(!Env::rank)
+                                    //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                                 //y_data[IA[i]] += x_data[j];
                             //}
                             #endif
@@ -1135,7 +1178,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                                     combiner(y_data[IA[i]], A[i] * x_data[j]);
                             #else
                                 if(b_data[j])
+                                {
+                                    if(!Env::rank)
+                                    printf("1.comb:x[%d]->y[%d] %f -> %f\n", j, IA[i], x_data[j], y_data[IA[i]]);
                                     combiner(y_data[IA[i]], x_data[j]);
+                                   if(!Env::rank)
+                                        printf("2.comb:x[%d]->y[%d] %f -> %f\n", j, IA[i], x_data[j], y_data[IA[i]]);
+                                }
                                 
                             #endif
                         }
@@ -1144,7 +1193,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                     //printf("\n");
                     
                 }
-                
             }
             else if(ordering_type == _COL_)
             {
@@ -1529,11 +1577,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
         Integer_Type yj_nitems = Yp->nitems[accu];
 
-        for(uint32_t i = 0; i < yj_nitems; i++)
+        if(not apply_depends_on_iter)
         {
-            if(yj_data[i])
-                y_data[i] += yj_data[i];
-        }    
+            for(uint32_t i = 0; i < yj_nitems; i++)
+            {
+                //if(!Env::rank)
+                  //  printf("[%d %f %f] ", i, yj_data[i], y_data[i]);
+                if(yj_data[i])
+                    y_data[i] += yj_data[i];
+            }   
+        }
+        else
+        {
+            for(uint32_t i = 0; i < yj_nitems; i++)
+            {
+                if(!Env::rank)
+                    printf("[%d %f %f] ", i, yj_data[i], y_data[i]);
+                if(yj_data[i] != INF)
+                    y_data[i] += yj_data[i];
+            }   
+            
+        }
+        
+        if(!Env::rank)
+            printf("\n");
     }
     
     uint32_t vo = 0;
@@ -1543,16 +1610,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     uint32_t co = 0;
     char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
-
+    
+    uint32_t bo = accu_segment_col;
+    char *b_data = (char *) B->data[bo];
+    Integer_Type b_nitems = B->nitems[bo];
+    
+    //printf("\n");
+    //Env::barrier();
     if(filtering_type == _NONE_)
     {
+        //printf("\n");
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
-            printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-            c_data[i] = applicator(v_data[i], y_data[i]);
-            printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+            if(!Env::rank)
+            printf("1.app:i=%d c=%d  b=%d y=%f v=%f\n", i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            if(apply_depends_on_iter)
+            {
+               // if(b_data[i])
+                    c_data[i] = applicator(v_data[i], y_data[i], iteration);   
+                //else
+                  ///  c_data[i] = 0;
+            }
+            else
+                c_data[i] = applicator(v_data[i], y_data[i]);
+            if(!Env::rank)
+            printf("2.app:i=%d c=%d b=%d y=%f v=%f\n", i, c_data[i], b_data[i], y_data[i], v_data[i]);
             //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
@@ -1570,8 +1654,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             if(i_data[i])
             {
                 //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                c_data[i] = applicator(v_data[i], y_data[j]);
-                //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
+                if(apply_depends_on_iter)
+                    c_data[i] = applicator(v_data[i], y_data[j], iteration);
+                else
+                    c_data[i] = applicator(v_data[i], y_data[j]);
+                printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
                 j++;
@@ -1581,7 +1668,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
                 Fractional_Type tmp = 0, tmp1 = 0;
                 //printf("%f %d\n", v_data[i], fabs(v_data[i] - (0.15 + (1.0 - 0.15) * tmp)) > 1e-5);    
                 //printf("3.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                c_data[i] = applicator(tmp1, tmp);
+                if(apply_depends_on_iter)
+                    c_data[i] = applicator(tmp1, tmp, iteration);    
+                else
+                    c_data[i] = applicator(tmp1, tmp);
                 //printf("4.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, 0, 0, 0);
@@ -1621,7 +1711,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         }
     }
     
-    if(not gather_depends_on_apply or gather_depends_on_iter)
+    if(not gather_depends_on_apply and not apply_depends_on_iter)
     {
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
             clear(Y[i]);
@@ -1962,15 +2052,32 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
     for(uint32_t i = 0; i < c_nitems; i++)
     {
         if(not c_data[i]) 
-            c_sum_local ++;
+            c_sum_local++;
     }
    
     //printf("%lu %d\n", c_sum_local, tile_height);
     //if(c_sum_local == tile_height)
     //{
-        MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-        if(c_sum_gloabl == (tile_height * Env::nranks))
-            converged = true;
+    MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    if(c_sum_gloabl == (tile_height * Env::nranks))
+        converged = true;
+
+    if(converged and apply_depends_on_iter)
+    {
+        uint64_t v_sum_local = 0, v_sum_gloabl = 0;
+        uint32_t vo = 0;
+        Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
+        Integer_Type v_nitems = V->nitems[vo];  
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(v_data[i] != INF) 
+                v_sum_local++;
+        }
+        MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        if(Env::is_master)
+            printf("Reachable Vertices: %lu\n", v_sum_gloabl);
+    }
+        
     //}
     return(converged);   
 }
@@ -2006,6 +2113,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     MPI_Allreduce(&s_local, &s_gloabl, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         printf("Score checksum: %lu\n", s_gloabl);
+    
 }
 
 
@@ -2033,5 +2141,43 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
             printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
         }  
     }
+    
+    /*
+    if(Env::rank == 3)
+    {
+        Triple<Weight, Integer_Type> pair, pair1;
+        for(uint32_t i = 0; i < count; i++)
+        {
+            pair.row = i;
+            pair.col = 0;
+            pair1 = A->base(pair, owned_segment, owned_segment);
+            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+        }  
+    }
+    
+    if(Env::rank == 1)
+    {
+        Triple<Weight, Integer_Type> pair, pair1;
+        for(uint32_t i = 0; i < count; i++)
+        {
+            pair.row = i;
+            pair.col = 0;
+            pair1 = A->base(pair, owned_segment, owned_segment);
+            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+        }  
+    }
+    
+    if(Env::rank == 2)
+    {
+        Triple<Weight, Integer_Type> pair, pair1;
+        for(uint32_t i = 0; i < count; i++)
+        {
+            pair.row = i;
+            pair.col = 0;
+            pair1 = A->base(pair, owned_segment, owned_segment);
+            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+        }  
+    }
+    */
 }
 #endif
