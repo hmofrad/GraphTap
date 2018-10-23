@@ -1565,8 +1565,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             
             for(uint32_t i = 0; i < yj_nitems; i++)
             {
-                if(Env::rank == 3)
-                    printf("i=%d yj=%d y=%d b=%d \n", i, yj_data[i], y_data[i], b_data[i]);
+                //if(Env::rank == 3)
+                //    printf("i=%d yj=%d y=%d b=%d \n", i, yj_data[i], y_data[i], b_data[i]);
                 if(yj_data[i] != INF)
                 //if(b_data[i])
                     y_data[i] += yj_data[i];
@@ -1576,8 +1576,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             
         }
         
-        if(!Env::rank)
-            printf("\n");
+        //if(!Env::rank)
+        //    printf("\n");
     }
     
     uint32_t vo = 0;
@@ -2110,6 +2110,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }
+    /*
     Env::barrier();
     if(Env::rank == 3)
     {
@@ -2123,6 +2124,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }    
-    
+    */
 }
 #endif
