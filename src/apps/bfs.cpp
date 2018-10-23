@@ -34,7 +34,7 @@ using ip = uint32_t;
     Fractional precision (default is float)
     Controls the precision of values.
 */
-using fp = double;
+using fp = uint32_t;
 
 int main(int argc, char **argv)
 { 
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     
     if(argc != 4)  {
         if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations>]\""
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<root>]\""
                       << std::endl;
         }    
         Env::exit(1);
@@ -53,7 +53,8 @@ int main(int argc, char **argv)
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+    uint32_t root = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+    uint32_t num_iterations = 0;
     bool directed = false;
     bool transpose = false;
     bool acyclic = false;
@@ -63,7 +64,7 @@ int main(int argc, char **argv)
     Filtering_type FT = _NONE_;
     bool parread = true;
     
-    // Connected component execution 
+    // Breadth First Search (BFS) execution 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
     bool apply_depends_on_iter  = true;
     Ordering_type OT = _ROW_;
     BFS_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);   
-    
+    V.root = root;
     V.execute(num_iterations);
     V.checksum();
     V.display();
@@ -81,7 +82,7 @@ int main(int argc, char **argv)
     G.free();    
 
     double time2 = Env::clock();
-    Env::print_time("Connected component", time2 - time1);
+    Env::print_time("Breadth First Search (BFS)", time2 - time1);
     Env::finalize();
     return(0);
 }
