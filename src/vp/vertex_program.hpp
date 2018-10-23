@@ -38,12 +38,6 @@ class Vertex_Program
         virtual bool applicator(Fractional_Type &v, Fractional_Type &y, Integer_Type iteration_) { return(true); }
         
         void execute(Integer_Type num_iterations = 0);
-        
-        //void init(std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_,
-        //     Fractional_Type v = 0, Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
-        //void scatter_gather(std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger_);
-        //void combine(std::function<void(Fractional_Type&, Fractional_Type&)> combiner_);
-        //void apply(std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_);
         void initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
         void free();
         void checksum();
@@ -87,16 +81,6 @@ class Vertex_Program
         void wait_for_sends();
         void wait_for_recvs();
         bool has_converged();
-        
-
-        
-        
-        
-        //std::function<bool(Fractional_Type&, Fractional_Type&)> initializer;
-        //std::function<Fractional_Type(Fractional_Type&, Fractional_Type&)> messenger;
-        //std::function<void(Fractional_Type&, Fractional_Type&)> combiner;
-        //std::function<bool(Fractional_Type&, Fractional_Type&)> applicator;
-        
         
         struct Triple<Weight, Integer_Type> tile_info( 
                        const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
@@ -153,20 +137,7 @@ class Vertex_Program
         //std::vector<std::vector<Integer_Type>> *IV;
         std::vector<std::vector<char>> *J;
         //std::vector<std::vector<Integer_Type>> *JV;
-        
-        
-        /*
-        unsigned char **I;
-        Integer_Type **IV;
-        unsigned char **J;
-        Integer_Type **JV;
-        */
-        /*
-        Vector<Weight, Integer_Type, char> *I;
-        Vector<Weight, Integer_Type, Integer_Type> *IV;
-        Vector<Weight, Integer_Type, char> *J;
-        Vector<Weight, Integer_Type, Integer_Type> *JV;
-        */
+
         std::vector<Integer_Type> nnz_row_sizes_loc;
         std::vector<Integer_Type> nnz_col_sizes_loc;
         std::vector<Integer_Type> nnz_row_sizes_all;
@@ -186,9 +157,6 @@ class Vertex_Program
         std::vector<std::vector<Integer_Type>> inboxes; // Temporary buffers for deserializing the adjacency lists
         std::vector<std::vector<Integer_Type>> outboxes;// Temporary buffers for  serializing the adjacency lists
 };
-
-//template<typename Weight, typename Integer_Type, typename Fractional_Type>
-//Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program() {};
 
 /* Support or row-wise tile processing designated to original matrix and 
    column-wise tile processing designated to transpose of the matrix. */                
@@ -1486,12 +1454,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
         Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
         Integer_Type y_nitems = Yp->nitems[yo];
         Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
-        char *b_data = (char *) B->data[xi];
-        
+
         if(stationary)
             spmv(y_data, x_data, tile);
         else
+        {
+            char *b_data = (char *) B->data[xi];
             spmv(y_data, x_data, tile, b_data);
+        }
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
@@ -1533,10 +1503,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     }
     wait_for_all();
 }
-
-//template<typename Weight, typename Integer_Type, typename Fractional_Type>
-//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply(
-//                            std::function<bool(Fractional_Type&, Fractional_Type&)> applicator_)
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply()
@@ -1601,8 +1567,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             
         }
         
-        if(!Env::rank)
-            printf("\n");
+        //if(!Env::rank)
+        //    printf("\n");
     }
     
     uint32_t vo = 0;
@@ -1613,9 +1579,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
     
-    uint32_t bo = accu_segment_col;
-    char *b_data = (char *) B->data[bo];
-    Integer_Type b_nitems = B->nitems[bo];
+    //uint32_t bo = accu_segment_col;
+    //char *b_data = (char *) B->data[bo];
+    //Integer_Type b_nitems = B->nitems[bo];
     
     //printf("\n");
     //Env::barrier();
@@ -1909,7 +1875,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
         }
         MPI_Allreduce(&num_triangles_local, &num_triangles_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(Env::is_master)
-            printf("\nNum_triangles = %lu\n", num_triangles_global);
+            std::cout << "\nNum_triangles: " << num_triangles_global << std::endl;
+
         for (uint32_t i = 0; i < rank_nrowgrps; i++)
         {
             D[i].clear();
@@ -2057,30 +2024,10 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
             c_sum_local++;
     }
    
-    //printf("%lu %d\n", c_sum_local, tile_height);
-    //if(c_sum_local == tile_height)
-    //{
     MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(c_sum_gloabl == (tile_height * Env::nranks))
         converged = true;
 
-    if(converged and apply_depends_on_iter)
-    {
-        uint64_t v_sum_local = 0, v_sum_gloabl = 0;
-        uint32_t vo = 0;
-        Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
-        Integer_Type v_nitems = V->nitems[vo];  
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            if(v_data[i] != INF) 
-                v_sum_local++;
-        }
-        MPI_Allreduce(&v_sum_local, &v_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-        if(Env::is_master)
-            printf("Reachable Vertices: %lu\n", v_sum_gloabl);
-    }
-        
-    //}
     return(converged);   
 }
 
@@ -2088,27 +2035,32 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 {
-    double v_sum_local = 0, v_sum_global = 0;
+    uint64_t v_sum_local = 0, v_sum_global = 0;
     
     uint32_t vo = 0;
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
     Integer_Type v_nitems = V->nitems[vo];
     
-    v_sum_local = 0;  
-    for(uint32_t i = 0; i < v_nitems; i++)
-       v_sum_local += v_data[i];
-   
-    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
-    if(Env::is_master)
+    if(apply_depends_on_iter)
     {
-        std::cout << std::fixed << "Value checksum:" << v_sum_global << std::endl;
-        //if(std::is_same<Fractional_Type, double>::value 
-        //or std::is_same<Fractional_Type, float>::value
-          //  printf("Value checksum: %f %d\n", v_sum_gloabl, std::is_same<Fractional_Type, double>::value);
-        //else
-            //printf("Value checksum: %d \n", v_sum_gloabl);
-        //std::cout << typeid(Fractional_Type).name() << std::endl;
+        uint64_t v_sum_local_ = 0, v_sum_global_ = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(v_data[i] != INF) 
+                v_sum_local_++;
+        }
+
+        MPI_Allreduce(&v_sum_local_, &v_sum_global_, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        if(Env::is_master)
+            printf("Reachable Vertices: %lu\n", v_sum_global_);
     }
+    
+    for(uint32_t i = 0; i < v_nitems; i++)
+        v_sum_local += v_data[i];
+   
+    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    if(Env::is_master)
+        std::cout << std::fixed << "Value checksum:" << v_sum_global << std::endl;
     
     uint64_t s_local = 0, s_global = 0;
     uint32_t so = 0;
@@ -2116,15 +2068,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
     Integer_Type s_nitems = S->nitems[so];
 
     for(uint32_t i = 0; i < s_nitems; i++)
-    {
         s_local += s_data[i];
-    }
     
-    MPI_Allreduce(&s_local, &s_global, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&s_local, &s_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
         std::cout << std::fixed << "Score checksum:" << s_global << std::endl;
-        //printf("Score checksum: %lu\n", s_gloabl);
-    
 }
 
 
@@ -2149,47 +2097,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
             pair.row = i;
             pair.col = 0;
             pair1 = A->base(pair, owned_segment, owned_segment);
-            std::cout << std::fixed << "Rank[" << Env::rank << "],value=[" << pair1.row << "]=" << v_data[i] << ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
-            //printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
+            std::cout << std::fixed << "Rank[" << Env::rank << "],value=[" << pair1.row << "]=" << v_data[i] <<
+                                     ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }
-    
-    /*
-    if(Env::rank == 3)
-    {
-        Triple<Weight, Integer_Type> pair, pair1;
-        for(uint32_t i = 0; i < count; i++)
-        {
-            pair.row = i;
-            pair.col = 0;
-            pair1 = A->base(pair, owned_segment, owned_segment);
-            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
-        }  
-    }
-    
-    if(Env::rank == 1)
-    {
-        Triple<Weight, Integer_Type> pair, pair1;
-        for(uint32_t i = 0; i < count; i++)
-        {
-            pair.row = i;
-            pair.col = 0;
-            pair1 = A->base(pair, owned_segment, owned_segment);
-            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
-        }  
-    }
-    
-    if(Env::rank == 2)
-    {
-        Triple<Weight, Integer_Type> pair, pair1;
-        for(uint32_t i = 0; i < count; i++)
-        {
-            pair.row = i;
-            pair.col = 0;
-            pair1 = A->base(pair, owned_segment, owned_segment);
-            printf("Rank[%d],Value[%2d]=%f,Score[%2d]=%f\n",  Env::rank, pair1.row, v_data[i], pair1.row, s_data[i]);
-        }  
-    }
-    */
 }
 #endif
