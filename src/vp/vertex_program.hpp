@@ -412,6 +412,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
             }
             else if(iteration >= num_iterations)
                 break;
+            //if(iteration == 2)
+            //    break;
         }
     }
     else if(tc_family)
@@ -1557,18 +1559,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         }
         else
         {
+            uint32_t bo = accu_segment_col;
+            char *b_data = (char *) B->data[bo];
+            Integer_Type b_nitems = B->nitems[bo];
+            
             for(uint32_t i = 0; i < yj_nitems; i++)
             {
-                //if(!Env::rank)
-                //    printf("[%d %f %f] ", i, yj_data[i], y_data[i]);
+                if(Env::rank == 3)
+                    printf("i=%d yj=%d y=%d b=%d \n", i, yj_data[i], y_data[i], b_data[i]);
                 if(yj_data[i] != INF)
+                //if(b_data[i])
                     y_data[i] += yj_data[i];
+                //if(!Env::rank)
+                //    printf("2.[i=%d yj=%d y=%d] \n", i, yj_data[i], y_data[i]);
             }   
             
         }
         
-        //if(!Env::rank)
-        //    printf("\n");
+        if(!Env::rank)
+            printf("\n");
     }
     
     uint32_t vo = 0;
@@ -2101,5 +2110,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }
+    Env::barrier();
+    if(Env::rank == 3)
+    {
+        Triple<Weight, Integer_Type> pair, pair1;
+        for(uint32_t i = 0; i < count; i++)
+        {
+            pair.row = i;
+            pair.col = 0;
+            pair1 = A->base(pair, owned_segment, owned_segment);
+            std::cout << std::fixed << "Rank[" << Env::rank << "],value=[" << pair1.row << "]=" << v_data[i] <<
+                                     ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
+        }  
+    }    
+    
 }
 #endif
