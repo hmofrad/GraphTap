@@ -34,7 +34,7 @@ using ip = uint32_t;
     Fractional precision (default is float)
     Controls the precision of values.
 */
-using fp = double; 
+using fp = uint64_t; 
 
 int main(int argc, char **argv)
 {
@@ -68,10 +68,10 @@ int main(int argc, char **argv)
     bool stationary = false;
     bool tc_family = true;
     bool gather_depends_on_apply = false;
-    bool gather_depends_on_iter  = false;
+    bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     // Run 1st vertex program and calculate ingoing adjacency list
-    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
+    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
     V.execute(1);
     G.free();
     Env::barrier();
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     // Run 2nd vertex program and calculate outgoing adjacency list
-    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);  
+    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);  
     VR.initialize(&V);
     V.free();
     VR.execute(1);
