@@ -26,7 +26,8 @@ using wp = em;
 
 /*  Integer precision (default is uint32_t)
     Controls the number of vertices,
-    the engine can possibly process
+    the engine can possibly process.
+    Does not support more than 2B for now.
 */
 using ip = uint32_t;
 
@@ -34,7 +35,7 @@ using ip = uint32_t;
     Fractional precision (default is float)
     Controls the precision of values.
 */
-using fp = double;
+using fp = uint64_t;
 
 int main(int argc, char **argv)
 {
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+    num_iterations = 1;
     bool directed = true;
     bool transpose = false;
     bool acyclic = false;
@@ -71,7 +73,7 @@ int main(int argc, char **argv)
     bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
-    V.execute(1);
+    V.execute(num_iterations);
     V.checksum();
     V.display();
     V.free();
