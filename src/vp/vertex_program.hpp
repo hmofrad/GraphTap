@@ -569,7 +569,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             {
                 tmp = i + (owned_segment * tile_height);
                 b_data[i] = initializer(v_data[i], tmp);
-                printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
+                //printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
                 //if(!Env::rank)
                   //  printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
                 //if(Env::rank == 1)
@@ -599,7 +599,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
                 { 
                     //b_data[j] = initializer(v_data[i], tmp);
                     b_data[j] = initializer(v_data[i], tmp);
-                    printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
+                    //printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
                     j++;
                 }  
                 else                
@@ -803,10 +803,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            printf("1.R=%d,msg=i=%d x=%d v=%d s=%d\n", Env::rank, i, x_data[i], v_data[i], s_data[i]);
+            //printf("1.R=%d,msg=i=%d x=%d v=%d s=%d\n", Env::rank, i, x_data[i], v_data[i], s_data[i]);
             x_data[i] = messenger(v_data[i], s_data[i]);
             //if(!Env::rank)
-            printf("2.R=%d,msg=i=%d x=%d c=%d v=%d s=%d\n", Env::rank, i, x_data[i], c_data[i], v_data[i], s_data[i]);
+            //printf("2.R=%d,msg=i=%d x=%d c=%d v=%d s=%d\n", Env::rank, i, x_data[i], c_data[i], v_data[i], s_data[i]);
             //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
@@ -1157,10 +1157,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                                 if(b_data[j])
                                 {
                                     //if(!Env::rank)
-                                        printf("1.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
+                                       // printf("1.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
                                     combiner(y_data[IA[i]], x_data[j]);
                                     //if(!Env::rank)
-                                        printf("2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
+                                        //printf("2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
                                 }
                                 
                             #endif
@@ -1584,7 +1584,7 @@ Env::barrier();
                 for(uint32_t i = 0; i < yj_nitems; i++)
                 {
                     //if(Env::rank == 3 or Env::rank == 0)
-                        printf("1.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
+                       // printf("1.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
                     //if(y_data[i] == INF)
                     //if(yj_data[i] != INF)
                     //if(b_data[i])
@@ -1600,7 +1600,7 @@ Env::barrier();
                     //if(b_data[i])
                         
                     //if(Env::rank == 3 or Env::rank == 0)
-                        printf("2.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
+                       // printf("2.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
                 }   
             }
             
@@ -1632,7 +1632,7 @@ Env::barrier();
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
             //if(Env::rank == 3)
-            printf("1.R=%d,app:i=%d c=%d  b=%d y=%d v=%d\n", Env::rank, i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            //printf("1.R=%d,app:i=%d c=%d  b=%d y=%d v=%d\n", Env::rank, i, c_data[i], b_data[i], y_data[i], v_data[i]);
             if(apply_depends_on_iter)
             {
                // if(b_data[i])
@@ -1643,7 +1643,7 @@ Env::barrier();
             else
                 c_data[i] = applicator(v_data[i], y_data[i]);
             //if(Env::rank == 3)
-            printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            //printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
             //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
@@ -1660,13 +1660,13 @@ Env::barrier();
         {
             if(i_data[i])
             {
-                printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
+                //printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
                 //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 if(apply_depends_on_iter)
                     c_data[i] = applicator(v_data[i], y_data[j], iteration);
                 else
                     c_data[i] = applicator(v_data[i], y_data[j]);
-                printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
+                //printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
                 //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
@@ -1702,7 +1702,7 @@ Env::barrier();
             {
                 b_data[i] = c_data[i];
                 //if(Env::rank == 0)
-                printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
+                //printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
             }
             //if(Env::rank == 0)
             //printf("\n");
@@ -1717,7 +1717,7 @@ Env::barrier();
                 if(i_data[i])
                 {
                     b_data[j] = c_data[i];
-                    printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
+                    //printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
                     j++;
                 }
                 
@@ -2140,6 +2140,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
     
     uint32_t NUM = 31;
     uint32_t count = v_nitems < NUM ? v_nitems : NUM;
+    Env::barrier();
     if(!Env::rank)
     {
         Triple<Weight, Integer_Type> pair, pair1;
@@ -2152,6 +2153,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }
+    Env::barrier();
     /*
     Env::barrier();
     if(Env::rank == 3)
