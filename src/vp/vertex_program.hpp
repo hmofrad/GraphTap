@@ -405,6 +405,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
             iteration++;
             Env::print_me("Iteration: ", iteration);
             //printf("num_iteration=%d %d\n", num_iterations, check_for_convergence);
+            
             if(check_for_convergence)
             {
                 if(has_converged())
@@ -412,7 +413,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
             }
             else if(iteration >= num_iterations)
                 break;
-            //if(iteration == 3)
+            
+            //if(iteration == 4)
             //    break;
         }
     }
@@ -567,6 +569,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             {
                 tmp = i + (owned_segment * tile_height);
                 b_data[i] = initializer(v_data[i], tmp);
+                printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
                 //if(!Env::rank)
                   //  printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
                 //if(Env::rank == 1)
@@ -596,10 +599,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
                 { 
                     //b_data[j] = initializer(v_data[i], tmp);
                     b_data[j] = initializer(v_data[i], tmp);
+                    printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
                     j++;
                 }  
                 else                
                     (void*)initializer(v_data[i], tmp);
+               // printf("\n");
             }
         }
         else
@@ -618,7 +623,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             }
         }
     }
-
+    Env::barrier(); // Remove this
     /* Initialiaze scores/states */
     S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
     if(VProgram)
@@ -669,17 +674,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     {
         uint32_t yi = 0;
         uint32_t yo = 0;
-        for(uint32_t j = 0; j < rank_nrowgrps; j++)
+        for(uint32_t k = 0; k < rank_nrowgrps; k++)
         {
-            yi = j;
-            if(local_row_segments[j] == owned_segment)
+            yi = k;
+            auto *Yp = Y[yi];
+            if(local_row_segments[k] == owned_segment)
                 yo = accu_segment_rg;
             else
                 yo = 0;
-            
-            auto *Yp = Y[yi];
             Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
             Integer_Type y_nitems = Yp->nitems[yo];
+            
             if(filtering_type == _NONE_)
             {
                 for(uint32_t i = 0; i < v_nitems; i++)
@@ -689,7 +694,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             {
                 auto &i_data = (*I)[yi];
                 //char *i_data = (char *) I->data[yi];        
-                //Integer_Type j = 0;
+                Integer_Type j = 0;
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     if(i_data[i])
@@ -798,10 +803,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
-            //printf("1.msg=i=%d x=%f v=%f s=%f\n", i, x_data[i], v_data[i], s_data[i]);
+            printf("1.R=%d,msg=i=%d x=%d v=%d s=%d\n", Env::rank, i, x_data[i], v_data[i], s_data[i]);
             x_data[i] = messenger(v_data[i], s_data[i]);
             //if(!Env::rank)
-            //printf("2.msg=i=%d x=%f c=%d v=%f s=%f\n", i, x_data[i], c_data[i], v_data[i], s_data[i]);
+            printf("2.R=%d,msg=i=%d x=%d c=%d v=%d s=%d\n", Env::rank, i, x_data[i], c_data[i], v_data[i], s_data[i]);
             //x_data[i] = (*f)(0, 0, v_data[i], s_data[i]);
         }
     }
@@ -1151,11 +1156,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                             #else
                                 if(b_data[j])
                                 {
-                                    if(!Env::rank)
-                                        printf("1.comb:x[%d]->y[%d] %d -> %d\n", j, IA[i], x_data[j], y_data[IA[i]]);
+                                    //if(!Env::rank)
+                                        printf("1.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
                                     combiner(y_data[IA[i]], x_data[j]);
-                                    if(!Env::rank)
-                                        printf("2.comb:x[%d]->y[%d] %d -> %d\n", j, IA[i], x_data[j], y_data[IA[i]]);
+                                    //if(!Env::rank)
+                                        printf("2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
                                 }
                                 
                             #endif
@@ -1539,7 +1544,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     uint32_t bo = accu_segment_col;
     char *b_data = (char *) B->data[bo];
     Integer_Type b_nitems = B->nitems[bo];
-               
+
+Env::barrier();    
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
     {
         if(Env::comm_split)
@@ -1577,19 +1583,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             {
                 for(uint32_t i = 0; i < yj_nitems; i++)
                 {
-                    if(Env::rank == 0)
-                        printf("1.[i=%d yj=%d y=%d b=%d] \n", i, yj_data[i], y_data[i], b_data[i]);
+                    //if(Env::rank == 3 or Env::rank == 0)
+                        printf("1.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
                     //if(y_data[i] == INF)
                     //if(yj_data[i] != INF)
-                    if(b_data[i])
-                        combiner(y_data[i], yj_data[i]);
+                    //if(b_data[i])
+                    //{
+                        //if(b_data[i] and yj_data[i] != INF)
+                        //if(yj_data[i] != INF)
+                            if(b_data[i] or yj_data[i])
+                                combiner(y_data[i], yj_data[i]);
+                    //}
                         //y_data[i] += yj_data[i];
                     //if(b_data[i])
                         //combiner(y_data[i], yj_data[i]);
                     //if(b_data[i])
                         
-                    if(Env::rank == 0)
-                        printf("2.[i=%d yj=%d y=%d b=%d] \n", i, yj_data[i], y_data[i], b_data[i]);
+                    //if(Env::rank == 3 or Env::rank == 0)
+                        printf("2.mrg[R=%d, i=%d yj=%d y=%d b=%d] \n", Env::rank, i, yj_data[i], y_data[i], b_data[i]);
                 }   
             }
             
@@ -1612,7 +1623,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     //Integer_Type b_nitems = B->nitems[bo];
     
     //printf("\n");
-    //Env::barrier();
+    Env::barrier();
     if(filtering_type == _NONE_)
     {
         //printf("\n");
@@ -1620,8 +1631,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
             //v_data[i] = 
-            if(!Env::rank)
-            printf("1.app:i=%d c=%d  b=%d y=%d v=%d\n", i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            //if(Env::rank == 3)
+            printf("1.R=%d,app:i=%d c=%d  b=%d y=%d v=%d\n", Env::rank, i, c_data[i], b_data[i], y_data[i], v_data[i]);
             if(apply_depends_on_iter)
             {
                // if(b_data[i])
@@ -1631,8 +1642,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             }
             else
                 c_data[i] = applicator(v_data[i], y_data[i]);
-            if(!Env::rank)
-            printf("2.app:i=%d c=%d b=%d y=%d v=%d\n", i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            //if(Env::rank == 3)
+            printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
             //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
             //v_data[i] = (*f)(0, y_data[i], 0, 0); 
@@ -1649,11 +1660,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
         {
             if(i_data[i])
             {
+                printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
                 //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 if(apply_depends_on_iter)
                     c_data[i] = applicator(v_data[i], y_data[j], iteration);
                 else
                     c_data[i] = applicator(v_data[i], y_data[j]);
+                printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
                 //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
@@ -1676,7 +1689,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             }
         }
     }
-    
+    Env::barrier();
+    //MPI_Barrier(MPI_COMM_WORLD);
     if(not stationary)
     {
         uint32_t bo = accu_segment_col;
@@ -1687,8 +1701,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
             for(uint32_t i = 0; i < c_nitems; i++)
             {
                 b_data[i] = c_data[i];
-                //printf("[%d %d]", i, b_data[i]);
+                //if(Env::rank == 0)
+                printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
             }
+            //if(Env::rank == 0)
             //printf("\n");
         }
         else
@@ -1701,9 +1717,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
                 if(i_data[i])
                 {
                     b_data[j] = c_data[i];
+                    printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
                     j++;
                 }
+                
             }
+            //if(Env::rank == 0)
+            //printf("\n");
         }
     }
     
@@ -1711,7 +1731,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     {
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
             clear(Y[i]);
-    }    
+    }   
+Env::barrier();
+//if(!Env::rank)
+//printf("REMoVE MEEE\nNum_triangles\n");    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -2129,7 +2152,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }
-    
+    /*
     Env::barrier();
     if(Env::rank == 3)
     {
@@ -2143,6 +2166,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }    
-    
+    */
 }
 #endif
