@@ -36,7 +36,8 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
 
         virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) 
         {
-            y1 = y2;
+            if(y2 != INF)
+                y1 = y2;
         }
         
         virtual bool applicator(Fractional_Type &v, Fractional_Type &y, Integer_Type iteration) 
