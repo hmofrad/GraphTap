@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _SOME_;
+    Filtering_type FT = _NONE_;
     bool parread = true;
     
     /* Breadth First Search (BFS) execution */
