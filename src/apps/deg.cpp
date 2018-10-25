@@ -9,33 +9,7 @@
  
 #include "mpi/env.hpp"
 #include "mat/graph.hpp"
-#include "vp/vertex_program.hpp"
-
 #include "deg.h"
-
-/* HAS_WEIGHT macro will be defined by compiler.
-   So, you don't have to change this.   
-   make WEIGHT="-DHASWEIGHT"         */
-   
-using em = Empty; // Weight (default is Empty)
-#ifdef HAS_WEIGHT
-using wp = uint32_t;
-#else
-using wp = em;
-#endif
-
-/*  Integer precision (default is uint32_t)
-    Controls the number of vertices,
-    the engine can possibly process.
-    Does not support more than 2B for now.
-*/
-using ip = uint32_t;
-
-/*
-    Fractional precision (default is float)
-    Controls the precision of values.
-*/
-using fp = uint64_t;
 
 int main(int argc, char **argv)
 {
@@ -43,18 +17,17 @@ int main(int argc, char **argv)
     Env::init(comm_split);
     double time1 = Env::clock();
     
-    if(argc != 4)  {
+    if(argc != 3)  {
         if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations>]\""
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
                       << std::endl;
         }    
         Env::exit(1);
     }
-    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-    num_iterations = 1;
+    ip num_iterations = 1;
+    
     bool directed = true;
     bool transpose = false;
     bool acyclic = false;
@@ -63,8 +36,6 @@ int main(int argc, char **argv)
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
-    
-    /* Degree execution */
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = true;
@@ -72,12 +43,20 @@ int main(int argc, char **argv)
     bool gather_depends_on_apply = false;
     bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
+    
+    //Degree_State<wp, ip, fp> S;
+    //Vertex_State<wp, ip, fp> &SB = static_cast<Degree_State<wp, ip, fp>&>(S);
+    //Vertex_State<wp, ip, fp> *SB = &S;
+    //printf("sizeee=%lu, %lu\n", sizeof(S), sizeof(SB));
+    
     Degree_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);
-    V.execute(num_iterations);
+    V.execute(num_iterations); // Degree execution
     V.checksum();
     V.display();
     V.free();
+    
     G.free();
+    
     
     double time2 = Env::clock();
     Env::print_time("Degree end-to-end", time2 - time1);
