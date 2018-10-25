@@ -4,8 +4,8 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef CC_H
-#define CC_H
+#ifndef BFS_H
+#define BFS_H
 
 //#define INF 2147483647
 
@@ -36,7 +36,7 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
 
         virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) 
         {
-            if(y2 != INF)
+            //if(y2 != INF)
                 y1 = y2;
         }
         
