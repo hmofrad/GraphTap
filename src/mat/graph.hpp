@@ -165,7 +165,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
         Env::exit(1);
     }
     t2 = Env::clock();
-    Env::print_time("Ingress transpose", t2 - t1);
+    Env::print_time("Ingress", t2 - t1);
 }
 
 
@@ -613,7 +613,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             fprintf(stderr, "read() failure\n");
             Env::exit(1);
         }
-        
+
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
