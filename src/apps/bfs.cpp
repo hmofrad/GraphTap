@@ -61,13 +61,12 @@ int main(int argc, char **argv)
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _SOME_;
     bool parread = true;
     
     /* Breadth First Search (BFS) execution */
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, acyclic, parallel_edges, TT, CT, FT, parread);
-    
     bool stationary = false;
     bool tc_family  = false;
     bool gather_depends_on_apply = false;
