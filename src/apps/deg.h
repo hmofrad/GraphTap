@@ -26,27 +26,16 @@ using ip = uint32_t;
 using fp = uint32_t;
 
 #include "vp/vertex_program.hpp"
-//#include "vp/vertex_state.hpp"
 
-//template<typename Weight, typename Integer_Type, typename Fractional_Type>
-struct Degree_State// : public Vertex_State<Weight, Integer_Type, Fractional_Type>
+struct Degree_State
 {
-    public:
-        //Degree_State(){};
-        //~Degree_State(){};
-        //using Vertex_State<Weight, Integer_Type, Fractional_Type>::Vertex_State;
-        //Degree_State<Weight, Integer_Type, Fractional_Type>(uint32_t degree) : Vertex_State<Weight, Integer_Type, Fractional_Type>(degree){};
-        ip degree = 0;
-        //uint32_t degree1 = 0;
-        //uint32_t degree2 = 0;
-    //std::string to_string() const { return "{degree: " + std::to_string(degree) + "}"; }
+    ip degree = 0;
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class Degree_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, Degree_State>
 {
     public: 
-        //using Vertex_State = Degree_State;
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, Degree_State>::Vertex_Program;  // inherit constructors
         
         virtual bool initializer(Degree_State &s, const Fractional_Type &v2)
