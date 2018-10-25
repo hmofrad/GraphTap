@@ -31,9 +31,9 @@ class Vertex_Program
                         bool apply_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
-        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) { return(stationary);}
+        virtual bool initializer(Fractional_Type &v1, const Fractional_Type &v2) { return(stationary);}
         virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
-        virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) { ; }
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) { ; }
         virtual bool applicator(Fractional_Type &v, Fractional_Type &y) { return(true); }
         virtual bool applicator(Fractional_Type &v, Fractional_Type &y, Integer_Type iteration_) { return(true); }
         
@@ -414,7 +414,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
             else if(iteration >= num_iterations)
                 break;
             
-            //if(iteration == 4)
+            //if(iteration == 3)
             //    break;
         }
     }
@@ -567,11 +567,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
         {
             for(uint32_t i = 0; i < v_nitems; i++)
             {
-                tmp = i + (owned_segment * tile_height);
-                b_data[i] = initializer(v_data[i], tmp);
+                //tmp = i + (owned_segment * tile_height);
+                b_data[i] = initializer(v_data[i], i + (owned_segment * tile_height));
                 //printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
                 //if(!Env::rank)
-                  //  printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
+                    //printf("i=%d b_data=%d v_data=%d\n", i, b_data[i], v_data[i]);
                 //if(Env::rank == 1)
                 //    printf("i=%d b_data=%d v_data=%f\n", i, b_data[i], v_data[i]);
                 //b_data[i] = initializer(v_data[i], tmp);
@@ -594,16 +594,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
             {
-                tmp = i + (owned_segment * tile_height);
+                //tmp = i + (owned_segment * tile_height);
                 if(j_data[i])
                 { 
                     //b_data[j] = initializer(v_data[i], tmp);
-                    b_data[j] = initializer(v_data[i], tmp);
+                    b_data[j] = initializer(v_data[i], i + (owned_segment * tile_height));
                     //printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
                     j++;
                 }  
                 else                
-                    (void*)initializer(v_data[i], tmp);
+                    (void*)initializer(v_data[i], i + (owned_segment * tile_height));
                // printf("\n");
             }
         }
@@ -1148,23 +1148,34 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                 {
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
+                        //printf("[j=%d], ", j);
                         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                         {
+                        //printf("[i=%d b=%d]", IA[i], b_data[IA[i]]);
                             #ifdef HAS_WEIGHT
-                                if(b_data[j])
-                                    combiner(y_data[IA[i]], A[i] * x_data[j]);
-                            #else
-                                if(b_data[j])
+                                //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]], A[i]);
+                                if(b_data[IA[i]])
                                 {
+                                    combiner(y_data[j], A[i] + x_data[IA[i]]);
+                                    //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d %d\n", Env::rank, j, b_data[j], IA[i], x_data[IA[i]], y_data[j], A[i]);
+                                }
+                            #else
+                                //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
+                                //if(b_data[j])
+                                if(b_data[IA[i]])
+                                {
+                                    //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[IA[i]], y_data[j]);
                                     //if(!Env::rank)
                                        // printf("1.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
-                                    combiner(y_data[IA[i]], x_data[j]);
+                                    //combiner(y_data[IA[i]], x_data[j]);
+                                    combiner(y_data[j], x_data[IA[i]]);
                                     //if(!Env::rank)
                                         //printf("2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
                                 }
                                 
                             #endif
                         }
+                        //printf("\n");
                         //printf("[%d %d]", j, b_data[j]);
                     }
                     //printf("\n");
@@ -1180,7 +1191,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                         #ifdef HAS_WEIGHT
                        /// if(x_data[IA[i]] and A[i])
                             combiner(y_data[j], A[i] * x_data[IA[i]]);   
-                            //y_data[j] += A[i] * x_data[IA[i]];   
+                            //y_data[j] += A[i] * x_data[IA[i]];
                         #else
                        // if(x_data[IA[i]])
                             combiner(y_data[j], x_data[IA[i]]);   
@@ -1572,7 +1583,7 @@ Env::barrier();
                 for(uint32_t i = 0; i < yj_nitems; i++)
                 {
                     //if(!Env::rank)
-                     //   printf("[i=%d yj=%d y=%d] \n", i, yj_data[i], y_data[i]);
+                        //printf("APP[R=%d i=%d bd=%d yj=%d y=%d] \n", Env::rank, i, b_data[i], yj_data[i], y_data[i]);
                     //if(yj_data[i])
                         //y_data[i] += yj_data[i];
                     if(b_data[i])
@@ -1591,7 +1602,7 @@ Env::barrier();
                     //{
                         //if(b_data[i] and yj_data[i] != INF)
                         //if(yj_data[i] != INF)
-                            if(b_data[i] or yj_data[i])
+                            if(b_data[i] or yj_data[i] != INF)
                                 combiner(y_data[i], yj_data[i]);
                     //}
                         //y_data[i] += yj_data[i];
@@ -1633,6 +1644,7 @@ Env::barrier();
             //v_data[i] = 
             //if(Env::rank == 3)
             //printf("1.R=%d,app:i=%d c=%d  b=%d y=%d v=%d\n", Env::rank, i, c_data[i], b_data[i], y_data[i], v_data[i]);
+            //printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
             if(apply_depends_on_iter)
             {
                // if(b_data[i])
@@ -2154,8 +2166,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
         }  
     }
     Env::barrier();
-    /*
-    Env::barrier();
+    
+    //Env::barrier();
     if(Env::rank == 3)
     {
         Triple<Weight, Integer_Type> pair, pair1;
@@ -2168,6 +2180,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
                                      ",score[" << pair1.row << "]=" << s_data[i] << std::endl;
         }  
     }    
-    */
+    
 }
 #endif
