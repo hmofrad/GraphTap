@@ -466,6 +466,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     /* Initialize values and activity pattern */
     std::vector<Integer_Type> v_s_size = {tile_height};
     V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
+    
+    std::vector<Vertex_State> VV(v_s_size);
 
     Vertex_State state = Vertex_State();
     //Vertex_State<Weight, Integer_Type, Fractional_Type> state; 
