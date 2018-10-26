@@ -8,8 +8,7 @@
 #define DEG_H 
 
 /* HAS_WEIGHT macro will be defined by compiler. 
-   make MACROS=-DHAS_WEIGHT */
-   
+   make MACROS=-DHAS_WEIGHT */   
 using em = Empty; // Weight (default is Empty)
 #ifdef HAS_WEIGHT
 using wp = uint32_t;
@@ -23,16 +22,17 @@ using ip = uint32_t;
 
 /* Fractional precision controls the precision of values.
    E.g. vertex rank in PageRank*/
-using fp = uint32_t;
+using fp = double;
+
+/* Vertex precision controls the vertex range */
+using vp = uint32_t;
 
 #include "vp/vertex_program.hpp"
 
 struct Degree_State
 {
-    //Degree_State(){};
-    //~Degree_State(){};
     ip degree = 0;
-    ip get_state(){return degree;};
+    ip get_state(){return(degree);};
     std::string print_state(){return("Degree=" + std::to_string(degree));};
 };
 
@@ -42,20 +42,13 @@ class Degree_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Ty
     public: 
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, Degree_State>::Vertex_Program;  // inherit constructors
         
-        //virtual bool initializer(Degree_State &s, const Fractional_Type &v2)
-        //{
-        //    s.degree = 0;
-        //    return(true);
-        //}
-        /*
-        virtual bool initializer(Fractional_Type &v1, const Fractional_Type &v2)
+        virtual bool initializer(ip vid, Degree_State &state)
         {
-            
-            v1 = v2;
+            state.degree = 0; // Not necessary
             return(true);
         }
-        */
-        virtual Fractional_Type messenger(Degree_State &s) 
+
+        virtual Fractional_Type messenger(Degree_State &state) 
         {
             return(1);
         }
@@ -65,9 +58,9 @@ class Degree_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Ty
             y1 += y2;
         }
         
-        virtual bool applicator(Degree_State &s, const Fractional_Type &y) 
+        virtual bool applicator(Degree_State &state, const Fractional_Type &y) 
         {
-            s.degree = y;
+            state.degree = y;
             return(true);
         }    
 };
