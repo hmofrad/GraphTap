@@ -54,7 +54,6 @@ int main(int argc, char **argv)
     V.checksum();
     V.display();
     V.free();
-    
     G.free();
     
     
