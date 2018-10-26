@@ -13,6 +13,8 @@
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
 
+//#include "vertex_state.hpp"
+
 #define INF 2147483647
 
 enum Ordering_type
@@ -21,24 +23,25 @@ enum Ordering_type
   _COL_
 };   
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 class Vertex_Program
 {
     public:
         //Vertex_Program();
-        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph, 
+        Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph,
                         bool stationary_ = false, bool gather_depends_on_apply_ = false, 
                         bool apply_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
         virtual bool initializer(Fractional_Type &v1, const Fractional_Type &v2) { return(stationary);}
+        virtual bool initializer(Vertex_State  &state, const Fractional_Type &v2) { return(stationary);}
         virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) { ; }
-        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) { return(true); }
-        virtual bool applicator(Fractional_Type &v, Fractional_Type &y, Integer_Type iteration_) { return(true); }
+        virtual bool applicator(Fractional_Type &v, const Fractional_Type &y) { return(true); }
+        virtual bool applicator(Fractional_Type &v, const Fractional_Type &y, Integer_Type iteration_) { return(true); }
         
         void execute(Integer_Type num_iterations = 0);
-        void initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram = nullptr);
+        void initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram = nullptr);
         void free();
         void checksum();
         void display();
@@ -57,9 +60,9 @@ class Vertex_Program
         void populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src);
         void clear(Vector<Weight, Integer_Type, Fractional_Type> *vec);
-        void specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);        
-        void specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);
-        void specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram);  
+        void specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram);        
+        void specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram);
+        void specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram);  
         void scatter_gather();
         void scatter();
         void gather();
@@ -160,13 +163,14 @@ class Vertex_Program
 
 /* Support or row-wise tile processing designated to original matrix and 
    column-wise tile processing designated to transpose of the matrix. */                
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Program(
          Graph<Weight,Integer_Type, Fractional_Type> &Graph,
          bool stationary_, bool gather_depends_on_apply_, bool apply_depends_on_iter_, 
          bool tc_family_, Ordering_type ordering_type_)
                        : X(nullptr), V(nullptr), S(nullptr)
 {
+
     A = Graph.A;
     stationary = stationary_;
     gather_depends_on_apply = gather_depends_on_apply_;
@@ -269,11 +273,11 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program(
     TYPE_CHAR = Types<Weight, Integer_Type, char>::get_data_type();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-Vertex_Program<Weight, Integer_Type, Fractional_Type>::~Vertex_Program() {};
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::~Vertex_Program() {};
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
 {
     if(tc_family)
     {
@@ -317,8 +321,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::free()
     }   
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::clear(
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::clear(
                                Vector<Weight, Integer_Type, Fractional_Type> *vec)
 {
     for(uint32_t i = 0; i < vec->vector_length; i++)
@@ -333,8 +337,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::clear(
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::populate(
         Vector<Weight, Integer_Type, Fractional_Type> *vec, Fractional_Type value)
 {
     for(uint32_t i = 0; i < vec->vector_length; i++)
@@ -360,8 +364,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(
     }
 }         
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::populate(Vector<Weight, Integer_Type, Fractional_Type> *vec_dst,
                       Vector<Weight, Integer_Type, Fractional_Type> *vec_src)
 {
     for(uint32_t i = 0; i < vec_src->vector_length; i++)
@@ -378,8 +382,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::populate(Vector<Weig
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type num_iterations)
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execute(Integer_Type num_iterations)
 {
     double t1, t2;
     t1 = Env::clock();
@@ -390,22 +394,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
     if(not tc_family)
     {
         if(!num_iterations)
-        {
             check_for_convergence = true; 
-            //num_iterations = INF;
-        }
 
-        //uint32_t iter = 0;
-        //while(iteration < num_iterations)
         while(true)
         {
             scatter_gather();
             combine();
             apply();
             iteration++;
-            Env::print_me("Iteration: ", iteration);
-            //printf("num_iteration=%d %d\n", num_iterations, check_for_convergence);
             
+            Env::print_me("Iteration: ", iteration);            
             if(check_for_convergence)
             {
                 if(has_converged())
@@ -428,19 +426,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::execute(Integer_Type
     Env::print_time("Execute", t2 - t1);
 }
 
-
-
-//template<typename Weight, typename Integer_Type, typename Fractional_Type>
-//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::initialize(
-//        std::function<bool(Fractional_Type&, Fractional_Type&)> initializer_, Fractional_Type v, 
-//        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initialize(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram)
 {
     double t1, t2;
     t1 = Env::clock();
 
-    //initializer = initializer_;
     if(stationary)
     {
         specialized_stationary_init(VProgram);
@@ -457,8 +448,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::initialize(Vertex_Pr
     Env::print_time("Init", t2 - t1);
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_stationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram)
 {
     /* Initialize messages */
     std::vector<Integer_Type> x_sizes;
@@ -476,20 +467,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
     std::vector<Integer_Type> v_s_size = {tile_height};
     V = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
 
-    //populate(V, v);
+    Vertex_State state = Vertex_State();
+    //Vertex_State<Weight, Integer_Type, Fractional_Type> state; 
+    printf("sz=%lu\n", sizeof(state));
     uint32_t vo = 0;
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
     Integer_Type v_nitems = V->nitems[vo];
     Fractional_Type v = 0;
     for(uint32_t i = 0; i < v_nitems; i++)
-        (void)initializer(v_data[i], v);
+    {
+        //(void)initializer(v_data[i], v);
+        (void)initializer(state, v);
+    }
         //(void)initializer(v_data[i], v);
 
     /* Initialiaze scores/states */
     S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
     if(VProgram)
     {
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
+        Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VP = VProgram;
         Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
         populate(S, V_);
         already_initialized = true;
@@ -530,8 +526,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_stationa
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_nonstationary_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram)
 {
     /* Initialize messages */
     std::vector<Integer_Type> x_sizes;
@@ -628,7 +624,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     S = new Vector<Weight, Integer_Type, Fractional_Type>(v_s_size, accu_segment_row_vec);
     if(VProgram)
     {
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
+        Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VP = VProgram;
         Vector<Weight, Integer_Type, Fractional_Type> *V_ = VP->V;
         populate(S, V_);
         already_initialized = true;
@@ -708,8 +704,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_nonstati
     }    
 }    
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type> *VProgram)
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_tc_init(Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram)
 {
     std::vector<Integer_Type> d_sizes;
     std::vector<Integer_Type> z_size;
@@ -735,7 +731,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
     if(VProgram)
     {
         /* Initialiaze scores/states */
-        Vertex_Program<Weight, Integer_Type, Fractional_Type> *VP = VProgram;
+        Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VP = VProgram;
         std::vector<std::vector<Integer_Type>> W_ = VP->W;
         R = W_;
         already_initialized = true;
@@ -776,8 +772,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_init(
 }        
 
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather()
 {
     double t1, t2;
     t1 = Env::clock();
@@ -841,8 +837,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter_gather()
     Env::print_time("Scatter_gather", t2 - t1);
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter()
 {
     uint32_t xo = accu_segment_col;
     Fractional_Type *x_data = (Fractional_Type *) X->data[xo];
@@ -882,8 +878,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::scatter()
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather()
 {  
     uint32_t leader;
     MPI_Request request;
@@ -966,8 +962,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::gather()
 }
 
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast()
 {
     uint32_t leader;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
@@ -1019,8 +1015,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::bcast()
     }
 }                   
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             std::vector<std::vector<Integer_Type>> &z_data,
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile)
 {
@@ -1057,8 +1053,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Fractional_Type *y_data, Fractional_Type *x_data,
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
             char *b_data)
@@ -1137,8 +1133,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
                                 //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
                                 combiner(y_data[IA[i]], x_data[j]);
                                 //if(!Env::rank)
-                                    //printf("2.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
-                                //y_data[IA[i]] += x_data[j];
+                                 //   printf("2.%d %d %d\n", j, x_data[j], y_data[IA[i]]);
+                                ///y_data[IA[i]] += x_data[j];
                             //}
                             #endif
                         }
@@ -1204,11 +1200,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::spmv(
     }    
 }
 
-//template<typename Weight, typename Integer_Type, typename Fractional_Type>
-//void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine(
+//template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+//void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine(
 //        std::function<void(Fractional_Type&, Fractional_Type&)> combiner_)
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine()
 {
     double t1, t2;
     t1 = Env::clock();
@@ -1254,8 +1250,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::combine()
     
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimized_1d_row()
 {
     uint32_t yi = accu_segment_row;
     uint32_t xi = 0;
@@ -1274,8 +1270,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_row()
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimized_1d_col()
 {
     MPI_Request request;
     MPI_Status status;
@@ -1364,8 +1360,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_1d_col()
     wait_for_all();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d_for_tc()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimized_2d_for_tc()
 {
     MPI_Request request;
     MPI_Status status;
@@ -1443,8 +1439,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d_for_tc(
     wait_for_all();    
 }
                    
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimized_2d()
 {
     MPI_Request request;
     MPI_Status status;
@@ -1522,8 +1518,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::optimized_2d()
     wait_for_all();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply()
 {
     double t1, t2;
     t1 = Env::clock();
@@ -1542,8 +1538,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::apply()
     Env::print_time("Apply", t2 - t1);
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_apply()
 {
     uint32_t accu;
     uint32_t yi = accu_segment_row;
@@ -1551,12 +1547,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_apply()
     auto *Yp = Y[yi];
     Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
     Integer_Type y_nitems = Yp->nitems[yo];
-    
-    uint32_t bo = accu_segment_col;
-    char *b_data = (char *) B->data[bo];
-    Integer_Type b_nitems = B->nitems[bo];
 
-Env::barrier();    
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
     {
         if(Env::comm_split)
@@ -1578,6 +1569,9 @@ Env::barrier();
         }
         else
         {
+            uint32_t bo = accu_segment_col;
+            char *b_data = (char *) B->data[bo];
+            Integer_Type b_nitems = B->nitems[bo];
             if(gather_depends_on_apply)
             {
                 for(uint32_t i = 0; i < yj_nitems; i++)
@@ -1678,7 +1672,7 @@ Env::barrier();
                     c_data[i] = applicator(v_data[i], y_data[j], iteration);
                 else
                     c_data[i] = applicator(v_data[i], y_data[j]);
-                //printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
+                //printf("2.R=%d,app:i=%d c=%d  y=%d v=%d\n",Env::rank,  i, c_data[i], y_data[j], v_data[i]);
                 //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
                 //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
                 //v_data[i] = (*f)(0, y_data[j], 0, 0);
@@ -1749,8 +1743,8 @@ Env::barrier();
 //printf("REMoVE MEEE\nNum_triangles\n");    
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_tc_apply()
 {
     uint32_t accu;
     uint32_t yi = accu_segment_row;
@@ -1973,8 +1967,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::specialized_tc_apply
     }
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_for_all()
 {
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
@@ -1983,22 +1977,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_all()
     Env::barrier();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_recvs()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_for_recvs()
 {
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::wait_for_sends()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_for_sends()
 {
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractional_Type>::
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::
         tile_info(const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
                   struct Triple<Weight, Integer_Type> &pair)
 {
@@ -2016,8 +2010,8 @@ struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractio
     return{item1, item2};
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractional_Type>::
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::
         leader_info(const struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile)
 {
     Integer_Type item1, item2;
@@ -2050,8 +2044,8 @@ struct Triple<Weight, Integer_Type> Vertex_Program<Weight, Integer_Type, Fractio
     return{item1, item2};
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-MPI_Comm Vertex_Program<Weight, Integer_Type, Fractional_Type>::communicator_info()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+MPI_Comm Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::communicator_info()
 {
     MPI_Comm comm;
     if(ordering_type == _ROW_)
@@ -2071,8 +2065,8 @@ MPI_Comm Vertex_Program<Weight, Integer_Type, Fractional_Type>::communicator_inf
     return{comm};
 }
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_converged()
 {
     bool converged = false;
     uint64_t c_sum_local = 0, c_sum_gloabl = 0;
@@ -2095,8 +2089,8 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type>::has_converged()
 }
 
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checksum()
 {
     uint64_t v_sum_local = 0, v_sum_global = 0;
     
@@ -2139,8 +2133,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type>::checksum()
 }
 
 
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type>::display()
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::display()
 {
     uint32_t vo = 0;
     Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
