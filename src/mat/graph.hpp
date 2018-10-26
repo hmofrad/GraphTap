@@ -33,7 +33,7 @@
 template<typename Weight = char, typename Integer_Type = uint32_t, typename Fractional_Type = float>
 class Graph
 {
-    template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
+    template<typename Weight_, typename Integer_Type_, typename Fractional_Type_, typename Vertex_state>
     friend class Vertex_Program;
     
     public:    
