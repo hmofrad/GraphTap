@@ -7,6 +7,8 @@
 #ifndef DEG_H
 #define DEG_H 
 
+#include "vp/vertex_program.hpp"
+
 /* HAS_WEIGHT macro will be defined by compiler. 
    make MACROS=-DHAS_WEIGHT */   
 using em = Empty; // Weight (default is Empty)
@@ -21,15 +23,10 @@ using wp = em;
 using ip = uint32_t;
 
 /* Fractional precision controls the precision of values.
-   E.g. vertex rank in PageRank*/
+   E.g. vertex rank in PageRank. */
 using fp = double;
 
-/* Vertex precision controls the vertex range */
-using vp = uint32_t;
-
-#include "vp/vertex_program.hpp"
-
-struct Degree_State
+struct Deg_State
 {
     ip degree = 0;
     ip get_state(){return(degree);};
@@ -37,18 +34,18 @@ struct Degree_State
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class Degree_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, Degree_State>
+class Deg_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, Deg_State>
 {
     public: 
-        using Vertex_Program<Weight, Integer_Type, Fractional_Type, Degree_State>::Vertex_Program;  // inherit constructors
+        using Vertex_Program<Weight, Integer_Type, Fractional_Type, Deg_State>::Vertex_Program;
         
-        virtual bool initializer(ip vid, Degree_State &state)
+        virtual bool initializer(ip vid, Deg_State &state)
         {
             state.degree = 0; // Not necessary
             return(true);
         }
 
-        virtual Fractional_Type messenger(Degree_State &state) 
+        virtual Fractional_Type messenger(Deg_State &state) 
         {
             return(1);
         }
@@ -58,10 +55,10 @@ class Degree_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Ty
             y1 += y2;
         }
         
-        virtual bool applicator(Degree_State &state, const Fractional_Type &y) 
+        virtual bool applicator(Deg_State &state, const Fractional_Type &y) 
         {
             state.degree = y;
-            return(true);
+            return(false);
         }    
 };
 #endif
