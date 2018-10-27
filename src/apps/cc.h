@@ -7,32 +7,65 @@
 #ifndef CC_H
 #define CC_H
 
+#include "vp/vertex_program.hpp"
+
+#define INF 2147483647
+
+/* HAS_WEIGHT macro will be defined by compiler.
+   So, you don't have to change this.   
+   make WEIGHT="-DHASWEIGHT"         */
+   
+using em = Empty; // Weight (default is Empty)
+#ifdef HAS_WEIGHT
+using wp = uint32_t;
+#else
+using wp = em;
+#endif
+
+/*  Integer precision controls the number of vertices
+    the engine can possibly process. */
+using ip = uint32_t;
+
+/* Fractional precision controls the precision of values.
+   E.g. vertex rank in PageRank. */
+using fp = uint32_t;
+
+struct CC_State
+{
+    ip label = 0;
+    ip get_state(){return(label);};
+    ip get_inf(){return(INF);};
+    
+    std::string print_state(){return("Label=" + std::to_string(label));};
+};
+
+
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type>
+class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, CC_State>
 {
     public:  
-        using Vertex_Program<Weight, Integer_Type, Fractional_Type>::Vertex_Program;  // inherit constructors
-        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
+        using Vertex_Program<Weight, Integer_Type, Fractional_Type, CC_State>::Vertex_Program;
+        virtual bool initializer(Integer_Type vid, CC_State &state)
         {
-            v1 = v2;
+            state.label = vid;
             return(true);
         }
         
-        virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) 
+        virtual Fractional_Type messenger(CC_State &state) 
         {
-            return(v);
+            return(state.label);
         }
 
-        virtual void combiner(Fractional_Type &y1, Fractional_Type &y2) 
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
             y1 = (y1 < y2) ? y1 : y2;
         }
-        
-        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
+
+        virtual bool applicator(CC_State &state, const Fractional_Type &y) 
         {
-            Fractional_Type t = v;
-            v = (y < v) ? y : v;
-            return(t != v);
+            Fractional_Type tmp = state.label;
+            state.label = (y < state.label) ? y : state.label;
+            return(tmp != state.label);
         }      
 };
 #endif
