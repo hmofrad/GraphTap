@@ -40,11 +40,13 @@ class Vertex_Program
         virtual Fractional_Type messenger(Vertex_State &state) { return(1);}
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) { ; }
         virtual bool applicator(Vertex_State &state, const Fractional_Type &y) { return(true); }
+        virtual bool applicator(Vertex_State &state){ return(false); }
+        virtual bool applicator(Vertex_State &state, const Fractional_Type &y, const Integer_Type iteration_) { return(true); }
+        
         
         virtual bool initializer(Vertex_State &state, const Fractional_Type &v2) { return(stationary);}
         virtual bool initializer(Fractional_Type &v1, const Fractional_Type &v2) { return(stationary);}
         virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
-        
         virtual bool applicator(Fractional_Type &v, const Fractional_Type &y) { return(true); }
         virtual bool applicator(Fractional_Type &v, const Fractional_Type &y, Integer_Type iteration_) { return(true); }
         
@@ -422,7 +424,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         {
             scatter_gather();
             combine();
-            exit(0);
             apply();
             iteration++;
             Env::print_me("Iteration: ", iteration);            
@@ -1406,47 +1407,47 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
     {
         if(compression_type == Compression_type::_CSR_)
         {
-            #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csr->A;
-            #endif
-            Integer_Type *IA = (Integer_Type *) tile.csr->IA;
-            Integer_Type *JA = (Integer_Type *) tile.csr->JA;
-            Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
-            if(ordering_type == _ROW_)
+            if(stationary)
             {
-                for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
+                #ifdef HAS_WEIGHT
+                Weight *A = (Weight *) tile.csr->A;
+                #endif
+                Integer_Type *IA = (Integer_Type *) tile.csr->IA;
+                Integer_Type *JA = (Integer_Type *) tile.csr->JA;
+                Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
+                if(ordering_type == _ROW_)
                 {
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                    for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                     {
-                        #ifdef HAS_WEIGHT
-                        //if(x_data[JA[j]] and A[j])
-                            combiner(y_data[i], A[j] * x_data[JA[j]]);
-                            //y_data[i] += A[j] * x_data[JA[j]];
-                        #else
-                        //if(x_data[JA[j]])
-                            combiner(y_data[i], x_data[JA[j]]);
-                            //y_data[i] += x_data[JA[j]];
-                        #endif   
+                        for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                        {
+                            #ifdef HAS_WEIGHT
+                                combiner(y_data[i], A[j] * x_data[JA[j]]);
+                            #else
+                                combiner(y_data[i], x_data[JA[j]]);
+                            #endif   
+                        }
+                    }
+                }
+                else if(ordering_type == _COL_)
+                {
+                    for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
+                    {
+                        for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
+                        {       
+                            #ifdef HAS_WEIGHT
+                                combiner(y_data[JA[j]], A[j] * x_data[i]);
+                            #else
+                                combiner(y_data[JA[j]], x_data[i]);
+                            #endif                        
+                        }
                     }
                 }
             }
-            else if(ordering_type == _COL_)
+            else
             {
-                for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
-                {
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {       
-                        #ifdef HAS_WEIGHT
-                       //if(x_data[i] and A[j])
-                            combiner(y_data[JA[j]], A[j] * x_data[i]);
-                            //y_data[JA[j]] += A[j] * x_data[i];
-                        #else
-                        //if(x_data[i])
-                            combiner(y_data[JA[j]], x_data[i]);
-                            //y_data[JA[j]] += x_data[i];
-                        #endif                        
-                    }
-                }
+                fprintf(stderr, "Invalid compression type for nonstationary algorithms\n");
+                Env::exit(1);
             }
         }
         else if(compression_type == Compression_type::_CSC_)    
@@ -1454,7 +1455,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             #ifdef HAS_WEIGHT
             Weight *A = (Weight *) tile.csc->A;
             #endif
-            
             Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
             Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
@@ -1467,18 +1467,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                         {
                             #ifdef HAS_WEIGHT
-                            //if(x_data[j] and A[i])
-                                combiner(y_data[IA[i]], A[i] * x_data[j]);
-                                //y_data[IA[i]] += A[i] * x_data[j];
+                            combiner(y_data[IA[i]], A[i] * x_data[j]);
                             #else
-                            //if(x_data[j])
-                            ////{
-                                //printf("1.%d %f %f\n", j, x_data[i], y_data[IA[i]]);
-                                combiner(y_data[IA[i]], x_data[j]);
-                                //if(!Env::rank)
-                                 //   printf("2.%d %d %d\n", j, x_data[j], y_data[IA[i]]);
-                                ///y_data[IA[i]] += x_data[j];
-                            //}
+                            combiner(y_data[IA[i]], x_data[j]);
                             #endif
                         }
                     }
@@ -1487,56 +1478,41 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                 {
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
-                        //printf("[j=%d], ", j);
                         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                         {
-                        //printf("[i=%d b=%d]", IA[i], b_data[IA[i]]);
                             #ifdef HAS_WEIGHT
-                                //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]], A[i]);
-                                if(b_data[IA[i]])
-                                {
-                                    combiner(y_data[j], A[i] + x_data[IA[i]]);
-                                    //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d %d\n", Env::rank, j, b_data[j], IA[i], x_data[IA[i]], y_data[j], A[i]);
-                                }
+                            if(b_data[IA[i]])
+                                combiner(y_data[IA[i]], A[i] + x_data[j]);
+                                //combiner(y_data[j], A[i] + x_data[IA[i]]);
                             #else
-                                //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
-                                //if(b_data[j])
-                                if(b_data[IA[i]])
-                                {
-                                    //printf(">>>>2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[IA[i]], y_data[j]);
-                                    //if(!Env::rank)
-                                       // printf("1.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
-                                    //combiner(y_data[IA[i]], x_data[j]);
-                                    combiner(y_data[j], x_data[IA[i]]);
-                                    //if(!Env::rank)
-                                        //printf("2.(R=%d)comb:x[%d],b=%d->y[%d] %d -> %d\n", Env::rank, j, b_data[j], IA[i], x_data[j], y_data[IA[i]]);
-                                }
-                                
+                            if(b_data[IA[i]])
+                                combiner(y_data[IA[i]], x_data[j]);
+                                //combiner(y_data[j], x_data[IA[i]]);
                             #endif
                         }
-                        //printf("\n");
-                        //printf("[%d %d]", j, b_data[j]);
                     }
-                    //printf("\n");
-                    
                 }
             }
             else if(ordering_type == _COL_)
             {
-                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                if(stationary)
                 {
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
-                        #ifdef HAS_WEIGHT
-                       /// if(x_data[IA[i]] and A[i])
-                            combiner(y_data[j], A[i] * x_data[IA[i]]);   
-                            //y_data[j] += A[i] * x_data[IA[i]];
-                        #else
-                       // if(x_data[IA[i]])
-                            combiner(y_data[j], x_data[IA[i]]);   
-                            //y_data[j] += x_data[IA[i]];
-                        #endif
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                                combiner(y_data[j], A[i] * x_data[IA[i]]);   
+                            #else
+                                combiner(y_data[j], x_data[IA[i]]);
+                            #endif
+                        }
                     }
+                }
+                else
+                {
+                    fprintf(stderr, "Invalid compression type for nonstationary algorithms\n");
+                    Env::exit(1);
                 }
             }
         }            
@@ -1955,185 +1931,141 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     Fractional_Type *y_data = (Fractional_Type *) Yp->data[yo];
     Integer_Type y_nitems = Yp->nitems[yo];
     
-    if(stationary)
-    {
-        for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-        {
-            if(Env::comm_split)
-                accu = follower_rowgrp_ranks_accu_seg_rg[j];
-            else
-                accu = follower_rowgrp_ranks_accu_seg[j];
-            
-            Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
-            Integer_Type yj_nitems = Yp->nitems[accu];
-            
-            for(uint32_t i = 0; i < yj_nitems; i++)
-            {
-                combiner(y_data[i], yj_data[i]);
-            }      
-        }
-    }
-    else
-    {
-        for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-        {
-            if(Env::comm_split)
-                accu = follower_rowgrp_ranks_accu_seg_rg[j];
-            else
-                accu = follower_rowgrp_ranks_accu_seg[j];
-            
-            Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
-            Integer_Type yj_nitems = Yp->nitems[accu];
-
-            
-            uint32_t bo = accu_segment_col;
-            char *b_data = (char *) B->data[bo];
-            Integer_Type b_nitems = B->nitems[bo];
-            if(gather_depends_on_apply)
-            {
-                for(uint32_t i = 0; i < yj_nitems; i++)
-                {
-                    if(b_data[i])
-                        combiner(y_data[i], yj_data[i]);
-                }   
-            }
-            else if(apply_depends_on_iter)
-            {
-                for(uint32_t i = 0; i < yj_nitems; i++)
-                {
-                    if(b_data[i] or yj_data[i] != INF)
-                        combiner(y_data[i], yj_data[i]);
-                }   
-            }
-        }
-    }
-    //exit(0);
-    uint32_t vo = 0;
-    Fractional_Type *v_data = (Fractional_Type *) V->data[vo];
-    Integer_Type v_nitems = V->nitems[vo];
+    Integer_Type v_nitems = V2.size();
+    
+    uint32_t bo = accu_segment_col;
+    char *b_data = (char *) B->data[bo];
+    Integer_Type b_nitems = B->nitems[bo];
     
     uint32_t co = 0;
     char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
     
-    //uint32_t bo = accu_segment_col;
-    //char *b_data = (char *) B->data[bo];
-    //Integer_Type b_nitems = B->nitems[bo];
+    for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+    {
+        if(Env::comm_split)
+            accu = follower_rowgrp_ranks_accu_seg_rg[j];
+        else
+            accu = follower_rowgrp_ranks_accu_seg[j];
+        
+        Fractional_Type *yj_data = (Fractional_Type *) Yp->data[accu];
+        Integer_Type yj_nitems = Yp->nitems[accu];
+        for(uint32_t i = 0; i < yj_nitems; i++)
+        {
+            if(b_data[i])
+                combiner(y_data[i], yj_data[i]);
+        }   
+        
+        
+        /*
+        if(gather_depends_on_apply)
+        {
+            for(uint32_t i = 0; i < yj_nitems; i++)
+            {
+                if(b_data[i])
+                    combiner(y_data[i], yj_data[i]);
+            }   
+        }
+        else if(apply_depends_on_iter)
+        {
+            for(uint32_t i = 0; i < yj_nitems; i++)
+            {
+                if(b_data[i] or yj_data[i] != INF)
+                    combiner(y_data[i], yj_data[i]);
+            }   
+        }
+        */
+    }
+
+
     
-    //printf("\n");
-    Env::barrier();
     if(filtering_type == _NONE_)
     {
-        //printf("\n");
-        for(uint32_t i = 0; i < v_nitems; i++)
+        if(apply_depends_on_iter)
         {
-            //printf("%d y=%f v=%f\n", i, y_data[i], v_data[i]);
-            //v_data[i] = 
-            //if(Env::rank == 3)
-            //printf("1.R=%d,app:i=%d c=%d  b=%d y=%d v=%d\n", Env::rank, i, c_data[i], b_data[i], y_data[i], v_data[i]);
-            //printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
-            if(apply_depends_on_iter)
+            for(uint32_t i = 0; i < v_nitems; i++)
             {
-               // if(b_data[i])
-                    c_data[i] = applicator(v_data[i], y_data[i], iteration);   
-                //else
-                  ///  c_data[i] = 0;
+                Vertex_State &state = V2[i];
+                c_data[i] = applicator(state, y_data[i], iteration);
             }
-            else
-                c_data[i] = applicator(v_data[i], y_data[i]);
-            //if(Env::rank == 3)
-            //printf("2.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[i], y_data[i], v_data[i]);
-            //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
-            //printf("c=%f y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
-            //v_data[i] = (*f)(0, y_data[i], 0, 0); 
+        }
+        else
+        {
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V2[i];
+                c_data[i] = applicator(state, y_data[i]);
+            }
         }
     }
     else if(filtering_type == _SOME_)
     {
         Fractional_Type tmp = 0;
         auto &i_data = (*I)[yi];
-        
-        //char *i_data = (char *) I->data[yi];        
         Integer_Type j = 0;
-        for(uint32_t i = 0; i < v_nitems; i++)
+        if(apply_depends_on_iter)
         {
-            if(i_data[i])
+            for(uint32_t i = 0; i < v_nitems; i++)
             {
-                //printf("1.R=%d,app:i=%d c=%d b=%d y=%d v=%d\n",Env::rank,  i, c_data[i], b_data[j], y_data[j], v_data[i]);
-                //printf("1.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                if(apply_depends_on_iter)
-                    c_data[i] = applicator(v_data[i], y_data[j], iteration);
+                Vertex_State &state = V2[i];
+                if(i_data[i])
+                {
+                    c_data[i] = applicator(state, y_data[j], iteration);
+                    j++;
+                }
                 else
-                    c_data[i] = applicator(v_data[i], y_data[j]);
-                //printf("2.R=%d,app:i=%d c=%d  y=%d v=%d\n",Env::rank,  i, c_data[i], y_data[j], v_data[i]);
-                //printf("2.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
-                //v_data[i] = (*f)(0, y_data[j], 0, 0);
-                j++;
+                {
+                    c_data[i] = applicator(state);    
+                }
             }
-            else
-            {
-                Fractional_Type tmp = 0, tmp1 = 0;
-                //printf("%f %d\n", v_data[i], fabs(v_data[i] - (0.15 + (1.0 - 0.15) * tmp)) > 1e-5);    
-                //printf("3.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                if(apply_depends_on_iter)
-                    c_data[i] = applicator(tmp1, tmp, iteration);    
-                else
-                    c_data[i] = applicator(tmp1, tmp);
-                //printf("4.i=%d c=%d y=%f v=%f\n", i, c_data[i], y_data[i], v_data[i]);
-                //printf("c=%d y=%f v=%f\n", c_data[i], y_data[i], v_data[i]);
-                //v_data[i] = (*f)(0, 0, 0, 0);
-                //printf("%d %f\n", ret, v_data[i]);    
-                //return fabs(s.rank - tmp) > tol;
-            }
-        }
-    }
-    Env::barrier();
-    //MPI_Barrier(MPI_COMM_WORLD);
-    if(not stationary)
-    {
-        uint32_t bo = accu_segment_col;
-        char *b_data = (char *) B->data[bo];
-        Integer_Type b_nitems = B->nitems[bo];
-        if(filtering_type == _NONE_)
-        {
-            for(uint32_t i = 0; i < c_nitems; i++)
-            {
-                b_data[i] = c_data[i];
-                //if(Env::rank == 0)
-                //printf("[%d %d %d]\n", Env::rank, i, b_data[i]);
-            }
-            //if(Env::rank == 0)
-            //printf("\n");
+            
         }
         else
         {
-            Fractional_Type tmp = 0;
-            auto &i_data = (*I)[yi];
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < c_nitems; i++)
+            for(uint32_t i = 0; i < v_nitems; i++)
             {
+                Vertex_State &state = V2[i];
                 if(i_data[i])
                 {
-                    b_data[j] = c_data[i];
-                    //printf("[%d %d %d]\n", Env::rank, j, b_data[j]);
+                    c_data[i] = applicator(state, y_data[j]);
                     j++;
                 }
-                
+                else
+                {
+                    c_data[i] = applicator(state);
+                }
             }
-            //if(Env::rank == 0)
-            //printf("\n");
         }
     }
-    
+
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < c_nitems; i++)
+        {
+            b_data[i] = c_data[i];
+        }
+    }
+    else
+    {
+        Fractional_Type tmp = 0;
+        auto &i_data = (*I)[yi];
+        Integer_Type j = 0;
+        for(uint32_t i = 0; i < c_nitems; i++)
+        {
+            if(i_data[i])
+            {
+                b_data[j] = c_data[i];
+                j++;
+            }
+            
+        }
+    }
+   
     if(not gather_depends_on_apply and not apply_depends_on_iter)
     {
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
             clear(Y[i]);
-    }   
-Env::barrier();
-//if(!Env::rank)
-//printf("REMoVE MEEE\nNum_triangles\n");    
+    } 
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
