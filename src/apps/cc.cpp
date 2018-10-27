@@ -19,6 +19,7 @@ int main(int argc, char **argv)
     double time1 = Env::clock();   
     
     if(argc != 3)  {
+    //if(argc != 3)  {
         if(Env::is_master) {
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
                       << std::endl;
@@ -28,15 +29,16 @@ int main(int argc, char **argv)
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    uint32_t num_iterations = 0;
-    num_iterations = 0;
+    ip num_iterations = 0;
+    //uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
+    //num_iterations = 0;
     bool directed = false;
     bool transpose = false;
     bool self_loops = true;
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSR_;
+    Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
     
