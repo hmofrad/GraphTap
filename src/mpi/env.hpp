@@ -208,13 +208,16 @@ void Env::finalize()
     Env::barrier();
     if(Env::comm_split)
     {
-        MPI_Group_free(&rowgrps_group_);
-        MPI_Group_free(&rowgrps_group);
-        MPI_Comm_free(&rowgrps_comm);
-        
-        MPI_Group_free(&colgrps_group_);
-        MPI_Group_free(&colgrps_group);
-        MPI_Comm_free(&colgrps_comm);
+        if(rowgrps_group_)
+        {
+            MPI_Group_free(&rowgrps_group_);
+            MPI_Group_free(&rowgrps_group);
+            MPI_Comm_free(&rowgrps_comm);
+            
+            MPI_Group_free(&colgrps_group_);
+            MPI_Group_free(&colgrps_group);
+            MPI_Comm_free(&colgrps_comm);   
+        }
     }
     int ret = MPI_Finalize();
     assert(ret == MPI_SUCCESS);
