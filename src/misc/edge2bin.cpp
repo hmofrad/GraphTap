@@ -1,5 +1,5 @@
 /*
- * Edge list to binary converter
+ * edge2bin.cpp: Edge list to binary converter
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
@@ -26,6 +26,11 @@ int main(int argc, char **argv) {
   	std::string filepath_out = argv[2];
 
 	std::ifstream  fin(filepath_in.c_str(),   std::ios_base::in);
+    if(!fin.is_open())
+    {
+        fprintf(stderr, "Unable to open input file");
+        exit(1); 
+    }
 	std::ofstream fout(filepath_out.c_str(), std::ios_base::binary);
 
 	// Consume comments identified by '#' and '%' characters
@@ -33,7 +38,7 @@ int main(int argc, char **argv) {
 	// Read pairs of (char i, char j) from filepath_in
 	// Write bianry pairs of (uint32_t i, uint32_t j) to filepath_out
 	uint32_t num_comments = 0;
-	uint32_t num_edges = 0;
+	uint64_t num_edges = 0;
 	bool is_comment = false;
 	std::string line;
 	uint32_t i, j;
@@ -57,9 +62,9 @@ int main(int argc, char **argv) {
     		num_edges++;
 		}
 	}
-
+    fout.close();
 	fin.close();
-	fout.close();
+	
 
 	std::cout << "########################################" << std::endl;
 	std::cout << "Read/write stats:" << std::endl;
