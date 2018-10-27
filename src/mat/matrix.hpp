@@ -72,14 +72,13 @@ class Matrix
     template<typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Graph;
     
-    template<typename Weight__, typename Integer_Type__, typename Fractional_Type__>
+    template<typename Weight__, typename Integer_Type__, typename Fractional_Type__, typename Vertex_state>
     friend class Vertex_Program;
     
     public:    
         Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool parallel_edges_,
                Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
         ~Matrix();
-
     private:
         Integer_Type nrows, ncols;
         uint32_t ntiles, nrowgrps, ncolgrps;
@@ -923,10 +922,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &outbox = outboxes[r];
-            uint32_t outbox_bound = outbox.size() + many_triples_size;
-            outbox.resize(outbox_bound);
-            /* Send the triples with many_triples_size padding. */
-            MPI_Isend(outbox.data(), outbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
+            uint32_t outbox_bound = outbox.size();
+            MPI_Isend(outbox.data(), outbox.size(), MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
             out_requests.push_back(request);
         }
     }     
@@ -938,10 +935,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         if(r != Env::rank)
         {
             auto &inbox = inboxes[r];
-            uint32_t inbox_bound = inbox_sizes[r] + many_triples_size;
-            inbox.resize(inbox_bound);
-            /* Recv the triples with many_triples_size padding. */
-            MPI_Irecv(inbox.data(), inbox_bound / many_triples_size, MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);    
+            inbox.resize(inbox_sizes[r]);
+            MPI_Irecv(inbox.data(), inbox.size(), MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);    
             in_requests.push_back(request);
         }
     }
@@ -958,7 +953,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                 test(inbox[i]);
                 insert(inbox[i]);
             }
-
             inbox.clear();
             inbox.shrink_to_fit();
         }
