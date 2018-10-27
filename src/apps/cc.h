@@ -34,8 +34,7 @@ struct CC_State
 {
     ip label = 0;
     ip get_state(){return(label);};
-    ip get_inf(){return(INF);};
-    
+    ip get_inf(){return(INF);};    
     std::string print_state(){return("Label=" + std::to_string(label));};
 };
 
