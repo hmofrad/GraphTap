@@ -30,6 +30,7 @@ struct Deg_State
 {
     ip degree = 0;
     ip get_state(){return(degree);};
+    ip get_inf(){return(0);};
     std::string print_state(){return("Degree=" + std::to_string(degree));};
 };
 
