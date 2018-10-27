@@ -616,9 +616,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             fprintf(stderr, "read() failure\n");
             Env::exit(1);
         }
-
+        //if(triple.row == 2 or triple.col == 2)
+        //    printf("<%d %d>\n", triple.row, triple.col);
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
+        
+        //printf("%d %d\n", triple.row + 1, triple.col + 1);
         
         // Remove self-loops
         if (triple.row == triple.col)
