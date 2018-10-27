@@ -23,7 +23,7 @@ int main(int argc, char **argv)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
                       << std::endl;
         }    
-        exit(1);
+        Env::exit(1);
     }
     
     std::string file_path = argv[1]; 
