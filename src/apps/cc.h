@@ -11,10 +11,8 @@
 
 #define INF 2147483647
 
-/* HAS_WEIGHT macro will be defined by compiler.
-   So, you don't have to change this.   
-   make WEIGHT="-DHASWEIGHT"         */
-   
+/* HAS_WEIGHT macro will be defined by compiler. 
+   make MACROS=-DHAS_WEIGHT */ 
 using em = Empty; // Weight (default is Empty)
 #ifdef HAS_WEIGHT
 using wp = uint32_t;
