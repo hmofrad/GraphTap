@@ -19,7 +19,6 @@ int main(int argc, char **argv)
     double time1 = Env::clock();   
     
     if(argc != 3)  {
-    //if(argc != 3)  {
         if(Env::is_master) {
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
                       << std::endl;
@@ -29,9 +28,6 @@ int main(int argc, char **argv)
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    ip num_iterations = 0;
-    //uint32_t num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
-    //num_iterations = 0;
     bool directed = false;
     bool transpose = false;
     bool self_loops = true;
@@ -51,7 +47,7 @@ int main(int argc, char **argv)
     bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
-    V.execute(num_iterations);
+    V.execute();
     V.checksum();
     V.display();
     V.free();
