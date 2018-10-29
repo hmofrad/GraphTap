@@ -14,16 +14,11 @@
 
 int main(int argc, char **argv)
 { 
-   // #ifndef HAS_WEIGHT
-   //     #define HAS_WEIGHT
-    //    printf("xXXX|\n");
-    //#endif
-    
     bool comm_split = true;
     Env::init(comm_split);    
     double time1 = Env::clock();   
     
-    if(argc != 5)  {
+    if(argc != 4)  {
         if(Env::is_master) {
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> <root>\""
                       << std::endl;
@@ -34,18 +29,26 @@ int main(int argc, char **argv)
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     ip root = std::atoi(argv[3]);
-    ip iter = std::atoi(argv[4]);
+    
+    #ifdef HAS_WEIGHT
+    /* SSSP on an directed weighted graph */
     bool directed = true;
     bool transpose = true;
-    bool self_loops = false;
-    bool acyclic = false;
+    bool parallel_edges = true;
+    #else
+    /* SSSP on an ndirected graph */
+    bool directed = false;
+    bool transpose = false;
     bool parallel_edges = false;
+    #endif
+    bool self_loops = true;
+    bool acyclic = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
     
-    /* Single Source Shortest Path (SSSP) execution */
+    /* Single Source Shortest Path (SSSP) execution*/
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = false;
@@ -55,7 +58,7 @@ int main(int argc, char **argv)
     Ordering_type OT = _ROW_;
     SSSP_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);   
     V.root = root;
-    V.execute(iter);
+    V.execute();
     V.checksum();
     V.display();
     V.free();
