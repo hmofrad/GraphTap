@@ -607,6 +607,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     
     struct Triple<Weight, Integer_Type> triple;
     struct Triple<Weight, Integer_Type> pair;
+    //printf("SZ=%lu\n", sizeof(pair));
     while (offset < endpos)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
@@ -621,7 +622,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
-        //printf("%d %d\n", triple.row + 1, triple.col + 1);
+        //printf("%d %d %d\n", triple.row, triple.col, triple.weight);
         
         // Remove self-loops
         if (triple.row == triple.col)
