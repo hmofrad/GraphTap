@@ -16,7 +16,7 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 .PHONY: all clean
 
-objs = deg pr tc cc bfs # deg pr tc bfs sssp
+objs = deg pr tc cc bfs sssp
 # deg pr tc cc
 #objs = deg pr tc cc
 
