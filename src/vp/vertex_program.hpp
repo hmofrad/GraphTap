@@ -1343,10 +1343,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                                     combiner(y_data[IA[i]], A[i] + x_data[j]);
                                     */
                                     //if(b_data[j])
-                                        combiner(y_data[IA[i]], x_data[j], A[i]);
+                                        
+                                    if(get_vid(IA[i]) == 506)
+                                        printf("1.r=%d i=%d j=%d y=%d x=%d a=%d %d\n", Env::rank, get_vid(IA[i]), j,  y_data[IA[i]], x_data[j], A[i], get_vid(j));
+                                    
+                                       combiner(y_data[IA[i]], x_data[j], A[i]);
                                         //combiner(y_data[IA[i]], A[i] + x_data[j]);
                                 
-                                
+                                    if(get_vid(IA[i]) == 506)
+                                        printf("2.r=%d i=%d j=%d y=%d x=%d a=%d\n", Env::rank, get_vid(IA[i]), j,  y_data[IA[i]], x_data[j], A[i]);
                                     //printf(">2.rank=%d(i=%d,j=%d),yi=%d,xj=%d w=%d bia=%d\n", Env::rank, IA[i], j, y_data[IA[i]], x_data[j],  A[i], b_data[IA[i]]);
                                 #else
                                 //if(b_data[IA[i]])
@@ -1835,8 +1840,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                   //  printf("1.r=%d i=%d y=%d yj=%d %d\n", Env::rank, i, y_data[i], yj_data[i], iteration);
                 //if(b_data[i])
                     combiner(y_data[i], yj_data[i]);
-                //if(get_vid(i) == 772)
-                   // printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
+                
+                //if(get_vid(i) == 506)
+                  //  printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
                     //printf("2.r=%d i=%d y=%d yj=%d\n", Env::rank, i, y_data[i], yj_data[i]);
             //}
         }   
@@ -2362,8 +2368,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     for(uint32_t i = 0; i < v_nitems; i++)
     {
         Vertex_State &state = V2[i];
-        if(get_vid(i) < nrows)
+        //if(get_vid(i) < nrows)
+        if((state.get_state() != state.get_inf()) and (get_vid(i) < nrows))    
+        {
                 v_sum_local += state.get_state();
+                //printf("%d %d\n", get_vid(i), state.get_state());
+        }
+            
     }
     MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
