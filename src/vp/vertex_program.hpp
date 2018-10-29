@@ -580,6 +580,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
                     if(j_data[i])
                     { 
                         b_data[j] = c_data[i];
+                        printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
                         j++;
                     }
                 }
@@ -845,7 +846,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     t2 = Env::clock();
     Env::print_time("Init", t2 - t1);
 }
-
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specialized_tc_init(
     Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VProgram)
@@ -868,18 +869,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         Env::exit(1);
     }   
 
-    /* Initialize values and activity pattern */
+    // Initialize values and activity pattern 
     W.resize(tile_height);
     
     if(VProgram)
     {
-        /* Initialiaze scores/states */
+        // Initialiaze scores/states 
         Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State> *VP = VProgram;
         std::vector<std::vector<Integer_Type>> W_ = VP->W;
         R = W_;
         already_initialized = true;
         
-        /* Initialiaze BIG 2D scores/states vector */
+        // Initialiaze BIG 2D scores/states vector 
         D.resize(nrowgrps);
         for(uint32_t i = 0; i < nrowgrps; i++)
             D[i].resize(d_sizes[i]);
@@ -889,7 +890,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             D_SIZE[i].resize(d_sizes[i] + 1); // 0 + nitems
     }
 
-    /* Initialiaze accumulators */
+    // Initialiaze accumulators 
     Z.resize(rank_nrowgrps);
     for(uint32_t j = 0; j < rank_nrowgrps; j++)
         Z[j].resize(z_sizes[j]);
@@ -913,7 +914,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     inboxes.resize(rowgrp_nranks - 1);
     outboxes.resize(rowgrp_nranks - 1);
 }        
-
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather()
@@ -1238,26 +1239,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                     for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
                     {
                         //if(i < -1)
-                        //printf("y[%d]=%d: ", i, y_data[i]);
+                        
                         //if(b_data[i])
                         //{
+                            printf("b[%d]=%d,", i, b_data[i]);
                             for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                             {
+                                printf("2.rank=%d(i=%d,j=%d),yi=%d,xj=%d\n", Env::rank, i, JA[j], y_data[i], x_data[i]);
                                 #ifdef HAS_WEIGHT
                                 if(b_data[JA[j]])
-                                    combiner(y_data[i], A[j] * x_data[JA[j]]);
+                                //if(b_data[JA[j]])    
+                                    combiner(y_data[i], A[j] + x_data[JA[j]]);
+                                
+                                //combiner(y_data[JA[j]], A[j] + x_data[i]);
                                 #else
                                 
                                 //{
                                     //if(i < -1)
                                     //printf("(x[%d]=%d) ", JA[j], x_data[JA[j]]);
-                                if(b_data[JA[j]])
+                                //if(b_data[JA[j]])
                                     combiner(y_data[i], x_data[JA[j]]);
                                     //printf("2.rank=%d(i=%d,j=%d),yi=%d,xj=%d\n", Env::rank, i, j, y_data[i], x_data[JA[j]]);
                                 //}
                                 #endif   
-                            }
-                        //}
+                            //}
+                            printf("\n");
+                        }
+                        
                         //if(i < -1)
                         //printf("> y[%d]=%d\n", i, y_data[i]);
                     }
@@ -1299,13 +1307,87 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                     
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
-                        if(b_data[j])
-                        {
+                        
+                        //if(b_data[j])
+                        //{
+                            
+                            
+                            
+                            
                             for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                             {
+                                printf("0.rank=%d,b=%d,%d(i=%d,j=%d),yi=%d,xj=%d vid=%d xia=%d\n", Env::rank, b_data[j], b_data[IA[i]], IA[i], j, y_data[IA[i]], x_data[j],  get_vid(IA[i]),  x_data[IA[i]]);
+                                int r = 0;
+                                if(b_data[j])
+                                {
+                                    
+                                    
+                                    auto &j_data = (*J)[0];
+                                    Integer_Type jj = 0;
+                                    for(uint32_t ii = 0; ii < ncols_plus_one_minus_one; ii++)
+                                    {
+                                        if(j_data[ii])
+                                        {
+                                            //b_data[jj] = c_data[ii];
+                                            //printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                                            //printf(">j=%d jj=%d\n", ii, jj);
+                                            if(j == jj)
+                                            {
+                                                r = jj;
+                                                printf(">j=%d jj=%d <r=%d> %d\n", j, jj, ii, IA[i]);
+                                                break;
+                                            }
+                                            jj++;
+                                        }
+                                    }
+                                    /*
+                                    auto &i_data = (*I)[0];
+                                    Integer_Type jjj = 0;
+                                    for(uint32_t ii = 0; ii < ncols_plus_one_minus_one; ii++)
+                                    {
+                                        
+                                        if(i_data[ii])
+                                        {
+                                            //b_data[jj] = c_data[ii];
+                                            //printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                                            //printf(">j=%d jj=%d\n", ii, jj);
+                                            if(j == jjj)
+                                            {
+                                                printf(">r=%d jjj=%d <ii=%d> %d\n", j, jjj, ii, IA[i]);
+                                              //  break;
+                                            }
+                                            jjj++;
+                                        }
+                                        
+                                            
+                                    }
+                                    */
+                                    
+                                } 
+                                
+                                
                                 #ifdef HAS_WEIGHT
-                                //if(b_data[IA[i]])
+                                
+                                    //printf(">1.rank=%d(i=%d,j=%d),yi=%d,xj=%d w=%d bia=%d\n", Env::rank, IA[i], j, y_data[IA[i]], x_data[j],  A[i], b_data[IA[i]]);
+                                    /*
+                                    if(b_data[IA[i]])
+                                    {
+                                        combiner(y_data[j], A[i] + x_data[IA[i]]);
+                                        //printf("0.rank=%d(i=%d,j=%d),yi=%d,xj=%d w=%d\n", Env::rank, IA[i], j, y_data[j], x_data[IA[i]],  A[i]);
+                                    }
+                                    */
+                                    //if(b_data[IA[i]] and b_data[j])
+                                   
+                                    /*
+                                    //NONE
+                                    if(b_data[j])
                                     combiner(y_data[IA[i]], A[i] + x_data[j]);
+                                    */
+                                    if(b_data[j])
+                                    combiner(y_data[IA[i]], A[i] + x_data[j]);
+                                
+                                
+                                    //printf(">2.rank=%d(i=%d,j=%d),yi=%d,xj=%d w=%d bia=%d\n", Env::rank, IA[i], j, y_data[IA[i]], x_data[j],  A[i], b_data[IA[i]]);
                                 #else
                                 //if(b_data[IA[i]])
                                 //{
@@ -1320,7 +1402,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                                 //}
                                 #endif
                             }
-                        }
+                        //}
                     }
                     //if(Env::rank == 2)
                       //  printf(">3.rank=%d, y = %d\n", Env::rank, y_data[772]);
@@ -1791,13 +1873,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                     
                 //if(get_vid(i) == 772)
                   //  printf("1.r=%d i=%d y=%d yj=%d %d\n", Env::rank, i, y_data[i], yj_data[i], iteration);
-                
+                //if(b_data[i])
                     combiner(y_data[i], yj_data[i]);
                 //if(get_vid(i) == 772)
+                    printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
                     //printf("2.r=%d i=%d y=%d yj=%d\n", Env::rank, i, y_data[i], yj_data[i]);
             //}
         }   
-        Env::barrier();
+        
         
         /*
         if(gather_depends_on_apply)
@@ -1818,7 +1901,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         }
         */
     }
-
+Env::barrier();
     if(filtering_type == _NONE_)
     {
         if(apply_depends_on_iter)
@@ -1836,9 +1919,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V2[i];
+                //printf("1.[%d %d %d %d] \n", i, c_data[i], y_data[i], state.distance);
                 c_data[i] = applicator(state, y_data[i]);
                 //if(i < 31)
-                //printf("[%d %d %d %d] \n", i, c_data[i], y_data[i], state.parent);
+                printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[i], state.distance);
             }
             //printf("\n");
         }
@@ -1879,6 +1963,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                 {
                     c_data[i] = applicator(state);
                 }
+                printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[j], state.distance);
             }
         }
     }
@@ -1893,7 +1978,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     }
     else
     {
-        Fractional_Type tmp = 0;
+        /*
         auto &i_data = (*I)[yi];
         Integer_Type j = 0;
         for(uint32_t i = 0; i < c_nitems; i++)
@@ -1901,9 +1986,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             if(i_data[i])
             {
                 b_data[j] = c_data[i];
+                printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
                 j++;
             }
         }
+        */
+        
+        auto &j_data = (*J)[bo];
+        Integer_Type j = 0;
+        for(uint32_t i = 0; i < c_nitems; i++)
+        {
+            if(j_data[i])
+            { 
+                b_data[j] = c_data[i];
+                printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                j++;
+            }
+        }
+        
+        
     }
    
     if(not gather_depends_on_apply and not apply_depends_on_iter)
@@ -2295,7 +2396,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     if(Env::is_master)
         std::cout << std::fixed << "Value checksum:" << v_sum_global << std::endl;
 
-    if(apply_depends_on_iter)
+    if(apply_depends_on_iter or gather_depends_on_apply)
     {
 
         uint64_t v_sum_local_ = 0, v_sum_global_ = 0;
@@ -2354,8 +2455,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     
     //for(int i = 0; i < 4; i++)
     //{
-        /*
-    if(Env::rank == 0)
+        
+    if(Env::rank == 2)
     {
         Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
@@ -2368,7 +2469,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
         }  
     }    
     //}
-    */
+    
     
 }
 #endif
