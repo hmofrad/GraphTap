@@ -76,7 +76,7 @@ class Matrix
     friend class Vertex_Program;
     
     public:    
-        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool parallel_edges_,
+        Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_,
                Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
         ~Matrix();
     private:
@@ -87,6 +87,8 @@ class Matrix
         Tiling *tiling;
         Compression_type compression_type;
         Filtering_type filtering_type;
+        bool directed;
+        bool transpose;
         bool parallel_edges;
         bool parread;
         /*
@@ -197,7 +199,7 @@ class Matrix
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
-    Integer_Type ncols_, uint32_t ntiles_, bool parallel_edges_, Tiling_type tiling_type_, 
+    Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_, Tiling_type tiling_type_, 
     Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
 {
     nrows = nrows_;
@@ -207,6 +209,8 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     ncolgrps = ntiles_ / nrowgrps;
     tile_height = (nrows_ / nrowgrps) + 1;
     tile_width = (ncols_ / ncolgrps) + 1;
+    directed = directed_;
+    transpose = transpose_;
     parallel_edges = parallel_edges_;
     parread = parread_;
     
