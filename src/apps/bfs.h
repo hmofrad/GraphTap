@@ -69,14 +69,9 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
         {
             if(y2 != INF)
             {
-                //if(y2 > y1 or y1 == INF)
                 if(y2 < y1)     
                     y1 = y2;
             }
-            ///else
-                
-            
-            //printf("%d %d\n", y1, y2);
         }
         
         virtual bool applicator(BFS_State &state, const Fractional_Type &y, Integer_Type iteration)
@@ -89,20 +84,12 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
                 if(y != INF)
                 {
                     state.hops = iteration + 1;
-                //v = y;
                     state.parent = y;
                     return(true);
                 }
                 else
                     return(false);
             }
-            
-            //if (s.hops != INF)
-            //return false;  // already visited
-            //s.hops = (dist_t) (iter + 1);
-            //s.parent = y;
-            //return true;
-            
         }      
 };
 #endif
