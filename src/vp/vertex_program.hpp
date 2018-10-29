@@ -38,6 +38,7 @@ class Vertex_Program
         virtual bool initializer(Integer_Type vid, Vertex_State &state) { return(stationary);}
         virtual bool initializer(Integer_Type vid, Vertex_State &state, const State &other) { return(stationary);}
         virtual Fractional_Type messenger(Vertex_State &state) { return(1);}
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) { ; }
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) { ; }
         virtual bool applicator(Vertex_State &state, const Fractional_Type &y) { return(true); }
         virtual bool applicator(Vertex_State &state){ return(false); }
@@ -175,6 +176,8 @@ class Vertex_Program
         std::vector<std::vector<Integer_Type>> outboxes;// Temporary buffers for  serializing the adjacency lists
         
         Integer_Type get_vid(Integer_Type index){return(index + (owned_segment * tile_height));};
+        bool directed;
+        bool transpose;
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -188,6 +191,8 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
 {
 
     A = Graph.A;
+    directed = A->directed;
+    transpose = A->transpose;
     stationary = stationary_;
     gather_depends_on_apply = gather_depends_on_apply_;
     apply_depends_on_iter = apply_depends_on_iter_;
@@ -520,7 +525,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         uint32_t co = 0;
         char *c_data = (char *) C->data[co];
         Integer_Type c_nitems = C->nitems[co];
-        Env::barrier();
+        //Env::barrier();
        // printf("V:");
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -529,7 +534,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
             //printf("[%d %d]", i, state.get_state());
         }
         //printf("\n");
-        Env::barrier();
+        //Env::barrier();
         /* Initialiaze accumulators */
         std::vector<Integer_Type> y_size;
         std::vector<Integer_Type> y_sizes;
@@ -580,7 +585,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
                     if(j_data[i])
                     { 
                         b_data[j] = c_data[i];
-                        printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                        //printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
                         j++;
                     }
                 }
@@ -1242,10 +1247,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         
                         //if(b_data[i])
                         //{
-                            printf("b[%d]=%d,", i, b_data[i]);
+                            //printf("b[%d]=%d,", i, b_data[i]);
                             for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
                             {
-                                printf("2.rank=%d(i=%d,j=%d),yi=%d,xj=%d\n", Env::rank, i, JA[j], y_data[i], x_data[i]);
+                               // printf("2.rank=%d(i=%d,j=%d),yi=%d,xj=%d\n", Env::rank, i, JA[j], y_data[i], x_data[i]);
                                 #ifdef HAS_WEIGHT
                                 if(b_data[JA[j]])
                                 //if(b_data[JA[j]])    
@@ -1263,7 +1268,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                                 //}
                                 #endif   
                             //}
-                            printf("\n");
+                           // printf("\n");
                         }
                         
                         //if(i < -1)
@@ -1308,62 +1313,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
                         
-                        //if(b_data[j])
-                        //{
+                        if(b_data[j])
+                        {
                             
                             
                             
                             
                             for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                             {
-                                printf("0.rank=%d,b=%d,%d(i=%d,j=%d),yi=%d,xj=%d vid=%d xia=%d\n", Env::rank, b_data[j], b_data[IA[i]], IA[i], j, y_data[IA[i]], x_data[j],  get_vid(IA[i]),  x_data[IA[i]]);
-                                int r = 0;
-                                if(b_data[j])
-                                {
-                                    
-                                    
-                                    auto &j_data = (*J)[0];
-                                    Integer_Type jj = 0;
-                                    for(uint32_t ii = 0; ii < ncols_plus_one_minus_one; ii++)
-                                    {
-                                        if(j_data[ii])
-                                        {
-                                            //b_data[jj] = c_data[ii];
-                                            //printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
-                                            //printf(">j=%d jj=%d\n", ii, jj);
-                                            if(j == jj)
-                                            {
-                                                r = jj;
-                                                printf(">j=%d jj=%d <r=%d> %d\n", j, jj, ii, IA[i]);
-                                                break;
-                                            }
-                                            jj++;
-                                        }
-                                    }
-                                    /*
-                                    auto &i_data = (*I)[0];
-                                    Integer_Type jjj = 0;
-                                    for(uint32_t ii = 0; ii < ncols_plus_one_minus_one; ii++)
-                                    {
-                                        
-                                        if(i_data[ii])
-                                        {
-                                            //b_data[jj] = c_data[ii];
-                                            //printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
-                                            //printf(">j=%d jj=%d\n", ii, jj);
-                                            if(j == jjj)
-                                            {
-                                                printf(">r=%d jjj=%d <ii=%d> %d\n", j, jjj, ii, IA[i]);
-                                              //  break;
-                                            }
-                                            jjj++;
-                                        }
-                                        
-                                            
-                                    }
-                                    */
-                                    
-                                } 
+                               // printf("0.rank=%d,b=%d,%d(i=%d,j=%d),yi=%d,xj=%d vid=%d xia=%d\n", Env::rank, b_data[j], b_data[IA[i]], IA[i], j, y_data[IA[i]], x_data[j],  get_vid(IA[i]),  x_data[IA[i]]);
+
                                 
                                 
                                 #ifdef HAS_WEIGHT
@@ -1383,8 +1342,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                                     if(b_data[j])
                                     combiner(y_data[IA[i]], A[i] + x_data[j]);
                                     */
-                                    if(b_data[j])
-                                    combiner(y_data[IA[i]], A[i] + x_data[j]);
+                                    //if(b_data[j])
+                                        combiner(y_data[IA[i]], x_data[j], A[i]);
+                                        //combiner(y_data[IA[i]], A[i] + x_data[j]);
                                 
                                 
                                     //printf(">2.rank=%d(i=%d,j=%d),yi=%d,xj=%d w=%d bia=%d\n", Env::rank, IA[i], j, y_data[IA[i]], x_data[j],  A[i], b_data[IA[i]]);
@@ -1402,7 +1362,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                                 //}
                                 #endif
                             }
-                        //}
+                        }
                     }
                     //if(Env::rank == 2)
                       //  printf(">3.rank=%d, y = %d\n", Env::rank, y_data[772]);
@@ -1854,7 +1814,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     uint32_t co = 0;
     char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
-    Env::barrier();
+    //Env::barrier();
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
     {
         if(Env::comm_split)
@@ -1876,7 +1836,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                 //if(b_data[i])
                     combiner(y_data[i], yj_data[i]);
                 //if(get_vid(i) == 772)
-                    printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
+                   // printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
                     //printf("2.r=%d i=%d y=%d yj=%d\n", Env::rank, i, y_data[i], yj_data[i]);
             //}
         }   
@@ -1901,7 +1861,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         }
         */
     }
-Env::barrier();
+//Env::barrier();
     if(filtering_type == _NONE_)
     {
         if(apply_depends_on_iter)
@@ -1922,7 +1882,7 @@ Env::barrier();
                 //printf("1.[%d %d %d %d] \n", i, c_data[i], y_data[i], state.distance);
                 c_data[i] = applicator(state, y_data[i]);
                 //if(i < 31)
-                printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[i], state.distance);
+              //  printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[i], state.distance);
             }
             //printf("\n");
         }
@@ -1963,7 +1923,7 @@ Env::barrier();
                 {
                     c_data[i] = applicator(state);
                 }
-                printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[j], state.distance);
+               // printf("2.[r=%d i=%d c=%d y=%d d=%d] \n", Env::rank, get_vid(i), c_data[i], y_data[j], state.distance);
             }
         }
     }
@@ -1978,31 +1938,44 @@ Env::barrier();
     }
     else
     {
-        /*
-        auto &i_data = (*I)[yi];
-        Integer_Type j = 0;
-        for(uint32_t i = 0; i < c_nitems; i++)
+        if(not directed)
         {
-            if(i_data[i])
+            auto &i_data = (*I)[yi];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < c_nitems; i++)
             {
-                b_data[j] = c_data[i];
-                printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
-                j++;
+                if(i_data[i])
+                {
+                    b_data[j] = c_data[i];
+                  //  printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                    j++;
+                }
             }
         }
-        */
-        
-        auto &j_data = (*J)[bo];
-        Integer_Type j = 0;
-        for(uint32_t i = 0; i < c_nitems; i++)
+        else
         {
-            if(j_data[i])
-            { 
-                b_data[j] = c_data[i];
-                printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
-                j++;
+            if(transpose)
+            {                
+                auto &j_data = (*J)[bo];
+                Integer_Type j = 0;
+                for(uint32_t i = 0; i < c_nitems; i++)
+                {
+                    if(j_data[i])
+                    { 
+                        b_data[j] = c_data[i];
+                      //  printf("i=%d c=%d j=%d b=%d\n", i, c_data[i], j, b_data[j]);
+                        j++;
+                    }
+                }
+            }
+            else
+            {
+                fprintf(stderr, "Directed graphs for non-stationary algorithms should be transposed\n");
+                Env::exit(1);
             }
         }
+        
+        
         
         
     }
@@ -2394,7 +2367,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     }
     MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
-        std::cout << std::fixed << "Value checksum:" << v_sum_global << std::endl;
+        std::cout << std::fixed << "Value checksum: " << v_sum_global << std::endl;
 
     if(apply_depends_on_iter or gather_depends_on_apply)
     {
@@ -2411,7 +2384,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
 
         MPI_Allreduce(&v_sum_local_, &v_sum_global_, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(Env::is_master)
-            printf("Reachable Vertices: %lu\n", v_sum_global_);
+            std::cout << std::fixed << "Reachable Vertices: " << v_sum_global_ << std::endl;
     }
     Env::barrier();
     
@@ -2456,7 +2429,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     //for(int i = 0; i < 4; i++)
     //{
         
-    if(Env::rank == 2)
+    if(Env::rank == -2)
     {
         Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
