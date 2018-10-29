@@ -112,7 +112,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     parread = parread_;
     
     // Initialize matrix
-    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, 
+    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, directed_, transpose_, 
                                                           parallel_edges_, tiling_type_, compression_type_,
                                                           filtering_type_, parread_);
 }
