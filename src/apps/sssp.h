@@ -76,10 +76,20 @@ class SSSP_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type
             y1 = (y1 < tmp) ? y1 : tmp;
         }
         //#else
+            
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
+            /*
+            if(y2 != INF)
+            {
+                if(y2 < y1)     
+                    y1 = y2;
+            }
+            */
             y1 = (y1 < y2) ? y1 : y2;
+            //printf("%d %d \n", y1 ,y2);
         }
+        
         //#endif
         
         //virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
