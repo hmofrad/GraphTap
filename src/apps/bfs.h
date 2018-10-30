@@ -49,6 +49,7 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
             if(vid == root)
             {
                 state.vid = vid;
+                state.parent = vid;
                 state.hops = 0;
                 return(true);
             }
@@ -67,11 +68,14 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
 
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
+            y1 = (y1 < y2) ? y1 : y2;
+            /*
             if(y2 != INF)
             {
                 if(y2 < y1)     
                     y1 = y2;
             }
+            */
         }
         
         virtual bool applicator(BFS_State &state, const Fractional_Type &y, Integer_Type iteration)
