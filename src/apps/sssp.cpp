@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     bool parallel_edges = false;
     #endif
-    bool self_loops = true;
+    bool self_loops = false;
     bool acyclic = false;
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
