@@ -83,7 +83,7 @@ class Matrix
         Integer_Type nrows, ncols;
         uint32_t ntiles, nrowgrps, ncolgrps;
         Integer_Type tile_height, tile_width;    
-        
+        uint64_t nedges = 0;
         Tiling *tiling;
         Compression_type compression_type;
         Filtering_type filtering_type;
@@ -177,6 +177,7 @@ class Matrix
         void del_filtering_indices();
         void print(std::string element);
         void distribute();
+        void balance();
         void filter(Filtering_type filtering_type_);//, std::vector<std::vector<char>> &K, std::vector<std::vector<Integer_Type>> &KV);
         void debug(int what_rank);
         void init_filtering();
@@ -864,13 +865,16 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
         //std::vector<uint64_t> nedges_grid(tiling->ntiles);
         std::vector<std::vector<uint64_t>> nedges_grid(Env::nranks);
         std::vector<uint64_t> rank_nedges(Env::nranks);
+        std::vector<uint64_t> rowgrp_nedges(nrowgrps);
+        std::vector<uint64_t> colgrp_nedges(ncolgrps);
+        
         for(uint32_t i = 0; i < Env::nranks; i++)
             nedges_grid[i].resize(tiling->rank_ntiles);
         uint32_t k = 0;
 
-        for (uint32_t i = 0; i < nrowgrps; i++)
+        for(uint32_t i = 0; i < nrowgrps; i++)
         {
-            for (uint32_t j = 0; j < ncolgrps; j++)  
+            for(uint32_t j = 0; j < ncolgrps; j++)  
             {
                 auto &tile = tiles[i][j];
                 if(Env::rank == tile.rank)
@@ -889,9 +893,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
         }
         
         Env::barrier();
-        for (uint32_t r = 0; r < Env::nranks; r++)
+        for(uint32_t r = 0; r < Env::nranks; r++)
         {
-            if (r != Env::rank)
+            if(r != Env::rank)
             {
                 auto &out_edges = nedges_grid[Env::rank];
                 auto &in_edges = nedges_grid[r];
@@ -901,46 +905,54 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
         }
         Env::barrier();
         
-        
-        
         if(!Env::rank)
         {
-            print("nedges");
-            printf("\n");
-        }
-        Env::barrier();
-        
-        if(Env::rank == 2)
-        {
-            for (uint32_t i = 0; i < nrowgrps; i++)
+            for(uint32_t i = 0; i < nrowgrps; i++)
             {
-                for (uint32_t j = 0; j < ncolgrps; j++)  
+                for(uint32_t j = 0; j < ncolgrps; j++)  
                 {
                     auto &tile = tiles[i][j];
-                    //printf("%d ", tile.nedges);
-                    //if(Env::rank != tile.rank)
-                      //  tile.nedges = nedges_grid_t[tile.rank][tile.nth];
-                }
-                printf("\n");
-            }
-            
-        }
-        Env::barrier();
-        
-        if(!Env::rank)
-        {
-            for (uint32_t i = 0; i < nrowgrps; i++)
-            {
-                for (uint32_t j = 0; j < ncolgrps; j++)  
-                {
-                    auto &tile = tiles[i][j];
-                    //printf("%d\n", tile.nth);
                     if(Env::rank != tile.rank)
                         tile.nedges = nedges_grid[tile.rank][tile.nth];
+                    
                 }
             }
             
             print("nedges");
+            
+            for(uint32_t i = 0; i < nrowgrps; i++)
+            {
+                for(uint32_t j = 0; j < ncolgrps; j++)  
+                {
+                    auto &tile = tiles[i][j];
+                    rank_nedges[tile.rank] += tile.nedges;
+                    rowgrp_nedges[i] += tile.nedges;
+                    colgrp_nedges[i] += tile.nedges;
+                    nedges += tile.nedges;
+                }
+            }
+            
+            if(!Env::rank)
+            {
+                printf("Total number of edges: %lu\n", nedges);
+                printf("Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
+                printf("Edge distribution among ranks [rank, rank_nedges, rank_nedges_imbalance]\n");
+                for(uint32_t r = 0; r < Env::nranks; r++)
+                    printf("[%d %lu %2.2f] ", r, rank_nedges[r], (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
+                printf("\n");
+                
+                printf("Edge distribution among rowgrps [rowgrp, rowgrp_nedges, rowgrp_nedges_imbalance]\n");
+                for(uint32_t i = 0; i < nrowgrps; i++)
+                    printf("[%d %lu %2.2f] ", i, rowgrp_nedges[i], (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
+                printf("\n");
+                
+                printf("Edge distribution among colgrps [colgrp, colgrp_nedges, colgrp_nedges_imbalance]\n");
+                for(uint32_t j = 0; j < ncolgrps; j++)
+                    printf("[%d %lu %2.2f] ", j, colgrp_nedges[j], (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
+                printf("\n");
+                
+                
+            }
             
             
             
@@ -979,6 +991,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
    // }
     Env::barrier();
     exit(0);
+    
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
+{
     
 }
 
