@@ -855,6 +855,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
         }
 		tile.nedges = tile.triples->size();
     }    
+    balance();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -895,60 +896,44 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
     }
     Env::barrier();
     
-    if(!Env::rank)
+    for(uint32_t i = 0; i < nrowgrps; i++)
     {
-        for(uint32_t i = 0; i < nrowgrps; i++)
+        for(uint32_t j = 0; j < ncolgrps; j++)  
         {
-            for(uint32_t j = 0; j < ncolgrps; j++)  
-            {
-                auto &tile = tiles[i][j];
-                if(Env::rank != tile.rank)
-                    tile.nedges = nedges_grid[tile.rank][tile.nth];
-                
-                rank_nedges[tile.rank] += tile.nedges;
-                rowgrp_nedges[i] += tile.nedges;
-                colgrp_nedges[i] += tile.nedges;
-                nedges += tile.nedges;
-            }
-        }
-        
-        print("nedges");
-        /*
-        for(uint32_t i = 0; i < nrowgrps; i++)
-        {
-            for(uint32_t j = 0; j < ncolgrps; j++)  
-            {
-                auto &tile = tiles[i][j];
-                rank_nedges[tile.rank] += tile.nedges;
-                rowgrp_nedges[i] += tile.nedges;
-                colgrp_nedges[i] += tile.nedges;
-                nedges += tile.nedges;
-            }
-        }
-        */
-        if(!Env::rank)
-        {
-            printf("Total number of edges: %lu\n", nedges);
-            printf("Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
-            printf("Edge distribution among ranks [rank, rank_nedges, rank_nedges_imbalance]\n");
-            for(uint32_t r = 0; r < Env::nranks; r++)
-                printf("[%d %lu %2.2f] ", r, rank_nedges[r], (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
-            printf("\n");
+            auto &tile = tiles[i][j];
+            if(Env::rank != tile.rank)
+                tile.nedges = nedges_grid[tile.rank][tile.nth];
             
-            printf("Edge distribution among rowgrps [rowgrp, rowgrp_nedges, rowgrp_nedges_imbalance]\n");
-            for(uint32_t i = 0; i < nrowgrps; i++)
-                printf("[%d %lu %2.2f] ", i, rowgrp_nedges[i], (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
-            printf("\n");
-            
-            printf("Edge distribution among colgrps [colgrp, colgrp_nedges, colgrp_nedges_imbalance]\n");
-            for(uint32_t j = 0; j < ncolgrps; j++)
-                printf("[%d %lu %2.2f] ", j, colgrp_nedges[j], (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
-            printf("\n");
-            
-            
+            rank_nedges[tile.rank] += tile.nedges;
+            rowgrp_nedges[i] += tile.nedges;
+            colgrp_nedges[i] += tile.nedges;
+            nedges += tile.nedges;
         }
     }
     
+    print("nedges");
+     
+    if(!Env::rank)
+    {   
+        printf("\nEdge distribution pattern\n");  
+        printf("Total number of edges: %lu\n", nedges);
+        printf("Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
+        printf("Edge distribution among ranks [rank, rank_nedges, rank_nedges_imbalance]\n");
+        for(uint32_t r = 0; r < Env::nranks; r++)
+            printf("[%d %lu %2.2f] ", r, rank_nedges[r], (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
+        printf("\n");
+        
+        printf("Edge distribution among rowgrps [rowgrp, rowgrp_nedges, rowgrp_nedges_imbalance]\n");
+        for(uint32_t i = 0; i < nrowgrps; i++)
+            printf("[%d %lu %2.2f] ", i, rowgrp_nedges[i], (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
+        printf("\n");
+        
+        printf("Edge distribution among colgrps [colgrp, colgrp_nedges, colgrp_nedges_imbalance]\n");
+        for(uint32_t j = 0; j < ncolgrps; j++)
+            printf("[%d %lu %2.2f] ", j, colgrp_nedges[j], (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
+        printf("\n\n");
+    }
+    Env::barrier();
 }
 
 /* Inspired from LA3 code @
