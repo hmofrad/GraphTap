@@ -915,22 +915,22 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
      
     if(!Env::rank)
     {   
-        printf("\nEdge distribution pattern\n");  
-        printf("Total number of edges: %lu\n", nedges);
-        printf("Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
-        printf("Edge distribution among ranks [rank, rank_nedges, rank_nedges_imbalance]\n");
+        printf("\nEdge balancing:\n");  
+        printf("Edge balancing: Total number of edges: %lu\n", nedges);
+        printf("Edge balancing: Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
+        printf("Edge balancing: Imbalance ratio per rank [0-%d]\n", Env::nranks);
         for(uint32_t r = 0; r < Env::nranks; r++)
-            printf("[%d %lu %2.2f] ", r, rank_nedges[r], (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
+            printf("%2.2f ", (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
         printf("\n");
         
-        printf("Edge distribution among rowgrps [rowgrp, rowgrp_nedges, rowgrp_nedges_imbalance]\n");
+        printf("Edge balancing: Imbalance ratio per rowgroup [0-%d]\n", nrowgrps);
         for(uint32_t i = 0; i < nrowgrps; i++)
-            printf("[%d %lu %2.2f] ", i, rowgrp_nedges[i], (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
+            printf("%2.2f ", (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
         printf("\n");
         
-        printf("Edge distribution among colgrps [colgrp, colgrp_nedges, colgrp_nedges_imbalance]\n");
+        printf("Edge balancing: Imbalance ratio per colgroup [0-%d]\n", ncolgrps);
         for(uint32_t j = 0; j < ncolgrps; j++)
-            printf("[%d %lu %2.2f] ", j, colgrp_nedges[j], (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
+            printf("%2.2f ", (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
         printf("\n\n");
     }
     Env::barrier();
