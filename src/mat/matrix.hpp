@@ -882,7 +882,35 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
             }
         }
     }
-    
+    /*
+    if(!Env::rank)
+    {
+        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
+            printf("<%lu ", nedges_grid[Env::rank][i]);
+        printf(">\n");
+    }
+    Env::barrier();
+    if(Env::rank == 1)
+    {
+        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
+            printf("<%lu> ", nedges_grid[Env::rank][i]);
+        printf("\n");
+    }
+    Env::barrier();
+    if(Env::rank == 2)
+    {
+        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
+            printf("<%lu ", nedges_grid[Env::rank][i]);
+        printf(">\n");
+    }
+    Env::barrier();
+    if(Env::rank == 3)
+    {
+        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
+            printf("<%lu ", nedges_grid[Env::rank][i]);
+        printf(">\n");
+    }
+    */
     Env::barrier();
     for(uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -906,7 +934,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
             
             rank_nedges[tile.rank] += tile.nedges;
             rowgrp_nedges[i] += tile.nedges;
-            colgrp_nedges[i] += tile.nedges;
+            colgrp_nedges[j] += tile.nedges;
             nedges += tile.nedges;
         }
     }
@@ -934,6 +962,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
         printf("\n\n");
     }
     Env::barrier();
+    exit(0);
 }
 
 /* Inspired from LA3 code @
