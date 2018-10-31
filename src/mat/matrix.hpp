@@ -10,9 +10,10 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
+#include "mpi/types.hpp" 
 #include "mat/tiling.hpp" 
 #include "ds/vector.hpp" 
-#include "mpi/types.hpp" 
+#include "ds/indexed_sort.hpp"
 
 #define NA 0
 
@@ -194,8 +195,8 @@ class Matrix
         void insert(const struct Triple<Weight, Integer_Type> &triple);
         void test(const struct Triple<Weight, Integer_Type> &triple);
         
-        std::vector<int32_t> sort_indices(const std::vector<int32_t> &v);
-        void indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2);        
+        //std::vector<int32_t> sort_indices(const std::vector<int32_t> &v);
+        //void indexed_sort(std::vector<int32_t> &v1, std::vector<int32_t> &v2);        
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -302,6 +303,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::insert(const struct Triple<W
     tiles[pair.row][pair.col].triples->push_back(triple);
 }
 
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 std::vector<int32_t> Matrix<Weight, Integer_Type, Fractional_Type>::sort_indices(const std::vector<int32_t> &v) 
 {
@@ -330,6 +332,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::indexed_sort(std::vector<int
     }
     std::sort(v2.begin(), v2.end(),[&temp](int32_t i1, int32_t i2) {return temp[i1] < temp[i2];});           
 }
+*/
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -572,21 +575,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
     }
     
     // Optimization: Spilitting communicator among row/col groups       
-    indexed_sort(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
-    indexed_sort(all_rowgrp_ranks_rg, all_rowgrp_ranks_accu_seg_rg);
+    indexed_sort<int32_t, int32_t>(all_rowgrp_ranks, all_rowgrp_ranks_accu_seg);
+    indexed_sort<int32_t, int32_t>(all_rowgrp_ranks_rg, all_rowgrp_ranks_accu_seg_rg);
     // Make sure there is at least one follower
     if(follower_rowgrp_ranks.size() > 1)
     {
-        indexed_sort(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
-        indexed_sort(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
+        indexed_sort<int32_t, int32_t>(follower_rowgrp_ranks, follower_rowgrp_ranks_accu_seg);
+        indexed_sort<int32_t, int32_t>(follower_rowgrp_ranks_rg, follower_rowgrp_ranks_accu_seg_rg);
     }
-    indexed_sort(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
-    indexed_sort(all_colgrp_ranks_cg, all_colgrp_ranks_accu_seg_cg);
+    indexed_sort<int32_t, int32_t>(all_colgrp_ranks, all_colgrp_ranks_accu_seg);
+    indexed_sort<int32_t, int32_t>(all_colgrp_ranks_cg, all_colgrp_ranks_accu_seg_cg);
     // Make sure there is at least one follower
     if(follower_colgrp_ranks.size() > 1)
     {
-        indexed_sort(follower_colgrp_ranks, follower_colgrp_ranks_accu_seg);
-        indexed_sort(follower_colgrp_ranks_cg, follower_colgrp_ranks_accu_seg_cg);
+        indexed_sort<int32_t, int32_t>(follower_colgrp_ranks, follower_colgrp_ranks_accu_seg);
+        indexed_sort<int32_t, int32_t>(follower_colgrp_ranks_cg, follower_colgrp_ranks_accu_seg_cg);
     }
 
     if(Env::comm_split and not Env::get_comm_split())
@@ -943,26 +946,25 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
      
     if(!Env::rank)
     {   
-        printf("\nEdge balancing:\n");  
-        printf("Edge balancing: Total number of edges: %lu\n", nedges);
-        printf("Edge balancing: Balanced number of edges per ranks %lu \n", nedges/Env::nranks);
-        printf("Edge balancing: Imbalance ratio per rank [0-%d]\n", Env::nranks);
+        printf("\nEdge balancing info (not functiona):\n");  
+        printf("Edge balancing: Total number of edges = %lu\n", nedges);
+        printf("Edge balancing: Balanced number of edges per ranks = %lu \n", nedges/Env::nranks);
+        printf("Edge balancing: Imbalance ratio per ranks [0-%d]\n", Env::nranks);
         for(uint32_t r = 0; r < Env::nranks; r++)
             printf("%2.2f ", (double) (rank_nedges[r] / (double) (nedges/Env::nranks)));
         printf("\n");
         
-        printf("Edge balancing: Imbalance ratio per rowgroup [0-%d]\n", nrowgrps);
+        printf("Edge balancing: Imbalance ratio per rowgroups [0-%d]\n", nrowgrps);
         for(uint32_t i = 0; i < nrowgrps; i++)
             printf("%2.2f ", (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps)));
         printf("\n");
         
-        printf("Edge balancing: Imbalance ratio per colgroup [0-%d]\n", ncolgrps);
+        printf("Edge balancing: Imbalance ratio per colgroups [0-%d]\n", ncolgrps);
         for(uint32_t j = 0; j < ncolgrps; j++)
             printf("%2.2f ", (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps)));
         printf("\n\n");
     }
     Env::barrier();
-    exit(0);
 }
 
 /* Inspired from LA3 code @
