@@ -2498,19 +2498,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             std::vector<Fractional_Type> &y2j_data = Y2[yi][accu];
             std::vector<Integer_Type> &pj_data = P[yi][accu];
             Integer_Type y2j_nitems = y2_nitems_vec[accu];
-            
-            
+            Integer_Type &k = indices[accu];
+            printf("1.%d %d\n", accu, indices[accu]);
+            if(pj_data[k] == i)
+            {
+                combiner(y_data[i], y2j_data[i]);
+                k++;
+            }
+            printf("2.%d %d\n", accu, indices[accu]);
         }
-
-        
-        
     }
     
     
     
     }
     
-    
+    /*
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
     {
         if(Env::comm_split)
@@ -2523,43 +2526,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         for(uint32_t i = 0; i < yj_nitems; i++)
         {
             combiner(y_data[i], yj_data[i]);
-            
-            //if(b_data[i])
-            //{
-                //printf("1.r=%d i=%d y=%d yj=%d\n", Env::rank, i, y_data[i], yj_data[i]);
-                //if(b_data[i] or yj_data[i] != INF)
-                    
-                //if(get_vid(i) == 772)
-                  //  printf("1.r=%d i=%d y=%d yj=%d %d\n", Env::rank, i, y_data[i], yj_data[i], iteration);
-                //if(b_data[i])
-                    
-                
-                //if(get_vid(i) == 506)
-                  //  printf("1.[r=%d i=%d y=%d yj=%d] \n", Env::rank, get_vid(i), y_data[i], yj_data[i]);
-                    //printf("2.r=%d i=%d y=%d yj=%d\n", Env::rank, i, y_data[i], yj_data[i]);
-            //}
         }   
-        
-        
-        /*
-        if(gather_depends_on_apply)
-        {
-            for(uint32_t i = 0; i < yj_nitems; i++)
-            {
-                if(b_data[i])
-                    combiner(y_data[i], yj_data[i]);
-            }   
-        }
-        else if(apply_depends_on_iter)
-        {
-            for(uint32_t i = 0; i < yj_nitems; i++)
-            {
-                if(b_data[i] or yj_data[i] != INF)
-                    combiner(y_data[i], yj_data[i]);
-            }   
-        }
-        */
     }
+    */
 //Env::barrier();
 int c = 0;
     if(filtering_type == _NONE_)
