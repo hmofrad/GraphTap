@@ -367,6 +367,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
         {
             delete Yt;
             delete B;
+            
+            for(uint32_t j = 0; j < rank_nrowgrps; j++)
+            {
+                Y2[j].clear();
+                Y2[j].shrink_to_fit();
+                P[j].clear();
+                P[j].shrink_to_fit();
+            }
         }
     }   
 }
@@ -2460,9 +2468,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
     char *c_data = (char *) C->data[co];
     Integer_Type c_nitems = C->nitems[co];
     //Env::barrier();
-    std::vector<Integer_Type>indices(rowgrp_nranks);
+    std::vector<Integer_Type> indices(rowgrp_nranks);
+    
+    /*
     if(!Env::rank)
     {
+        
     for(uint32_t j = 0; j < rowgrp_nranks; j++)
     {
         if(j != accu_segment_rg)
@@ -2484,6 +2495,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         //printf("\n\n");
         //break;
     }
+    }
+    */
     
     
     for(uint32_t i = 0; i < y_nitems; i++)
@@ -2499,19 +2512,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             std::vector<Integer_Type> &pj_data = P[yi][accu];
             Integer_Type y2j_nitems = y2_nitems_vec[accu];
             Integer_Type &k = indices[accu];
-            printf("1.%d %d\n", accu, indices[accu]);
-            if(pj_data[k] == i)
+            //printf("1.%d %d\n", accu, indices[accu]);
+            if(k < y2j_nitems)
             {
-                combiner(y_data[i], y2j_data[i]);
-                k++;
+                if(pj_data[k] == i)
+                {
+                    combiner(y_data[i], y2j_data[k]);
+                    k++;
+                }
             }
-            printf("2.%d %d\n", accu, indices[accu]);
+            //printf("2.%d %d\n", accu, indices[accu]);
         }
     }
     
     
     
-    }
+    //}
     
     /*
     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
