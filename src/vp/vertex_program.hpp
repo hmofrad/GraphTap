@@ -83,7 +83,7 @@ class Vertex_Program
         void optimized_2d_for_tc();
         void spmv(Fractional_Type *y_data, Fractional_Type *x_data,
                 struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile);
-        void spmv(Fractional_Type *y_data, std::vector<Fractional_Type> &x_data, 
+        void spmv(Fractional_Type *y_data, Fractional_Type *x_data, std::vector<Fractional_Type> &x2_data, 
                 struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
                 std::vector<Integer_Type> &s_data, std::vector<char> &t_data);//, std::unordered_set<Integer_Type> &p_data);        
                 
@@ -184,7 +184,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = false;
+        bool activity_filtering = true;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -983,23 +983,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     else
     {
-        int nitems = x2_nitems_vec[xo];
-        /* 0 all / 1 nothing / else nitems  */
-        double ratio = (double) nitems/x_nitems;
-        if(ratio <= activity_filtering_ratio)
+        if(activity_filtering)
         {
-            msgs_activity_filtering = true;                            
-            if(nitems)
-                nitems++;
+            int nitems = x2_nitems_vec[xo];
+            /* 0 all / 1 nothing / else nitems  */
+            double ratio = (double) nitems/x_nitems;
+            if(ratio <= activity_filtering_ratio)
+            {
+                //msgs_activity_filtering = true;                            
+                //if(nitems)
+                    nitems++;
+                //else
+                  //  nitems = 1;
+            }
             else
-                nitems = 1;
+            {
+                //msgs_activity_filtering = false;
+                nitems = 0;
+            }  
+            x2_nitems_vec[xo] = nitems;
         }
         else
-        {
-            msgs_activity_filtering = false;
-            nitems = 0;
-        }  
-        x2_nitems_vec[xo] = nitems;
+            x2_nitems_vec[xo] = 0;
         //if(!Env::rank)
         //{
             //printf("rank=%d num=%d all_num=%d filter=%d\n", Env::rank, x2_nitems_vec[xo], x_nitems, msgs_activity_filtering);
@@ -1292,7 +1297,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         for(uint32_t i = 0; i < rank_ncolgrps; i++)
         {
             leader_cg = leader_ranks_cg[local_col_segments[i]];  
-            std::vector<Fractional_Type> &xj_data = X2[i];
+            Fractional_Type *xj_data = (Fractional_Type *) X->data[i];
+            Fractional_Type xj_nitems = X->nitems[i];
+            std::vector<Fractional_Type> &x2j_data = X2[i];
             std::vector<Integer_Type> &sj_data = S[i];
             
             int nitems = 0;
@@ -1302,48 +1309,33 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             if(Env::rank_cg != leader_cg)
                 x2_nitems_vec[i] = nitems;
             
-            if(x2_nitems_vec[i])
-                msgs_activity_filtering = true;
-            else
-                msgs_activity_filtering = false;
-            
-            if(Env::comm_split)
+            if(activity_filtering and x2_nitems_vec[i] > 0)
             {
-                if(msgs_activity_filtering)
+                if(Env::comm_split)
                 {
                     if(x2_nitems_vec[i] > 1)
                     {
-                        MPI_Bcast(xj_data.data(), x2_nitems_vec[i] - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                        MPI_Bcast(x2j_data.data(), x2_nitems_vec[i] - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
                         MPI_Bcast(sj_data.data(), x2_nitems_vec[i] - 1, TYPE_INT, leader_cg, colgrps_communicator);
                     }
                 }
                 else
                 {
-                    MPI_Bcast(xj_data.data(), xj_data.size(), TYPE_DOUBLE, leader_cg, colgrps_communicator);
-                    x2_nitems_vec[i] = xj_data.size();
+                    fprintf(stderr, "Invalid communicator\n");
+                    Env::exit(1);
                 }
             }
             else
             {
-                fprintf(stderr, "Invalid communicator\n");
-                Env::exit(1);
+                if(Env::comm_split)
+                    MPI_Bcast(xj_data, xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                else
+                {
+                    fprintf(stderr, "Invalid communicator\n");
+                    Env::exit(1);
+                }
             }
         }
-        /*
-        if(!Env::rank)
-        {
-            for(uint32_t i = 0; i < rank_ncolgrps; i++)
-                printf("%d ", x2_nitems_vec[i]);
-            printf(".0.\n");
-        }
-        Env::barrier();
-        if(Env::rank == 2)
-        {
-            for(uint32_t i = 0; i < rank_ncolgrps; i++)
-                printf("%d ", x2_nitems_vec[i]);
-            printf(".2.\n");
-        }
-        */
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -1403,7 +1395,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
-            Fractional_Type *y_data, std::vector<Fractional_Type> &x_data, 
+            Fractional_Type *y_data, Fractional_Type *x_data, std::vector<Fractional_Type> &x2_data, 
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
             std::vector<Integer_Type> &s_data, std::vector<char> &t_data)
 {
@@ -1424,7 +1416,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                if(x2_nitems_vec[tile.jth])
+                if(activity_filtering and x2_nitems_vec[tile.jth] > 0)
                 {
                     Integer_Type s_nitems = x2_nitems_vec[tile.jth] - 1;
                     Integer_Type j = 0;
@@ -1434,9 +1426,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                         {
                             #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[k], A[i]);
+                            combiner(y_data[IA[i]], x2_data[k], A[i]);
                             #else
-                            combiner(y_data[IA[i]], x_data[k]);
+                            combiner(y_data[IA[i]], x2_data[k]);
                             #endif
                             t_data[IA[i]] = 1;
                         }
@@ -1826,10 +1818,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
         }
         else
         {
-            std::vector<Fractional_Type> &x_data = X2[xi];
-            std::vector<Integer_Type> &s_data = S[xi];
-            std::vector<char> &t_data = T[yi];
-            spmv(y_data, x_data, tile, s_data, t_data);
+            //if(activity_filtering and x2_nitems_vec[xi])
+            ///{
+                Fractional_Type *x_data = (Fractional_Type *) X->data[xi];
+                std::vector<Fractional_Type> &x2_data = X2[xi];
+                std::vector<Integer_Type> &s_data = S[xi];
+                std::vector<char> &t_data = T[yi];
+                spmv(y_data, x_data, x2_data, tile, s_data, t_data);
+            //}
+            //else
+            //{
+                
+              //  spmv(y_data, x_data, tile);
+            //}
+            
         }
         
         xi++;
