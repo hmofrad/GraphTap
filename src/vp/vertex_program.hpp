@@ -208,6 +208,8 @@ class Vertex_Program
         double activity_filtering_ratio = 0.6;
         bool accu_activity_filtering = 0; // 0 all / 1 nothing / else nitems 
         bool msgs_activity_filtering = 0; // 0 all / 1 nothing / else nitems 
+        uint64_t num_row_touches = 0;
+        uint64_t num_row_edges = 0;
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -1632,7 +1634,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                 Integer_Type j = 0;
                 //std::unordered_set<Integer_Type> pp;
                 //Integer_Type l = 0;
-                Integer_Type num_touches = 0;
                 for(Integer_Type k = 0; k < s_nitems; k++)
                 {
                     j = s_data[k];
@@ -1647,8 +1648,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         #endif
                         //pp.insert(IA[i]);
                         t_data[IA[i]] = 1;
+                        num_row_touches++;
                     }
                 }
+                num_row_edges += tile.nedges;
             }
             else if(ordering_type == _COL_)
             {
@@ -2211,6 +2214,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
         {
+            
             /*
             if(!Env::rank)
             {
@@ -2411,6 +2415,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                 {
                     if(not active_accu)
                     {
+                        /*
                         std::vector<Fractional_Type> &y2_data = Y2[yi][yo];
                         std::vector<Integer_Type> &p_data = P[yi][yo];
                         std::vector<char> &t_data = T[yi];
@@ -2427,6 +2432,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                             }
                         }
                         int nitems = j;
+                        */
                         /*
                         if(!Env::rank)
                         {
@@ -2486,6 +2492,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                             nitems = 0;
                             accu_activity_filtering = false;
                         }
+                        
+                        //printf("num_row_edges=%d, num_row_touches=%d, r=%f ratio=%f, af=%d\n", num_row_edges, num_row_touches, (double) num_row_touches/num_row_edges,ratio, accu_activity_filtering);
+                        
                         //if(!Env::rank or )
                             
                         //printf(">>>rank=%d ratio=%f accf=%d, ni%d\n", Env::rank, ratio, accu_activity_filtering, nitems);
@@ -2962,7 +2971,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             //printf("XXXXXXXXXXXXXXXXXXXXX\n");
         if(active_accu)
         {
-            
+            for(uint32_t j = 0; j < rank_nrowgrps; j++)
+                std::fill(T[j].begin(), T[j].end(), 0);
+            /*
             for(uint32_t j = 0; j < rank_nrowgrps; j++)
             {
                 if(local_row_segments[j] == owned_segment)
@@ -2992,7 +3003,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                 
                 //std::fill(T[j].begin(), T[j].end(), 0);
             }
-            
+            */
             
             
             /*
@@ -3030,15 +3041,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         
     }
     
-    for(uint32_t j = 0; j < rank_nrowgrps; j++)
-    {
-        std::vector<char> &t_data = T[j];
+    //for(uint32_t j = 0; j < rank_nrowgrps; j++)
+   // {
+       // std::vector<char> &t_data = T[j];
         //memset(t_data.data(), 0, t_data.size() * sizeof(char));
-        std::fill(T[j].begin(), T[j].end(), 0);
+     //   std::fill(T[j].begin(), T[j].end(), 0);
         //for(uint32_t i = 0; i < t_data.size(); i++)
           //  printf("%d ", t_data[i]);
         //printf("\n");
-    }
+   // }
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
