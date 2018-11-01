@@ -184,7 +184,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = false;
+        bool activity_filtering = true;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -983,6 +983,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     else
     {
+        int nitems = x2_nitems_vec[xo];
+        /* 0 all / 1 nothing / else nitems  */
+        double ratio = (double) nitems/x_nitems;
+        if(ratio <= activity_filtering_ratio)
+        {
+            msgs_activity_filtering = true;                            
+            if(nitems)
+                nitems++;
+            else
+                nitems = 1;
+        }
+        else
+        {
+            msgs_activity_filtering = false;
+            nitems = 0;
+        }  
+        x2_nitems_vec[xo] = nitems;
+        //if(!Env::rank)
+        //{
+            //printf("rank=%d num=%d all_num=%d filter=%d\n", Env::rank, x2_nitems_vec[xo], x_nitems, msgs_activity_filtering);
+        
+        
         if(Env::comm_split)
         {
             specialized_nonstationary_bcast();
@@ -1280,10 +1302,29 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             if(Env::rank_cg != leader_cg)
                 x2_nitems_vec[i] = nitems;
             
+            if(x2_nitems_vec[i])
+                msgs_activity_filtering = true;
+            else
+                msgs_activity_filtering = false;
+            
             if(Env::comm_split)
             {
-                MPI_Bcast(xj_data.data(), nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
-                MPI_Bcast(sj_data.data(), nitems, TYPE_INT, leader_cg, colgrps_communicator);
+                if(msgs_activity_filtering)
+                {
+                    if(x2_nitems_vec[i] > 1)
+                    {
+                        x2_nitems_vec[i] = nitems - 1;
+                        MPI_Bcast(xj_data.data(), x2_nitems_vec[i], TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                        MPI_Bcast(sj_data.data(), x2_nitems_vec[i], TYPE_INT, leader_cg, colgrps_communicator);
+                    }
+                    else
+                        x2_nitems_vec[i] = nitems - 1;
+                }
+                else
+                {
+                    MPI_Bcast(xj_data.data(), xj_data.size(), TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                    x2_nitems_vec[i] = xj_data.size();
+                }
             }
             else
             {
@@ -1291,6 +1332,21 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                 Env::exit(1);
             }
         }
+        /*
+        if(!Env::rank)
+        {
+            for(uint32_t i = 0; i < rank_ncolgrps; i++)
+                printf("%d ", x2_nitems_vec[i]);
+            printf(".0.\n");
+        }
+        Env::barrier();
+        if(Env::rank == 2)
+        {
+            for(uint32_t i = 0; i < rank_ncolgrps; i++)
+                printf("%d ", x2_nitems_vec[i]);
+            printf(".2.\n");
+        }
+        */
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
