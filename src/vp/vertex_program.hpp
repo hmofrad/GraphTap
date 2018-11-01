@@ -13,10 +13,6 @@
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
 
-//#include "vertex_state.hpp"
-
-//#define INF 2147483647
-
 struct State { State() {}; };
 
 enum Ordering_type
@@ -1648,10 +1644,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         #endif
                         //pp.insert(IA[i]);
                         t_data[IA[i]] = 1;
-                        num_row_touches++;
+                        //num_row_touches++;
                     }
                 }
-                num_row_edges += tile.nedges;
+                //num_row_edges += tile.nedges;
             }
             else if(ordering_type == _COL_)
             {
@@ -2969,10 +2965,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         
         //for(uint32_t j = 0; j < rowgrp_nranks; i++)
             //printf("XXXXXXXXXXXXXXXXXXXXX\n");
-        if(active_accu)
-        {
-            for(uint32_t j = 0; j < rank_nrowgrps; j++)
-                std::fill(T[j].begin(), T[j].end(), 0);
+        //if(active_accu)
+        //{
+            //for(uint32_t j = 0; j < rank_nrowgrps; j++)
+             //   std::fill(T[j].begin(), T[j].end(), 0);
             /*
             for(uint32_t j = 0; j < rank_nrowgrps; j++)
             {
@@ -3037,15 +3033,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             }
             */
             
-        }
+        //}
         
     }
-    
-    //for(uint32_t j = 0; j < rank_nrowgrps; j++)
+    if(active_accu)
+    {
+        for(uint32_t j = 0; j < rank_nrowgrps; j++)
+            std::fill(T[j].begin(), T[j].end(), 0);
+    }
    // {
        // std::vector<char> &t_data = T[j];
         //memset(t_data.data(), 0, t_data.size() * sizeof(char));
-     //   std::fill(T[j].begin(), T[j].end(), 0);
+     
         //for(uint32_t i = 0; i < t_data.size(); i++)
           //  printf("%d ", t_data[i]);
         //printf("\n");
