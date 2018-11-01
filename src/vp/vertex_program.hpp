@@ -1313,12 +1313,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                 {
                     if(x2_nitems_vec[i] > 1)
                     {
-                        x2_nitems_vec[i] = nitems - 1;
-                        MPI_Bcast(xj_data.data(), x2_nitems_vec[i], TYPE_DOUBLE, leader_cg, colgrps_communicator);
-                        MPI_Bcast(sj_data.data(), x2_nitems_vec[i], TYPE_INT, leader_cg, colgrps_communicator);
+                        MPI_Bcast(xj_data.data(), x2_nitems_vec[i] - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                        MPI_Bcast(sj_data.data(), x2_nitems_vec[i] - 1, TYPE_INT, leader_cg, colgrps_communicator);
                     }
-                    else
-                        x2_nitems_vec[i] = 0;
                 }
                 else
                 {
@@ -1427,9 +1424,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                if(msgs_activity_filtering)
+                if(x2_nitems_vec[tile.jth])
                 {
-                    Integer_Type s_nitems = x2_nitems_vec[tile.jth];
+                    Integer_Type s_nitems = x2_nitems_vec[tile.jth] - 1;
                     Integer_Type j = 0;
                     for(Integer_Type k = 0; k < s_nitems; k++)
                     {
