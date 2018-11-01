@@ -1318,7 +1318,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
                         MPI_Bcast(sj_data.data(), x2_nitems_vec[i], TYPE_INT, leader_cg, colgrps_communicator);
                     }
                     else
-                        x2_nitems_vec[i] = nitems - 1;
+                        x2_nitems_vec[i] = 0;
                 }
                 else
                 {
@@ -1427,19 +1427,37 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                Integer_Type s_nitems = x2_nitems_vec[tile.jth];
-                Integer_Type j = 0;
-                for(Integer_Type k = 0; k < s_nitems; k++)
+                if(msgs_activity_filtering)
                 {
-                    j = s_data[k];
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                    Integer_Type s_nitems = x2_nitems_vec[tile.jth];
+                    Integer_Type j = 0;
+                    for(Integer_Type k = 0; k < s_nitems; k++)
                     {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[k], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[k]);
-                        #endif
-                        t_data[IA[i]] = 1;
+                        j = s_data[k];
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                            combiner(y_data[IA[i]], x_data[k], A[i]);
+                            #else
+                            combiner(y_data[IA[i]], x_data[k]);
+                            #endif
+                            t_data[IA[i]] = 1;
+                        }
+                    }
+                }
+                else
+                {
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                    {
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            #ifdef HAS_WEIGHT
+                            combiner(y_data[IA[i]], x_data[j], A[i]);
+                            #else
+                            combiner(y_data[IA[i]], x_data[j]);
+                            #endif
+                            t_data[IA[i]] = 1;
+                        }
                     }
                 }
             }
