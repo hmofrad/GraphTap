@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=16
+#SBATCH --ntasks=64
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
@@ -67,8 +67,8 @@ export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
-APP=bin/./pr
-ITERS_OR_SRC=0
+APP=bin/./sssp
+ITERS_OR_SRC=1554330
 #APP=./main
 
 if [ "$SLURM_NNODES" = "4" ]
@@ -78,7 +78,7 @@ then
     then
         time srun --mpi=pmi2 -n ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 ${ITERS_OR_SRC}
     else
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26.bin 67108864 ${ITERS_OR_SRC}
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
     fi
 elif [ "$SLURM_NNODES" = "8" ]
 then
