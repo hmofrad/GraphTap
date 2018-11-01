@@ -184,7 +184,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = true;
+        bool activity_filtering = false;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -1295,7 +1295,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
             std::vector<Fractional_Type> &xj_data = X2[i];
             std::vector<Integer_Type> &sj_data = S[i];
             
-            Integer_Type nitems = 0;
+            int nitems = 0;
             if(Env::rank_cg == leader_cg)
                 nitems = x2_nitems_vec[i];
             MPI_Bcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator);
