@@ -184,11 +184,12 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = true;
+        bool activity_filtering = false;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
         uint64_t num_row_edges = 0;
+        std::vector<Integer_Type> activity_statuses;
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -542,6 +543,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         
         if(not stationary)
         {
+            activity_statuses.resize(ncolgrps); // Assuming ncolgrps == nrowgrps
             X2.resize(rank_ncolgrps);
             for(uint32_t j = 0; j < rank_ncolgrps; j++)
                 X2[j].resize(x_sizes[j]);
@@ -762,6 +764,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         
         if(not stationary)
         {
+            activity_statuses.resize(ncolgrps); // Assuming ncolgrps == nrowgrps
             X2.resize(rank_ncolgrps);
             for(uint32_t j = 0; j < rank_ncolgrps; j++)
                 X2[j].resize(x_sizes[j]);
@@ -989,27 +992,31 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             /* 0 all / 1 nothing / else nitems  */
             double ratio = (double) nitems/x_nitems;
             if(ratio <= activity_filtering_ratio)
-            {
-                //msgs_activity_filtering = true;                            
-                //if(nitems)
-                    nitems++;
-                //else
-                  //  nitems = 1;
-            }
+                nitems++;
             else
-            {
-                //msgs_activity_filtering = false;
                 nitems = 0;
-            }  
             x2_nitems_vec[xo] = nitems;
+            
+            activity_statuses[owned_segment] = x2_nitems_vec[xo];
+            //printf("%d %d %d\n", Env::rank, owned_segment, activity_statuses[owned_segment]);
+            //std::vector<Integer_Type> statuses(Env::nranks);
+            
+            
+            Env::barrier();
+            for(uint32_t i = 0; i < Env::nranks; i++)
+            {
+                uint32_t r = leader_ranks[i];
+                if(r != Env::rank)
+                {
+                    MPI_Sendrecv(&activity_statuses[owned_segment], 1, TYPE_INT, r, Env::rank, 
+                                 &activity_statuses[i], 1, TYPE_INT, r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+                }
+            }
+            Env::barrier();            
         }
         else
             x2_nitems_vec[xo] = 0;
-        //if(!Env::rank)
-        //{
-            //printf("rank=%d num=%d all_num=%d filter=%d\n", Env::rank, x2_nitems_vec[xo], x_nitems, msgs_activity_filtering);
-        
-        
+
         if(Env::comm_split)
         {
             specialized_nonstationary_bcast();
@@ -1346,6 +1353,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    /*
     if(!Env::rank)
     {
         for(uint32_t i = 0; i < rank_ncolgrps; i++)
@@ -1354,7 +1362,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         }
         printf("\n");
     }
-    
+    */
 }   
 
 
@@ -1889,23 +1897,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                                 follower = follower_rowgrp_ranks[j];
                                 accu = follower_rowgrp_ranks_accu_seg[j];
                             }
-                            
-                            /* 0 all / 1 nothing / else nitems  */
-                            int nitems = 0;
-                            MPI_Status status;
-                            MPI_Recv(&nitems, 1, MPI_INT, follower, pair_idx, communicator, &status);
-                            y2_nitems_vec[accu] = nitems;
-                            
-                           // if(pair_idx == 3)
-                                //printf("<l=%d t=%d ni=%d\n", Env::rank, pair_idx, nitems);
-                            
-                            if(y2_nitems_vec[accu])
-                                accu_activity_filtering = true;
-                            else
-                                accu_activity_filtering = false;
-                            
-                            if(accu_activity_filtering)
+                            if(activity_statuses[tile.rg])
                             {
+                                // 0 all / 1 nothing / else nitems 
+                                int nitems = 0;
+                                MPI_Status status;
+                                MPI_Recv(&nitems, 1, MPI_INT, follower, pair_idx, communicator, &status);
+                                y2_nitems_vec[accu] = nitems;
+                                
+                               // if(pair_idx == 3)
+                                    //printf("<l=%d t=%d ni=%d\n", Env::rank, pair_idx, nitems);
+                                
+                                //if(y2_nitems_vec[accu])
+                                  //  accu_activity_filtering = true;
+                                //else
+                                  //  accu_activity_filtering = false;
+                                
+                                //if(accu_activity_filtering)
+                                //{
                                 if(y2_nitems_vec[accu] > 1)
                                 {
                                     std::vector<Fractional_Type> &y2j_data = Y2[yi][accu];
@@ -1915,6 +1924,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                                     MPI_Irecv(pj_data.data(), y2_nitems_vec[accu] - 1, TYPE_INT, follower, pair_idx, communicator, &request);
                                     in_requests.push_back(request);
                                 }
+                                //}
                             }
                             else
                             {                                
@@ -1922,8 +1932,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                                 Integer_Type yj_nitems = Yp->nitems[accu];
                                 MPI_Irecv(yj_data, yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                                 in_requests.push_back(request);
-                            }                           
+                            }       
+                            
                         } 
+                        /*
                        if(!Env::rank)
                         {
                             printf("%d: ", pair_idx);
@@ -1933,6 +1945,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                             }
                             printf("\n");
                         }
+                        */
                     }
                     else
                     {
@@ -1969,41 +1982,44 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                     {
                         std::vector<Fractional_Type> &y2_data = Y2[yi][yo];
                         std::vector<Integer_Type> &p_data = P[yi][yo];
-                        std::vector<char> &t_data = T[yi];
-                        Integer_Type j = 0;
-                        for(uint32_t i = 0; i < y_nitems; i++)
-                        {
-                            if(t_data[i])
-                            {
-                                p_data[j] = i;
-                                y2_data[j] = y_data[i];
-                                j++;
-                            }
-                        }
-                        int nitems = j;
-                        //y2_nitems_vec[yo] = nitems;           
+                        int nitems = 0;
                         
-                        /* 0 all / 1 nothing / else nitems  */
-                        double ratio = (double) nitems/y_nitems;
-                        if(ratio <= activity_filtering_ratio)
+                        if(activity_statuses[tile.rg])
                         {
-                            accu_activity_filtering = true;                            
-                            if(nitems)
+                            std::vector<char> &t_data = T[yi];
+                            Integer_Type j = 0;
+                            for(uint32_t i = 0; i < y_nitems; i++)
+                            {
+                                if(t_data[i])
+                                {
+                                    p_data[j] = i;
+                                    y2_data[j] = y_data[i];
+                                    j++;
+                                }
+                            }
+                            nitems = j;
+                            //y2_nitems_vec[yo] = nitems;           
+                            
+                            // 0 all / 1 nothing / else nitems  
+                            double ratio = (double) nitems/y_nitems;
+                            if(ratio <= activity_filtering_ratio)
+                            {
+                                accu_activity_filtering = true;                            
                                 nitems++;
+                            }
                             else
-                                nitems = 1;
-                        }
-                        else
+                            {
+                                nitems = 0;
+                                accu_activity_filtering = false;
+                            }    
+                        }                        
+                        
+
+                        
+                        if(activity_statuses[tile.rg])
+                        //if(accu_activity_filtering)
                         {
-                            nitems = 0;
-                            accu_activity_filtering = false;
-                        }         
-                        //y2_nitems_vec[yo] = nitems; 
-                        //if(Env::rank == 3)
-                          //  printf("rate=%f ni=%d\n", ratio, nitems);
-                        MPI_Send(&nitems, 1, TYPE_INT, leader, pair_idx, communicator);
-                        if(accu_activity_filtering)
-                        {
+                            MPI_Send(&nitems, 1, TYPE_INT, leader, pair_idx, communicator);
                             if(nitems > 1)
                             {
                                 MPI_Isend(y2_data.data(), nitems - 1, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
@@ -2020,6 +2036,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                     }    
                     else
                     {
+                        /*
                         std::vector<Fractional_Type> &y2_data = Y2[yi][yo];
                         std::vector<Integer_Type> &p_data = P[yi][yo];
                         std::vector<char> &t_data = T[yi];
@@ -2035,6 +2052,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                             }
                         }
                         int nitems = j;
+                        */
                         //y2_nitems_vec[yo] = nitems; 
                         
                         MPI_Isend(y_data, y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
