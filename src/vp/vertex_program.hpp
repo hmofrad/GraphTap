@@ -1346,6 +1346,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::specia
         fprintf(stderr, "Invalid tiling\n");
         Env::exit(1);
     }
+    if(!Env::rank)
+    {
+        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+        {
+            printf("%d ", x2_nitems_vec[i]);
+        }
+        printf("\n");
+    }
+    
 }   
 
 
@@ -1913,8 +1922,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::optimi
                                 Integer_Type yj_nitems = Yp->nitems[accu];
                                 MPI_Irecv(yj_data, yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                                 in_requests.push_back(request);
-                            }
+                            }                           
                         } 
+                       if(!Env::rank)
+                        {
+                            printf("%d: ", pair_idx);
+                            for(uint32_t i = 0; i < rowgrp_nranks; i++)
+                            {
+                                printf("%d ", y2_nitems_vec[i]);
+                            }
+                            printf("\n");
+                        }
                     }
                     else
                     {
