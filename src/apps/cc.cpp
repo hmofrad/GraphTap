@@ -24,7 +24,6 @@ int main(int argc, char **argv)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
     }
-    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     bool directed = false;
@@ -33,14 +32,17 @@ int main(int argc, char **argv)
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _SOME_;
     bool parread = true;
     
     /* Connected component execution */
+    bool stationary = false;
+    // Engine requirement for nonstationary algorithms on directed graphs
+    if(not stationary and directed)
+        transpose = not transpose; 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
-    bool stationary = false;
     bool tc_family = false;
     bool gather_depends_on_apply = true;
     bool gather_depends_on_iter  = false;
