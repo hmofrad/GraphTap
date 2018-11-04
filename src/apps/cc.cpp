@@ -18,11 +18,10 @@ int main(int argc, char **argv)
     Env::init(comm_split);    
     double time1 = Env::clock();   
     
-    if(argc > 4)  {
-        if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
-                      << std::endl;
-        }    
+    if(argc > 4)
+    {
+        if(Env::is_master)
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
     }
     
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
     bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
-    V.execute(std::atoi(argv[3]));
+    V.execute();
     V.checksum();
     //V.display();
     V.free();
