@@ -64,11 +64,6 @@ class Deg_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
         {
             state.degree = y;
             return(false);
-        } 
-
-        virtual Fractional_Type infinity()
-        {
-            return(INF);
-        }        
+        }   
 };
 #endif
