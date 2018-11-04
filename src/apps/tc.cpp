@@ -18,11 +18,10 @@ int main(int argc, char **argv)
     Env::init(comm_split);  
     double time1 = Env::clock();    
     
-    if(argc != 3)  {
-        if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
-                      << std::endl;
-        }    
+    if(argc > 4)
+    {
+        if(Env::is_master)
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
     }
     
@@ -35,7 +34,7 @@ int main(int argc, char **argv)
     bool acyclic = true;
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
+    Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _NONE_; // Do not turn on
     bool parread = true;
     
@@ -63,7 +62,6 @@ int main(int argc, char **argv)
     VR.execute(1);
     VR.free();
     GR.free();
-    
     
     double time2 = Env::clock();    
     Env::print_time("Triangle counting end-to-end", time2 - time1);
