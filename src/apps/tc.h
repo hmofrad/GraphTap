@@ -32,7 +32,6 @@ struct TC_State
     ip get_state(){return(vid);};
     std::vector<ip> neighbors;
     std::vector<ip> get_neighbors(){return(neighbors);};
-    ip get_inf(){return(0);};
     std::string print_state()
     {
         std::string str = "neighbors=";
