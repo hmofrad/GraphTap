@@ -18,40 +18,37 @@ int main(int argc, char **argv)
     Env::init(comm_split);    
     double time1 = Env::clock();   
     
-    if(argc != 4)  {
-        if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> <root>\""
-                      << std::endl;
-        }    
+    if(argc != 4)
+    {
+        if(Env::is_master)
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> <root>\"" << std::endl; 
         Env::exit(1);
     }
-    
+      
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     ip root = std::atoi(argv[3]);
-    
-    #ifdef HAS_WEIGHT
-    /* SSSP on an directed weighted graph */
     bool directed = true;
-    bool transpose = true;
-    bool parallel_edges = true;
-    #else
-    /* SSSP on an ndirected graph */
-    bool directed = false;
     bool transpose = false;
-    bool parallel_edges = false;
-    #endif
     bool self_loops = false;
     bool acyclic = false;
+    #ifdef HAS_WEIGHT
+    bool parallel_edges = true;
+    #else
+    bool parallel_edges = false;
+    #endif
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_;
-    Filtering_type FT = _SOME_;
+    Compression_type CT = _CSC_; // Only CSC is supported
+    Filtering_type FT = _NONE_;
     bool parread = true;
     
     /* Single Source Shortest Path (SSSP) execution*/
+    bool stationary = false;
+    // Requirement for nonstationary algorithms on directed graphs
+    if(not stationary and directed)
+        transpose = not transpose; 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
-    bool stationary = false;
     bool tc_family  = false;
     bool gather_depends_on_apply = true;
     bool apply_depends_on_iter  = false;
