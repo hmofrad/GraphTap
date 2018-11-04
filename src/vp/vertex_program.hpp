@@ -38,6 +38,7 @@ class Vertex_Program
         virtual bool applicator(Vertex_State &state, const Fractional_Type &y) { return(true); }
         virtual bool applicator(Vertex_State &state){ return(false); }
         virtual bool applicator(Vertex_State &state, const Fractional_Type &y, const Integer_Type iteration_) { return(true); }
+        virtual Fractional_Type infinity() { return(0); }
         
         
         virtual bool initializer(Vertex_State &state, const Fractional_Type &v2) { return(stationary);}
@@ -194,7 +195,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = true;
+        bool activity_filtering = false;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -1035,7 +1036,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                             k++;
                         }
                         else
-                            x_data[j] = state.get_inf();
+                            x_data[j] =infinity();
                         j++;
                     }
 
@@ -1061,7 +1062,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                                 k++;
                             }
                             else
-                                x_data[j] = state.get_inf();
+                                x_data[j] = infinity();
                             j++;
                         }
                     }
@@ -1555,7 +1556,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                if(x2_nitems_vec[tile.jth] > 0)
+                if(x2_nitems_vec[tile.jth] > 0 and activity_filtering)
                 {
                     Integer_Type s_nitems = x2_nitems_vec[tile.jth] - 1;
                     Integer_Type j = 0;
@@ -1577,14 +1578,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                 {
                     for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                     {
-                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        if(x_data[j] != infinity())
                         {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[j], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[j]);
-                            #endif
-                            t_data[IA[i]] = 1;
+                            for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                            {
+                                #ifdef HAS_WEIGHT
+                                combiner(y_data[IA[i]], x_data[j], A[i]);
+                                #else
+                                combiner(y_data[IA[i]], x_data[j]);
+                                #endif
+                                t_data[IA[i]] = 1;
+                            }
                         }
                     }
                 }
@@ -1692,7 +1696,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     double t1, t2;
     t1 = Env::clock();
     
-    if(stationary or not (stationary or activity_filtering))
+    if(stationary)
     {
         if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
             combine_2d_stationary();
@@ -2032,6 +2036,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         std::vector<Fractional_Type> &xv_data = XV[xi];
         std::vector<Integer_Type> &xi_data = XI[xi];
         std::vector<char> &t_data = T[yi];
+        
         spmv(tile, y_data, x_data, xv_data, xi_data, t_data);
         
         xi++;
