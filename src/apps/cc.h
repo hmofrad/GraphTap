@@ -31,11 +31,9 @@ using fp = uint32_t;
 struct CC_State
 {
     ip label = 0;
-    ip get_state(){return(label);};
-    ip get_inf(){return(INF);};    
+    ip get_state(){return(label);};   
     std::string print_state(){return("Label=" + std::to_string(label));};
 };
-
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, CC_State>
@@ -51,6 +49,12 @@ class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
         virtual Fractional_Type messenger(CC_State &state) 
         {
             return(state.label);
+        }
+        
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
+        {
+            Fractional_Type tmp = y2 * w;
+            y1 = (y1 < tmp) ? y1 : tmp;
         }
 
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
