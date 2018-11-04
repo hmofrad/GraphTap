@@ -104,10 +104,12 @@ class Matrix
         unsigned char **J;// = nullptr; // Column indices
         Integer_Type **JV;// = nullptr; // Column indices values
         */
-        std::vector<std::vector<char>> I;
-        std::vector<std::vector<Integer_Type>> IV;
+        std::vector<std::vector<char>> I;          // Filtered indices (from tile height)
+        std::vector<std::vector<Integer_Type>> IV; // Filtered values  (from tile height)
+        //std::vector<std::vector<Integer_Type>> IF; // Filtered indices (from nnz height)
         std::vector<std::vector<char>> J;
         std::vector<std::vector<Integer_Type>> JV;
+        
         
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles;
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles_rg;
@@ -1112,7 +1114,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
     out_requests.clear();
     Env::barrier();    
-    
 
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles_row_order)
@@ -1130,244 +1131,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     
     auto retval = MPI_Type_free(&MANY_TRIPLES);
     assert(retval == MPI_SUCCESS);   
-    Env::barrier(); 
-    
-    
-    
-    
-    
-    
-    
-    
-    /*
-    uint64_t nedges_start_local = 0, nedges_end_local = 0,
-             nedges_start_global = 0, nedges_end_global = 0;
-             
-    for (uint32_t i = 0; i < nrowgrps; i++)
-    {
-        for (uint32_t j = 0; j < ncolgrps; j++)  
-        {
-            auto &tile = tiles[i][j];
-            if(tile.triples->size() > 0)
-            {
-                nedges_start_local += tile.triples->size();
-            }
-        }
-    }
-
-    std::vector<MPI_Request> out_requests;
-    std::vector<MPI_Request> in_requests;
-    MPI_Request request;
-    MPI_Status status;
-    
-    MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
-    #ifdef HAS_WEIGHT
-    MPI_Datatype TYPE_WEIGHT = Types<Weight, Integer_Type, Weight>::get_data_type();
-    #endif
-    
-    std::vector<std::vector<Integer_Type>> outboxes_row(Env::nranks);
-    std::vector<std::vector<Integer_Type>> outboxes_col(Env::nranks);
-    std::vector<std::vector<Integer_Type>> inboxes_row(Env::nranks);
-    std::vector<std::vector<Integer_Type>> inboxes_col(Env::nranks);
-    #ifdef HAS_WEIGHT
-    std::vector<std::vector<Weight>> outboxes_weight(Env::nranks);
-    std::vector<std::vector<Weight>> inboxes_weight(Env::nranks);
-    #endif
-    
-    std::vector<uint32_t> outbox_sizes(Env::nranks);
-    std::vector<uint32_t> inbox_sizes(Env::nranks);
-    
-    for (uint32_t i = 0; i < nrowgrps; i++)
-    {
-        for (uint32_t j = 0; j < ncolgrps; j++)  
-        {
-            auto &tile = tiles[i][j];
-            if(tile.rank != Env::rank)
-            {   
-                auto &outbox_row = outboxes_row[tile.rank];
-                auto &outbox_col = outboxes_col[tile.rank];
-                #ifdef HAS_WEIGHT
-                auto &outbox_weight = outboxes_weight[tile.rank];
-                #endif
-                for (auto& triple : *(tile.triples))
-                {
-                    outbox_row.push_back(triple.row);
-                    outbox_col.push_back(triple.col);
-                    #ifdef HAS_WEIGHT
-                    outbox_weight.push_back(triple.weight);
-                    #endif
-                }
-                tile.free_triples();
-            }
-        }
-    }
-    
-    for (uint32_t r = 0; r < Env::nranks; r++)
-    {
-        if (r != Env::rank)
-        {
-            outbox_sizes[r] = outboxes_row[r].size();
-            uint32_t outbox_size = outbox_sizes[r];
-            MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
-                                                        r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
-        }
-    }
     Env::barrier();
-    
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &outbox_row = outboxes_row[r];
-            MPI_Isend(outbox_row.data(), outbox_row.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
-            out_requests.push_back(request);
-        }
-    } 
-
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &inbox_row = inboxes_row[r];  
-            inbox_row.resize(inbox_sizes[r]);
-            MPI_Irecv(inbox_row.data(), inbox_row.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
-            in_requests.push_back(request);
-        }
-    }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
-    in_requests.clear();
-    out_requests.clear();  
-    
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &outbox_col = outboxes_col[r];
-            MPI_Isend(outbox_col.data(), outbox_col.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
-            out_requests.push_back(request);
-        }
-    } 
-
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &inbox_col = inboxes_col[r];
-            inbox_col.resize(inbox_sizes[r]);
-            MPI_Irecv(inbox_col.data(), inbox_col.size(), TYPE_INT, r, 0, Env::MPI_WORLD, &request);
-            in_requests.push_back(request);
-        }
-    }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
-    in_requests.clear();
-    out_requests.clear(); 
-
-    #ifdef HAS_WEIGHT    
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &outbox_weight = outboxes_weight[r];
-            MPI_Isend(outbox_weight.data(), outbox_weight.size(), TYPE_WEIGHT, r, 0, Env::MPI_WORLD, &request);
-            out_requests.push_back(request);
-        }
-    } 
-
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &inbox_weight = inboxes_weight[r]; 
-            inbox_weight.resize(inbox_sizes[r]);
-            MPI_Irecv(inbox_weight.data(), inbox_weight.size(), TYPE_WEIGHT, r, 0, Env::MPI_WORLD, &request);
-            in_requests.push_back(request);
-        }
-    }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
-    in_requests.clear();
-    out_requests.clear();
-    #endif
-    
-    Triple<Weight, Integer_Type> triple;
-    for (uint32_t r = 0; r < Env::nranks; r++)
-    {
-        if (r != Env::rank)
-        {
-            auto &inbox_row = inboxes_row[r];
-            auto &inbox_col = inboxes_col[r];
-            #ifdef HAS_WEIGHT
-            auto &inbox_weight = inboxes_weight[r];
-            #endif
-            uint64_t num_triples = inbox_row.size();
-            assert(inbox_row.size() == inbox_col.size());
-            for (uint32_t i = 0; i < num_triples; i++)
-            {
-                #ifdef HAS_WEIGHT
-                triple = {inbox_row[i], inbox_col[i], inbox_weight[i]};
-                #else
-                triple.row = inbox_row[i];
-                triple.col = inbox_col[i];
-                #endif    
-                test(triple);
-                insert(triple);
-            }
-            inbox_row.clear();
-            inbox_row.shrink_to_fit();
-            inbox_col.clear();
-            inbox_col.shrink_to_fit();
-            #ifdef HAS_WEIGHT
-            inbox_weight.clear();
-            inbox_weight.shrink_to_fit();
-            #endif
-            
-            auto &outbox_row = outboxes_row[r];
-            outbox_row.clear();
-            outbox_row.shrink_to_fit();
-            
-            auto &outbox_col = outboxes_col[r];
-            outbox_col.clear();
-            outbox_col.shrink_to_fit();
-
-            #ifdef HAS_WEIGHT
-            auto &outbox_weight = outboxes_weight[r];
-            outbox_weight.clear();
-            outbox_weight.shrink_to_fit();
-            #endif
-        }
-    }
-    
-    inbox_sizes.clear();
-    inbox_sizes.shrink_to_fit();
-    
-    outbox_sizes.clear();
-    outbox_sizes.shrink_to_fit();
-
-    for(uint32_t t: local_tiles_row_order)
-    {
-        Triple<Weight, Integer_Type> pair = tile_of_local_tile(t);
-        auto &tile = tiles[pair.row][pair.col];
-        nedges_end_local += tile.triples->size();
-    }
-    
-    MPI_Allreduce(&nedges_start_local, &nedges_start_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    MPI_Allreduce(&nedges_end_local, &nedges_end_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    
-    if(Env::is_master)
-    {
-        printf("Edge distribution: Sanity check for exchanging %lu edges is done\n", nedges_end_global);
-    }
-    assert(nedges_start_global == nedges_end_global);
-    Env::barrier();
-    */
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1382,24 +1146,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
     {
         if(Env::is_master)
             printf("Vertex filtering: SRCS - Filtering isolated rows\n");     
-        /*
-        I = new unsigned char*[tiling->rank_nrowgrps];
-        for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
-        {
-            I[i] = new unsigned char[tile_height];
-            auto &i_data =  I[i];
-            memset(i_data, 0, tile_height * sizeof(unsigned char));
-            printf("<<<<%d\n", tile_height * sizeof(unsigned char));
-        }
-        IV = new Integer_Type*[tiling->rank_nrowgrps];
-        for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
-        {
-            IV[i] = new Integer_Type[tile_height];
-            auto &iv_data =  IV[i];
-            printf(">>>>%d\n", tile_height * sizeof(Integer_Type));
-            memset(iv_data, 0, tile_height * sizeof(Integer_Type));
-        }
-        */
+
         I.resize(tiling->rank_nrowgrps);
         for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
             I[i].resize(tile_height);
@@ -1407,25 +1154,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
             IV[i].resize(tile_height);        
         filter(_SRCS_);
-        //filter(_SRCS_, I, IV);
-        /*
-        if(Env::is_master)
-            printf("Vertex filtering: SNKS - Filtering isolated cols\n");     
-        J = new unsigned char*[tiling->rank_ncolgrps];
-        for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
-        {
-            J[i] = new unsigned char[tile_width];
-            auto &j_data =  J[i];
-            memset(j_data, 0, tile_width * sizeof(unsigned char));
-        }
-        JV = new Integer_Type*[tiling->rank_ncolgrps];
-        for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
-        {
-            JV[i] = new Integer_Type[tile_width];
-            auto &jv_data =  JV[i];
-            memset(jv_data, 0, tile_width * sizeof(Integer_Type));
-        }
-        */
+
         J.resize(tiling->rank_ncolgrps);
         for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
             J[i].resize(tile_width);
@@ -1435,7 +1164,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         if(Env::is_master)
             printf("Vertex filtering: SNKS - Filtering isolated columns\n");     
         filter(_SNKS_);
-        //filter(_SNKS_, J, JV);
     }
 }
 
@@ -1470,12 +1198,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filtering_type_)//,
-    //std::vector<std::vector<char>> &K, std::vector<std::vector<Integer_Type>> &KV)
+void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filtering_type_)
 {
-    //std::vector<std::vector<char>> *K_ptr;
     std::vector<std::vector<char>> *K;
-    //std::vector<std::vector<Integer_Type>> *KV_ptr = nullptr;
     std::vector<std::vector<Integer_Type>> *KV;
     uint32_t rank_nrowgrps_, rank_ncolgrps_;
     uint32_t rowgrp_nranks_, colgrp_nranks_;
@@ -1711,113 +1436,24 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             printf("%d ", nnz_sizes_loc[i]);
         printf("\n"); 
     }
-    
-    
-    /*
-    //char **K = new char*[rank_nrowgrps_];
-    K = new char*[rank_nrowgrps_];
-    for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-        K[i] = new char[tile_length];
-    
-    //Integer_Type **KV = new Integer_Type*[rank_nrowgrps_];
-    KV = new Integer_Type*[rank_nrowgrps_];
-    for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-        KV[i] = new Integer_Type[tile_length];
-    
-    */
-    
-    
-    
-    /*
-    std::vector<std::vector<char>> *K;
-    std::vector<std::vector<Integer_Type>> *KV;
-    //Integer_Type **KV;
-    if(_SRCS_)
-    {
-        K = &I;
-        KV = &IV;
-    }
-    else if(_SNKS_)
-    {
-        K = &J;
-        KV = &JV;
-    }
-    */
 
-    
-    
-    
-    //std::vector<std::vector<char>> *K = new std::vector<std::vector<char>>(rank_nrowgrps_, std::vector<char>(tile_length));
-    //std::vector<std::vector<Integer_Type>> *KV = new std::vector<std::vector<Integer_Type>>(rank_nrowgrps_, std::vector<Integer_Type>(tile_length));
-    //for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-    //{
-      //  //auto *k_data = (*K)[i];
-        //(*K)[i].resize(tile_length);
-    //}
-    
-    //std::vector<std::vector<Integer_Type>> *KV = new std::vector<std::vector<Integer_Type>>(rank_nrowgrps_);
-    //for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-    //    KV[i].resize(tile_length);
-    
-    
-    //for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-    //{
-        //auto *k_data = K[i];
-        //delete K[i];
-    //}
-    //delete [] K;
-    
-    //for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-    //{
-        //auto *kv_data = KV[i];
-        //delete KV[i];
-    //}
-    
-    //std::vector<Integer_Type> tile_length_sizes(rank_nrowgrps_, tile_length);
-    //Vector<Weight, Integer_Type, char> *K = new Vector<Weight, Integer_Type, char>(tile_length_sizes,  local_row_segments_);
-    //Vector<Weight, Integer_Type, Integer_Type> *KV = new Vector<Weight, Integer_Type, Integer_Type>(tile_length_sizes,  local_row_segments_);
-    
     if(nnz_sizes_all[owned_segment])
     {
         uint32_t ko = accu_segment_row_;
         auto &kj_data =  (*K)[ko];
         auto &kvj_data = (*KV)[ko];
-        
-        //std::vector<Integer_Type>  kvj_data = KV[ko];
-        
-        //std::vector<char> kj_data = K[ko];
-        //auto &kj_data = K[ko];
-        //auto &kvj_data = KV[ko];
-        
-        //auto &kj_data = K[ko];
-        //auto &kvj_data = KV[ko];
-        
-        
-        //uint32_t ko = accu_segment_row_;
-        //auto *kj_data = (char *) K->data[ko];
-        
-        //uint32_t kvo = accu_segment_row_;
-        //auto *kvj_data = (Integer_Type *) KV->data[kvo];
-        
-        
-        
+
         Integer_Type j = 0;
         for(uint32_t i = 0; i < f_nitems; i++)
         {
             if(f_data[i])
             {
-                //(*K)[ko][i] = 1;
-                //(*KV)[ko][i] = j;
-                
                 kj_data[i] = 1;
                 kvj_data[i] = j; 
                 j++;
             }
             else
             {
-                //(*K)[ko][i] = 0;
-                //(*KV)[ko][i] = NA;
-                
                 kj_data[i] = 0;
                 kvj_data[i] = NA; // Don't put -1 because Integer_Type might be unsigned int
             }
@@ -1832,28 +1468,20 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         leader = leader_ranks[this_segment];
         
         auto &kj_data = (*K)[j];
-        //Integer_Type kj_nitems = K[j].size();
-        //char *kj_data = (char *) K->data[j];
-        //Integer_Type kj_nitems = K->nitems[j];
-        //bool allocated = K->allocated[j];
-        
-        //if(allocated)
-        //{
-            if(this_segment == owned_segment)
+        if(this_segment == owned_segment)
+        {
+            for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
             {
-                for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
-                {
-                    follower = follower_rowgrp_ranks_[i];
-                    MPI_Isend(kj_data.data(), tile_length, TYPE_CHAR, follower, owned_segment, Env::MPI_WORLD, &request);
-                    out_requests.push_back(request);
-                }
+                follower = follower_rowgrp_ranks_[i];
+                MPI_Isend(kj_data.data(), tile_length, TYPE_CHAR, follower, owned_segment, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
             }
-            else
-            {
-                MPI_Irecv(kj_data.data(), tile_length, TYPE_CHAR, leader, this_segment, Env::MPI_WORLD, &request);
-                in_requests.push_back(request);
-            }
-        //}
+        }
+        else
+        {
+            MPI_Irecv(kj_data.data(), tile_length, TYPE_CHAR, leader, this_segment, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
     } 
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
@@ -1866,29 +1494,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         leader = leader_ranks[this_segment];
         
         auto &kvj_data = (*KV)[j];
-        //Integer_Type kvj_nitems = KV.size();
         
-        //Integer_Type *kvj_data = (Integer_Type *) KV->data[j];
-        //Integer_Type kvj_nitems = KV->nitems[j];
-        //bool allocated = KV->allocated[j];
-        
-        //if(allocated)
-        //{
-            if(this_segment == owned_segment)
+        if(this_segment == owned_segment)
+        {
+            for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
             {
-                for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
-                {
-                    follower = follower_rowgrp_ranks_[i];
-                    MPI_Isend(kvj_data.data(), tile_length, TYPE_INT, follower, owned_segment, Env::MPI_WORLD, &request);
-                    out_requests.push_back(request);
-                }
+                follower = follower_rowgrp_ranks_[i];
+                MPI_Isend(kvj_data.data(), tile_length, TYPE_INT, follower, owned_segment, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
             }
-            else
-            {
-                MPI_Irecv(kvj_data.data(), tile_length, TYPE_INT, leader, this_segment, Env::MPI_WORLD, &request);
-                in_requests.push_back(request);
-            }
-        //}
+        }
+        else
+        {
+            MPI_Irecv(kvj_data.data(), tile_length, TYPE_INT, leader, this_segment, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
     } 
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
@@ -1898,14 +1518,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     for (uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         auto &kj_data = (*K)[j];
-        //Integer_Type kj_nitems = K[j].size();
         auto &kvj_data = (*KV)[j];
-        //Integer_Type kvj_nitems = KV[j].size();
-        //char *kj_data = (char *) K->data[j];
-        //Integer_Type kj_nitems = K->nitems[j];
-        
-        //Integer_Type *kvj_data = (Integer_Type *) KV->data[j];
-        //Integer_Type kvj_nitems = KV->nitems[j];
         
         Integer_Type k = 0;
         for(uint32_t i = 0; i < tile_length; i++)
@@ -1916,49 +1529,26 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
                 k++;
             }
             else
-            {
                 assert(kvj_data[i] == NA);
-            }
         }
     }
-    
     
     if(filtering_type_ == _SRCS_)
     {
         nnz_row_sizes_all = nnz_sizes_all;
         nnz_row_sizes_loc = nnz_sizes_loc;
-        //I = K;
-        //IV = KV;
     }
     else if(filtering_type_ == _SNKS_)
     {
         nnz_col_sizes_all = nnz_sizes_all;
         nnz_col_sizes_loc = nnz_sizes_loc;
-        //J = K;
-        //JV = KV;
     }
-    
-    
-    //K1.clear();
-    //KV1.clear();
-    /*
-    for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-        delete [] K[i];
-    delete [] K;
-    
-    
-    for(uint32_t i = 0; i < rank_nrowgrps_; i++)
-        delete [] KV[i];
-    delete [] KV;
-    */
-    
     
     F.clear();
     F.shrink_to_fit();
     
     Env::barrier();
 }
-
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
@@ -2078,21 +1668,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         auto &j_data = J[xi];
         
         auto &jv_data = JV[xi];
-        
-        /*
-        auto *i_data = (char *) I->data[yi];
-        Integer_Type i_nitems = I->nitems[yi];
-        
-        auto *iv_data = (Integer_Type *) IV->data[yi];
-        Integer_Type iv_nitems = IV->nitems[yi];
 
-        auto *j_data = (char *) J->data[xi];
-        Integer_Type j_nitems = J->nitems[xi];
-                
-        auto *jv_data = (Integer_Type *) JV->data[xi];
-        Integer_Type jv_nitems = JV->nitems[xi];
-        */
-        
         Integer_Type r_nitems = nnz_row_sizes_loc[yi];
         
         if(tile.allocated)
@@ -2167,20 +1743,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         
         auto &jv_data = JV[xi];
         
-        /*
-        auto *i_data = (char *) I->data[yi];
-        Integer_Type i_nitems = I->nitems[yi];
-        
-        auto *iv_data = (Integer_Type *) IV->data[yi];
-        Integer_Type iv_nitems = IV->nitems[yi];
-
-        auto *j_data = (char *) J->data[xi];
-        Integer_Type j_nitems = J->nitems[xi];
-                
-        auto *jv_data = (Integer_Type *) JV->data[xi];
-        Integer_Type jv_nitems = JV->nitems[xi];
-        */
-
         Integer_Type c_nitems = nnz_col_sizes_loc[xi];
 
         if(tile.allocated)
