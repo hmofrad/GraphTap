@@ -53,7 +53,7 @@ class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
         
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
         {
-            Fractional_Type tmp = y2 * w;
+            Fractional_Type tmp = y2 + w;
             y1 = (y1 < tmp) ? y1 : tmp;
         }
 
