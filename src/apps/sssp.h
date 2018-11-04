@@ -34,7 +34,7 @@ struct SSSP_State
     //ip hops = INF;
     //ip vid = 0;
     ip get_state(){return(distance);};
-    ip get_inf(){return(INF);};    
+    //ip get_inf(){return(INF);};    
     std::string print_state(){return("Distance=" + std::to_string(distance));};
 };
 
@@ -160,6 +160,10 @@ class SSSP_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type
             */
             //#endif
             
-        }      
+        }   
+        virtual Fractional_Type infinity()
+        {
+            return(INF);
+        }
 };
 #endif
