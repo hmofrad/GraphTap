@@ -364,6 +364,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
         C.shrink_to_fit();
         for (uint32_t i = 0; i < rank_nrowgrps; i++)
         {
+            if(local_row_segments[i] == owned_segment)
+            {
+                for(uint32_t j = 0; j < rowgrp_nranks; j++)
+                {
+                    Y[i][j].clear();
+                    Y[i][j].shrink_to_fit();
+                }
+                    
+            }
+            else
+            {
+                Y[i][0].clear();
+                Y[i][0].shrink_to_fit();
+            }
             Y[i].clear();
             Y[i].shrink_to_fit();
         }   
@@ -379,8 +393,26 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
                 XI[i].clear();
                 XI[i].shrink_to_fit();
             }
+            
             for(uint32_t i = 0; i < rank_nrowgrps; i++)
             {
+              if(local_row_segments[i] == owned_segment)
+                {
+                    for(uint32_t j = 0; j < rowgrp_nranks; j++)
+                    {
+                        YV[i][j].clear();
+                        YV[i][j].shrink_to_fit();
+                        YI[i][j].clear();
+                        YI[i][j].shrink_to_fit();
+                    }
+                }
+                else
+                {
+                    YV[i][0].clear();
+                    YV[i][0].shrink_to_fit();
+                    YI[i][0].clear();
+                    YI[i][0].shrink_to_fit();
+                }
                 YV[i].clear();
                 YV[i].shrink_to_fit();
                 YI[i].clear();
