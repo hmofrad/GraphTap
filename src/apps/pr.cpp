@@ -18,11 +18,10 @@ int main(int argc, char **argv)
     Env::init(comm_split);    
     double time1 = Env::clock();
     
-    if((argc != 3) and (argc != 4))  {
-        if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations=INF>]\""
-                      << std::endl;
-        }    
+    if(argc > 4)
+    {
+        if(Env::is_master)
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations=INF>]\"" << std::endl;
         Env::exit(1);
     }
     
@@ -48,7 +47,6 @@ int main(int argc, char **argv)
     bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     Deg_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
-    
     V.execute(1);
     V.checksum();
     G.free();
