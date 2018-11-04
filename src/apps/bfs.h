@@ -34,7 +34,6 @@ struct BFS_State
     ip hops = INF;
     ip vid = 0;
     ip get_state(){return(hops);};
-    ip get_inf(){return(INF);};    
     std::string print_state(){return("Parent=" + std::to_string(parent) + ",Hops=" + std::to_string(hops));};
 };
 
@@ -65,17 +64,16 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
         {
             return(state.vid);
         }
+        
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
+        {
+            Fractional_Type tmp = y2 + w;
+            y1 = (y1 < tmp) ? y1 : tmp;
+        }
 
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
             y1 = (y1 < y2) ? y1 : y2;
-            /*
-            if(y2 != INF)
-            {
-                if(y2 < y1)     
-                    y1 = y2;
-            }
-            */
         }
         
         virtual bool applicator(BFS_State &state, const Fractional_Type &y, Integer_Type iteration)
@@ -94,6 +92,11 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
                 else
                     return(false);
             }
-        }      
+        }
+        
+        virtual Fractional_Type infinity()
+        {
+            return(INF);
+        }        
 };
 #endif
