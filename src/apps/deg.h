@@ -30,7 +30,6 @@ struct Deg_State
 {
     ip degree = 0;
     ip get_state(){return(degree);};
-    ip get_inf(){return(0);};
     std::string print_state(){return("Degree=" + std::to_string(degree));};
 };
 
@@ -51,6 +50,11 @@ class Deg_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
             return(1);
         }
         
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
+        {
+            y1 += (y2 * w);
+        }
+        
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
             y1 += y2;
@@ -60,6 +64,11 @@ class Deg_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
         {
             state.degree = y;
             return(false);
-        }    
+        } 
+
+        virtual Fractional_Type infinity()
+        {
+            return(INF);
+        }        
 };
 #endif
