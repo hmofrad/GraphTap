@@ -1095,6 +1095,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
     }
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
+    out_requests.clear();
 
     for (uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -1110,10 +1112,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
             inbox.shrink_to_fit();
         }
     }
-    
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
-    out_requests.clear();
-    Env::barrier();    
 
     Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles_row_order)
