@@ -195,7 +195,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = false;
+        bool activity_filtering = true;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -699,7 +699,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
         if(filtering_type == _NONE_)
         {
             for(uint32_t i = 0; i < v_nitems; i++)
-                y_data[i] = V[i].get_inf();
+                y_data[i] = infinity();
         }
         else if(filtering_type == _SOME_)
         {
@@ -709,15 +709,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
             {
                 if(i_data[i])
                 {
-                    y_data[j] = V[i].get_inf();
+                    y_data[j] = infinity();
                     j++;
                 }
             }
         }
     }
 }
-
-
 
 
 /*
@@ -1036,7 +1034,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                             k++;
                         }
                         else
-                            x_data[j] =infinity();
+                            x_data[j] = infinity();
                         j++;
                     }
 
@@ -1556,7 +1554,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
             if(ordering_type == _ROW_)
             {
-                if(x2_nitems_vec[tile.jth] > 0 and activity_filtering)
+                if(activity_filtering and x2_nitems_vec[tile.jth])
                 {
                     Integer_Type s_nitems = x2_nitems_vec[tile.jth] - 1;
                     Integer_Type j = 0;
@@ -2071,11 +2069,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         
                         if(y2_nitems_vec[accu] > 1)
                         {
-                            std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
                             std::vector<Integer_Type> &yij_data = YI[yi][accu];
-                            MPI_Irecv(yvj_data.data(), y2_nitems_vec[accu] - 1, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
-                            in_requests.push_back(request);
+                            std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
                             MPI_Irecv(yij_data.data(), y2_nitems_vec[accu] - 1, TYPE_INT, follower, pair_idx, communicator, &request);
+                            in_requests.push_back(request);
+                            MPI_Irecv(yvj_data.data(), y2_nitems_vec[accu] - 1, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                             in_requests.push_back(request);
                         }
                     }
@@ -2083,7 +2081,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     {                                
                         std::vector<Fractional_Type> &yj_data = Y[yi][accu];
                         Integer_Type yj_nitems = yj_data.size();
-                        
                         MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                         in_requests.push_back(request);
                     }       
@@ -2092,8 +2089,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             }
             else
             {
-                std::vector<Fractional_Type> &y2_data = YV[yi][yo];
-                std::vector<Integer_Type> &p_data = YI[yi][yo];
+                std::vector<Integer_Type> &yi_data = YI[yi][yo];
+                std::vector<Fractional_Type> &yv_data = YV[yi][yo];
                 int nitems = 0;
                 
                 if(activity_statuses[tile.rg])
@@ -2104,8 +2101,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     {
                         if(t_data[i])
                         {
-                            p_data[j] = i;
-                            y2_data[j] = y_data[i];
+                            yi_data[j] = i;
+                            yv_data[j] = y_data[i];
                             j++;
                         }
                     }
@@ -2128,9 +2125,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     MPI_Send(&nitems, 1, TYPE_INT, leader, pair_idx, communicator);
                     if(nitems > 1)
                     {
-                        MPI_Isend(y2_data.data(), nitems - 1, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
+                        MPI_Isend(yi_data.data(), nitems - 1, TYPE_INT, leader, pair_idx, communicator, &request);
                         out_requests.push_back(request);
-                        MPI_Isend(p_data.data(), nitems - 1, TYPE_INT, leader, pair_idx, communicator, &request);
+                        MPI_Isend(yv_data.data(), nitems - 1, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
                         out_requests.push_back(request);
                     }
                 }
@@ -2195,12 +2192,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         else
             accu = follower_rowgrp_ranks_accu_seg[j];
         
-        if(y2_nitems_vec[accu])
+        if(activity_filtering and y2_nitems_vec[accu])
         {
             if(y2_nitems_vec[accu] > 1)
             {
-                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
                 for(uint32_t i = 0; i < y2_nitems_vec[accu] - 1; i++)
                 {
                     Integer_Type k = yij_data[i];
@@ -2707,7 +2704,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     for(uint32_t i = 0; i < v_nitems; i++)
     {
         Vertex_State &state = V[i];
-        if((state.get_state() != state.get_inf()) and (get_vid(i) < nrows))    
+        if((state.get_state() != infinity()) and (get_vid(i) < nrows))    
                 v_sum_local += state.get_state();
             
     }
@@ -2722,7 +2719,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             Vertex_State &state = V[i];
-            if((state.get_state() != state.get_inf()) and (get_vid(i) < nrows)) 
+            if((state.get_state() != infinity()) and (get_vid(i) < nrows)) 
                 v_sum_local_++;
         }
 
