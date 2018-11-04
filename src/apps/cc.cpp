@@ -1,5 +1,5 @@
 /*
- * tc.cpp: Triangle counting benchmark
+ * cc.cpp: Connected component benchmark
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -32,7 +32,8 @@ int main(int argc, char **argv)
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2D_;
-    Compression_type CT = _CSC_; // Only CSC is supported
+    // Only CSC is supported for nonstationary algorithms
+    Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
     bool parread = true;
     
