@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
     V.execute();
     V.checksum();
-    //V.display();
+    V.display();
     V.free();
     G.free();
 
