@@ -380,7 +380,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
                 XI[i].clear();
                 XI[i].shrink_to_fit();
             }
-    
             for(uint32_t i = 0; i < rank_nrowgrps; i++)
             {
                 YV[i].clear();
@@ -1024,18 +1023,22 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 Integer_Type j = 0;
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
+                    
                     if(i_data[i])
                     {
                         Vertex_State &state = V[i];
-                        x_data[j] = messenger(state);
                         if(C[i])
                         {
+                            x_data[j] = messenger(state);
                             xv_data[k] = x_data[j];
                             xi_data[k] = j;
                             k++;
-                        }                    
+                        }
+                        else
+                            x_data[j] = state.get_inf();
                         j++;
                     }
+
                 }
             }
             else
@@ -1046,16 +1049,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                     Integer_Type j = 0;
                     for(uint32_t i = 0; i < v_nitems; i++)
                     {
+                        
                         if(j_data[i])
                         {
                             Vertex_State &state = V[i];
-                            x_data[j] = messenger(state);
                             if(C[i])                            
                             {
+                                x_data[j] = messenger(state);
                                 xv_data[k] = x_data[j];
                                 xi_data[k] = j;
                                 k++;
                             }
+                            else
+                                x_data[j] = state.get_inf();
                             j++;
                         }
                     }
@@ -2060,11 +2066,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         
                         if(y2_nitems_vec[accu] > 1)
                         {
-                            std::vector<Fractional_Type> &y2j_data = YV[yi][accu];
-                            std::vector<Integer_Type> &pj_data = YI[yi][accu];
-                            MPI_Irecv(y2j_data.data(), y2_nitems_vec[accu] - 1, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
+                            std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                            std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                            MPI_Irecv(yvj_data.data(), y2_nitems_vec[accu] - 1, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                             in_requests.push_back(request);
-                            MPI_Irecv(pj_data.data(), y2_nitems_vec[accu] - 1, TYPE_INT, follower, pair_idx, communicator, &request);
+                            MPI_Irecv(yij_data.data(), y2_nitems_vec[accu] - 1, TYPE_INT, follower, pair_idx, communicator, &request);
                             in_requests.push_back(request);
                         }
                     }
@@ -2188,12 +2194,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         {
             if(y2_nitems_vec[accu] > 1)
             {
-                std::vector<Fractional_Type> &y2j_data = YV[yi][accu];
-                std::vector<Integer_Type> &pj_data = YI[yi][accu];
+                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                std::vector<Integer_Type> &yij_data = YI[yi][accu];
                 for(uint32_t i = 0; i < y2_nitems_vec[accu] - 1; i++)
                 {
-                    Integer_Type k = pj_data[i];
-                    combiner(y_data[k], y2j_data[i]);
+                    Integer_Type k = yij_data[i];
+                    combiner(y_data[k], yvj_data[i]);
                 }
             }
         }
