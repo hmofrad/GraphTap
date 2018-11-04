@@ -1,5 +1,5 @@
 /*
- * deg.h: Degree benchmark helper
+ * deg.h: Outgoing degree benchmark helper
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
