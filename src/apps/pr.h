@@ -36,6 +36,11 @@ class PR_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
             return( (state.degree) ? (state.rank / state.degree) : 0 );
         }
 
+        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
+        {
+            y1 += (y2 * w);
+        }
+        
         virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
         {
             y1 += y2;
