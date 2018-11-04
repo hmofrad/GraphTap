@@ -63,6 +63,11 @@ class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
             Fractional_Type tmp = state.label;
             state.label = (y < state.label) ? y : state.label;
             return(tmp != state.label);
-        }      
+        }   
+        
+        virtual Fractional_Type infinity()
+        {
+            return(INF);
+        }
 };
 #endif
