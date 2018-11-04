@@ -17,11 +17,10 @@ int main(int argc, char **argv)
     Env::init(comm_split);
     double time1 = Env::clock();
     
-    if(argc != 3)  {
-        if(Env::is_master) {
-            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\""
-                      << std::endl;
-        }    
+    if(argc > 4)
+    {
+        if(Env::is_master)
+            std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
     }
     std::string file_path = argv[1]; 
