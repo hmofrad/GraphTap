@@ -1,5 +1,5 @@
 /*
- * Degree.cpp: Degree benchmark (Outgoing)
+ * Degree.cpp: Outgoing degree benchmark
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
