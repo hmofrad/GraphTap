@@ -13,6 +13,10 @@
 #SBATCH --cluster=mpi
 #SBATCH --partition=ib
 
+## while true; do crc-squeue.py; sleep 10; done
+## grep 'Execution' la3.out
+
+
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
 echo "SLURM_NNODES"=$SLURM_NNODES
@@ -38,15 +42,28 @@ ITERS_OR_SRC=20
 if [ "$SLURM_NNODES" = "4" ]
 then
     echo "RMAT=26"
-    time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
+    if [ "${APP}" = "sssp" ]
+    then
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+    else
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
+    fi
 elif [ "$SLURM_NNODES" = "8" ]
 then
     echo "RMAT=27"
-    time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27_1.bin 134217728 ${ITERS_OR_SRC}
+    if [ "${APP}" = "sssp" ]
+    then
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+    else
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
 elif [ "$SLURM_NNODES" = "16" ]
 then
     echo "RMAT=28"
-    time mpirun ${DEBUG}  -np ${NP} ${APP} /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28_1.bin 268435456 ${ITERS_OR_SRC}
+    if [ "${APP}" = "sssp" ]
+    then
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+    else
+        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
 else
         echo "RMAT=$SLURM_NNODES N/A"
 fi
