@@ -198,7 +198,7 @@ class Vertex_Program
         bool directed;
         bool transpose;
         double activity_filtering_ratio = 0.6;
-        bool activity_filtering = false;
+        bool activity_filtering = true;
         bool accu_activity_filtering = false;
         bool msgs_activity_filtering = false;
         uint64_t num_row_touches = 0;
@@ -808,13 +808,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             Vertex_State &state = V[i];
-            x_data[i] = messenger(state);
             if(C[i])
             {
+                x_data[i] = messenger(state);
                 xv_data[k] = x_data[i];
                 xi_data[k] = i;
                 k++;
             }
+            else
+                x_data[i] = infinity;
         }
     }
     else if(filtering_type == _SOME_)
@@ -874,11 +876,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
               //  Env::exit(1);
             //}
         }
-        msgs_activity_statuses[xo] = k;
+        
     }
     
     if(activity_filtering)
     {
+        msgs_activity_statuses[xo] = k;
         int nitems = msgs_activity_statuses[xo];
         // 0 all, 1 nothing, else nitems
         double ratio = (double) nitems/x_nitems;
