@@ -15,6 +15,7 @@
 
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
+## strings graphtap.out | grep 'Execute'
 
 
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
@@ -29,12 +30,14 @@ echo "************************************************"
 module purge
 module load gcc/5.4.0
 module load intel
+export I_MPI_FABRICS=shm:ofa
 
 export SLURM_CPU_BIND="none"
 export I_MPI_FALLBACK=0
 export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 NP=$SLURM_NTASKS
 APP=bin/./pr
 ITERS_OR_SRC=20
@@ -44,26 +47,30 @@ then
     echo "RMAT=26"
     if [ "${APP}" = "sssp" ]
     then
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
     else
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
     fi
 elif [ "$SLURM_NNODES" = "8" ]
 then
     echo "RMAT=27"
     if [ "${APP}" = "sssp" ]
     then
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27_1_w.bin 134217728 ${ITERS_OR_SRC}
     else
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27_1.bin 134217728 ${ITERS_OR_SRC}
+    fi    
 elif [ "$SLURM_NNODES" = "16" ]
 then
     echo "RMAT=28"
     if [ "${APP}" = "sssp" ]
     then
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28_1_w.bin 268435456 ${ITERS_OR_SRC}
     else
-        time mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
+        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28_1.bin 268435456 ${ITERS_OR_SRC}
+    fi    
 else
         echo "RMAT=$SLURM_NNODES N/A"
 fi
+
+strings graphtap.out | grep 'Execute'
