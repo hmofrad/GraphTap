@@ -304,6 +304,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         nedges++;
         offset = fin.tellg();
         
+        /*
         // Transpose
         if(transpose)
         {
@@ -315,12 +316,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         }
         else
         {
+            */
             #ifdef HAS_WEIGHT
             iss >> triple.row >> triple.col >> triple.weight;
             #else
             iss >> triple.row >> triple.col;
             #endif
-        }
+        //}
         
         // Remove self-loops
         if (triple.row == triple.col)
@@ -332,9 +334,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         // Remove cycles
         if(acyclic)
         {
-          if(triple.col < triple.row)
-            std::swap(triple.row, triple.col);
+            if(triple.col < triple.row)
+                std::swap(triple.row, triple.col);
         }
+        
+        // Transpose
+        if(transpose)
+            std::swap(triple.row, triple.col);
         
         // Insert edge
         pair = A->tile_of_triple(triple);
@@ -398,12 +404,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
             if(not self_loops)
                 continue;
         }
-
-        // Transpose
-        if(transpose)
-        {
-            std::swap(triple.row, triple.col);
-        }
         
         // Remove cycles    
         if(acyclic)
@@ -411,6 +411,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_binary()
           if(triple.col < triple.row)
             std::swap(triple.row, triple.col);
         }
+        
+        // Transpose
+        if(transpose)
+            std::swap(triple.row, triple.col);
         
         // Insert edge
         pair = A->tile_of_triple(triple);
@@ -515,22 +519,22 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         offset++;
         
         // Transpose
-        if(transpose)
-        {
-            #ifdef HAS_WEIGHT
-            iss >> triple.col >> triple.row >> triple.weight;
-            #else    
-            iss >> triple.col >> triple.row;
-            #endif
-        }
-        else
-        {
+        //if(transpose)
+        //{
+            //#ifdef HAS_WEIGHT
+            //iss >> triple.col >> triple.row >> triple.weight;
+          //  #else    
+          //  iss >> triple.col >> triple.row;
+          //  #endif
+        //}
+        //else
+        //{
             #ifdef HAS_WEIGHT
             iss >> triple.row >> triple.col >> triple.weight;
             #else
             iss >> triple.row >> triple.col;
             #endif
-        }
+        //}
         
         // Remove self-loops
         if (triple.row == triple.col)
@@ -545,6 +549,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
             if(triple.col < triple.row)
                 std::swap(triple.row, triple.col);
         }
+        
+        // Transpose
+        if(transpose)
+            std::swap(triple.row, triple.col);
+        
         
         // Insert edge
         A->insert(triple);
@@ -631,11 +640,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
                 continue;
         }
         
-        // Transpose
-        if(transpose)
-        {
-            std::swap(triple.row, triple.col);
-        }
+
         
         // Remove cycles
         if(acyclic)
@@ -643,6 +648,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             if(triple.col < triple.row)
                 std::swap(triple.row, triple.col);
         }
+        
+        // Transpose
+        if(transpose)
+        //{
+            std::swap(triple.row, triple.col);
+        //}
 
         // Insert edge
         A->insert(triple);
