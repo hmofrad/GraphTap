@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    ip num_iterations = 1;
+    //ip num_iterations = 1;
     bool directed = true;
     bool transpose = true;
     bool self_loops = false;
@@ -42,14 +42,14 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = false;
-    bool activity_filtering = true; // Has no effect (always on)
+    bool activity_filtering = false; // Has no effect (always on)
     bool tc_family = true;
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     // Run 1st vertex program and calculate ingoing adjacency list
     TC_Program<wp, ip, fp> V(G, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
-    V.execute(num_iterations);
+    V.execute(1);
     G.free();
     Env::barrier();
     
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     // Run 2nd vertex program and calculate outgoing adjacency list
-    TC_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);  
+    TC_Program<wp, ip, fp> VR(GR, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);  
     VR.initialize(V);
     V.free();
     VR.execute(1);
