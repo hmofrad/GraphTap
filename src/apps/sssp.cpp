@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     #endif
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_; // Only CSC is supported
-    Filtering_type FT = _NONE_;
+    Filtering_type FT = _SOME_;
     bool parread = true;
     
     /* Single Source Shortest Path (SSSP) execution*/
@@ -49,11 +49,12 @@ int main(int argc, char **argv)
         transpose = not transpose; 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    bool activity_filtering = true;
     bool tc_family  = false;
     bool gather_depends_on_apply = true;
     bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
-    SSSP_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);   
+    SSSP_Program<wp, ip, fp> V(G, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);   
     V.root = root;
     V.execute();
     V.checksum();
