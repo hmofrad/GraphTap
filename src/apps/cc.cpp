@@ -44,11 +44,12 @@ int main(int argc, char **argv)
         transpose = not transpose; 
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    bool activity_filtering = true;
     bool tc_family = false;
     bool gather_depends_on_apply = true;
     bool gather_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
-    CC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
+    CC_Program<wp, ip, fp> V(G, stationary, activity_filtering, gather_depends_on_apply, gather_depends_on_iter, tc_family, OT);   
     V.execute();
     V.checksum();
     V.display();
