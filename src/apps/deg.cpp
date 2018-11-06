@@ -39,12 +39,13 @@ int main(int argc, char **argv)
     Graph<wp, ip, ip> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = true;
+    bool activity_filtering = false; // Has no effect (Always off)
     bool tc_family = false;
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     /* Degree execution */
-    Deg_Program<wp, ip, ip> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
+    Deg_Program<wp, ip, ip> V(G, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
     V.execute(num_iterations);
     V.checksum();
     V.display();
