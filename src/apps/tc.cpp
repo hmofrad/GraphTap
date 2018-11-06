@@ -42,12 +42,13 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = false;
+    bool activity_filtering = true; // Has no effect (always on)
     bool tc_family = true;
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = false;
     Ordering_type OT = _ROW_;
     // Run 1st vertex program and calculate ingoing adjacency list
-    TC_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
+    TC_Program<wp, ip, fp> V(G, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
     V.execute(num_iterations);
     G.free();
     Env::barrier();
