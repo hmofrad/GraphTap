@@ -26,7 +26,7 @@ class Vertex_Program
 {
     public:
         Vertex_Program(Graph<Weight, Integer_Type, Fractional_Type> &Graph,
-                        bool stationary_ = false, bool gather_depends_on_apply_ = false, 
+                        bool stationary_ = false, bool activity_filtering_ = true, bool gather_depends_on_apply_ = false, 
                         bool apply_depends_on_iter_ = false, bool tc_family_ = false, Ordering_type = _ROW_);
         ~Vertex_Program();
         
@@ -200,10 +200,7 @@ class Vertex_Program
         double activity_filtering_ratio = 0.6;
         bool activity_filtering = true;
         bool accu_activity_filtering = false;
-        bool msgs_activity_filtering = false;
-        uint64_t num_row_touches = 0;
-        uint64_t num_row_edges = 0;
-        
+        bool msgs_activity_filtering = false;        
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -211,7 +208,7 @@ class Vertex_Program
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Program(
          Graph<Weight,Integer_Type, Fractional_Type> &Graph,
-         bool stationary_, bool gather_depends_on_apply_, bool apply_depends_on_iter_, 
+         bool stationary_, bool activity_filtering_, bool gather_depends_on_apply_, bool apply_depends_on_iter_, 
          bool tc_family_, Ordering_type ordering_type_)
 {
 
@@ -219,6 +216,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
     directed = A->directed;
     transpose = A->transpose;
     stationary = stationary_;
+    activity_filtering = activity_filtering_;
     gather_depends_on_apply = gather_depends_on_apply_;
     apply_depends_on_iter = apply_depends_on_iter_;
     tc_family = tc_family_;
@@ -816,7 +814,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 k++;
             }
             else
-                x_data[i] = infinity;
+                x_data[i] = infinity();
         }
     }
     else if(filtering_type == _SOME_)
@@ -1106,7 +1104,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
 }
 
-/* Buggy */
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather_nonstationary()
 {  
