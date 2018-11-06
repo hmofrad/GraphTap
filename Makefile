@@ -7,7 +7,7 @@
 CXX = g++
 MPI_CXX = mpicxx
 CXX_FLAGS = -std=c++14 -fpermissive
-
+MACROS=-DHAS_WEIGHT
 # Definitely Turn this on for fast binaries
 OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
@@ -16,13 +16,14 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 .PHONY: all clean
 
-objs = deg pr tc cc bfs sssp
+objs  = deg pr tc cc bfs sssp
 
 all: $(objs)
 
 $(objs): %: src/apps/%.cpp
 	@mkdir -p bin
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(MACROS) -o bin/$@ -I src $<
-    
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) -o bin/$@ -I src $<
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(MACROS) -o bin/$@_w -I src $<
+
 clean:
 	rm -rf bin
