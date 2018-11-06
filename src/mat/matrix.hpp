@@ -887,35 +887,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
             }
         }
     }
-    /*
-    if(!Env::rank)
-    {
-        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
-            printf("<%lu ", nedges_grid[Env::rank][i]);
-        printf(">\n");
-    }
-    Env::barrier();
-    if(Env::rank == 1)
-    {
-        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
-            printf("<%lu> ", nedges_grid[Env::rank][i]);
-        printf("\n");
-    }
-    Env::barrier();
-    if(Env::rank == 2)
-    {
-        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
-            printf("<%lu ", nedges_grid[Env::rank][i]);
-        printf(">\n");
-    }
-    Env::barrier();
-    if(Env::rank == 3)
-    {
-        for(uint32_t i = 0; i < tiling->rank_ntiles; i++)
-            printf("<%lu ", nedges_grid[Env::rank][i]);
-        printf(">\n");
-    }
-    */
+
     Env::barrier();
     for(uint32_t r = 0; r < Env::nranks; r++)
     {
@@ -948,59 +920,75 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::balance()
      
     if(!Env::rank)
     {   
+        uint32_t skip = 15;
         double imbalance_threshold = .2;
         double ratio = 0;
         uint32_t count = 0;
         double rank_nedges_ratio = 0;
         double rowgrps_nedges_ratio = 0;
         double colgrps_nedges_ratio = 0;
-        printf("\nEdge balancing info (not functional for now):\n");  
+        printf("\nEdge balancing info (Not functional):\n");  
         printf("Edge balancing: Total number of edges = %lu\n", nedges);
         printf("Edge balancing: Balanced number of edges per ranks = %lu \n", nedges/Env::nranks);
-        printf("Edge balancing: imbalance ratio per ranks [0-%d]\n", Env::nranks);
+        printf("Edge balancing: imbalance ratio per ranks [0-%d]\n", Env::nranks-1);
+        printf("Edge balancing: ");
         for(uint32_t r = 0; r < Env::nranks; r++)
         {
             ratio = (double) (rank_nedges[r] / (double) (nedges/Env::nranks));
-            printf("%2.2f ", ratio);
+            if(r < skip)
+                printf("%2.2f ", ratio);
             if(fabs(ratio - 1) > imbalance_threshold)
                 count++;
         }
-        printf("\n");
+        if(Env::nranks > skip)
+            printf("...\n");
+        else
+            printf("\n");
         if(count)
         {
-            printf("****Warning****: Edge distribution among ranks is not balanced.\n");
+            printf("Edge balancing: Edge distribution among %d ranks are not balanced.\n", count);
         }
         count = 0;
         
-        printf("Edge balancing: Imbalance ratio per rowgroups [0-%d]\n", nrowgrps);
+        printf("Edge balancing: Imbalance ratio per rowgroups [0-%d]\n", nrowgrps-1);
+        printf("Edge balancing: ");
         for(uint32_t i = 0; i < nrowgrps; i++)
         {
             ratio = (double) (rowgrp_nedges[i] / (double) (nedges/nrowgrps));
-            printf("%2.2f ", ratio);
+            if(i < skip)
+                printf("%2.2f ", ratio);
             if(fabs(ratio - 1) > imbalance_threshold)
                 count++;
         }
-        printf("\n");
+        if(nrowgrps > skip)
+            printf("...\n");
+        else
+            printf("\n");
         if(count)
         {
-            printf("****Warning****: Edge distribution among rowgroups is not balanced.\n");
+            printf("Edge balancing: Edge distribution among %d rowgroups are not balanced.\n", count);
         }
         count = 0;
         
-        printf("Edge balancing: Imbalance ratio per colgroups [0-%d]\n", ncolgrps);
+        printf("Edge balancing: Imbalance ratio per colgroups [0-%d]\n", ncolgrps-1);
+        printf("Edge balancing: ");
         for(uint32_t j = 0; j < ncolgrps; j++)
         {
             ratio = (double) (colgrp_nedges[j] / (double) (nedges/ncolgrps));
-            printf("%2.2f ", ratio);
+            if(j < skip)
+                printf("%2.2f ", ratio);
             if(fabs(ratio - 1) > imbalance_threshold)
                 count++;
         }
-        printf("\n");
+        if(ncolgrps > skip)
+            printf("...\n");
+        else
+            printf("\n");
         if(count)
         {
-            printf("****Warning****: Edge distribution among colgroups is not balanced.");
+            printf("Edge balancing: Edge distribution among %d colgroups are not balanced.", count);
         }
-        printf("\n\n");
+        printf("\n");
     }
     Env::barrier();
 }
@@ -1424,15 +1412,30 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     
     if(!Env::rank)
     {
+        uint32_t skip = 15;
         printf("nnz_sizes_all[%d]: ", filtering_type_);
         for(uint32_t i = 0 ; i < Env::nranks; i++)
-            printf("%d ", nnz_sizes_all[i]);
-        printf("\n");
+        {
+            if(i < skip)
+                printf("%d ", nnz_sizes_all[i]);
+            else
+                break;
+        }
+        if(skip < Env::nranks)
+            printf("...\n");
+        else
+            printf("\n");
         
         printf("nnz_sizes_loc[%d]: ", filtering_type_);
         for(uint32_t i = 0 ; i < rank_nrowgrps_; i++)
-            printf("%d ", nnz_sizes_loc[i]);
-        printf("\n"); 
+        {
+            if(i < skip)
+                printf("%d ", nnz_sizes_loc[i]);
+        }
+        if(skip < rank_nrowgrps_)
+            printf("...\n");
+        else
+            printf("\n");
     }
 
     if(nnz_sizes_all[owned_segment])
