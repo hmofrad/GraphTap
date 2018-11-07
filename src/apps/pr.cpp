@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     Graph<wp, ip, fp> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
     bool stationary = true;
-    bool activity_filtering = true; // Has no effect (always off)
+    bool activity_filtering = false; // Has no effect (always off)
     bool tc_family = false;
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = false;
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     transpose = true;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
-    PR_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
+    PR_Program<wp, ip, fp> VR(GR, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);
     VR.initialize(V);
     V.free();
     VR.execute(num_iterations); // Vertex execution
