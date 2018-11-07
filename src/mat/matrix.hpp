@@ -106,10 +106,10 @@ class Matrix
         */
         std::vector<std::vector<char>> I;          // Filtered indices (from tile height)
         std::vector<std::vector<Integer_Type>> IV; // Filtered values  (from tile height)
-        //std::vector<std::vector<Integer_Type>> IF; // Filtered indices (from nnz height)
+        std::vector<std::vector<Integer_Type>> IF; // Filtered indices (from nnz height)
         std::vector<std::vector<char>> J;
         std::vector<std::vector<Integer_Type>> JV;
-        
+        std::vector<std::vector<Integer_Type>> JF;
         
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles;
         std::vector<std::vector<struct Tile2D<Weight, Integer_Type, Fractional_Type>>> tiles_rg;
@@ -1139,6 +1139,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         IV.resize(tiling->rank_nrowgrps);
         for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
             IV[i].resize(tile_height);        
+        IF.resize(tiling->rank_nrowgrps);
         filter(_SRCS_);
 
         J.resize(tiling->rank_ncolgrps);
@@ -1147,6 +1148,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
         JV.resize(tiling->rank_ncolgrps);
         for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
             JV[i].resize(tile_width);
+        JF.resize(tiling->rank_ncolgrps);
         if(Env::is_master)
             printf("Vertex filtering: SNKS - Filtering isolated columns\n");     
         filter(_SNKS_);
@@ -1188,6 +1190,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
 {
     std::vector<std::vector<char>> *K;
     std::vector<std::vector<Integer_Type>> *KV;
+    std::vector<std::vector<Integer_Type>> *KF;
     uint32_t rank_nrowgrps_, rank_ncolgrps_;
     uint32_t rowgrp_nranks_, colgrp_nranks_;
     Integer_Type tile_length;
@@ -1205,6 +1208,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     {
         K = &I;
         KV = &IV;
+        KF = &IF;
         rank_nrowgrps_ = tiling->rank_nrowgrps;
         rank_ncolgrps_ = tiling->rank_ncolgrps;
         rowgrp_nranks_ = tiling->rowgrp_nranks;
@@ -1225,6 +1229,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     {
         K = &J;
         KV = &JV;
+        KF = &JF;
         rank_nrowgrps_ = tiling->rank_ncolgrps;
         rank_ncolgrps_ = tiling->rank_nrowgrps;
         rowgrp_nranks_ = tiling->colgrp_nranks;
@@ -1443,6 +1448,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         uint32_t ko = accu_segment_row_;
         auto &kj_data =  (*K)[ko];
         auto &kvj_data = (*KV)[ko];
+        auto &kfj_data = (*KF)[ko];
 
         Integer_Type j = 0;
         for(uint32_t i = 0; i < f_nitems; i++)
@@ -1451,6 +1457,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             {
                 kj_data[i] = 1;
                 kvj_data[i] = j; 
+                kfj_data.push_back(i);
                 j++;
             }
             else
@@ -1515,11 +1522,45 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-
+    
+    //MPI_Status status;
+    int nitems = 0;
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++)
+    {
+        this_segment = local_row_segments_[j];
+        leader = leader_ranks[this_segment];
+        
+        auto &kfj_data = (*KF)[j];
+        
+        if(this_segment == owned_segment)
+        {
+            for(uint32_t i = 0; i < rowgrp_nranks_ - 1; i++)
+            {
+                follower = follower_rowgrp_ranks_[i];
+                nitems = kfj_data.size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, owned_segment, Env::MPI_WORLD);
+                MPI_Isend(kfj_data.data(), kfj_data.size(), TYPE_INT, follower, owned_segment, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else
+        {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, this_segment, Env::MPI_WORLD, &status);
+            kfj_data.resize(nitems);
+            MPI_Irecv(kfj_data.data(), nitems, TYPE_INT, leader, this_segment, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
+    } 
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    out_requests.clear();
+    
     for (uint32_t j = 0; j < rank_nrowgrps_; j++)
     {
         auto &kj_data = (*K)[j];
         auto &kvj_data = (*KV)[j];
+        auto &kfj_data = (*KF)[j];
         
         Integer_Type k = 0;
         for(uint32_t i = 0; i < tile_length; i++)
@@ -1527,6 +1568,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             if(kj_data[i])
             {
                 assert(kvj_data[i] == k);
+                assert(kfj_data[k] == i);
                 k++;
             }
             else
@@ -1833,15 +1875,21 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
         {
             I[i].clear();
             I[i].shrink_to_fit();
+            IF[i].clear();
+            IF[i].shrink_to_fit();
         }
         I.clear();
+        IF.clear();
         
         for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         {
             J[i].clear();
             J[i].shrink_to_fit();
+            JF[i].clear();
+            JF[i].shrink_to_fit();
         }
         J.clear();
+        JF.clear();
         
         /*
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
