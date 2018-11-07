@@ -2,16 +2,16 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=16
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks=64
+#SBATCH --nodes=8
+#SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
 #SBATCH --time=00:10:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=ib
+#SBATCH --partition=opa
 
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
