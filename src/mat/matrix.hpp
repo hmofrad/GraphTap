@@ -1765,7 +1765,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
             yi++;
         }
     }
-    del_filtering_indices();
+   // del_filtering_indices();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1842,7 +1842,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             yi++;
         }  
     }    
-    del_filtering_indices();
+    //del_filtering_indices();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -1871,6 +1871,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
 {
     if(filtering_type == _SOME_)
     {
+        del_filtering_indices();
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         {
             I[i].clear();
