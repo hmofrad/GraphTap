@@ -316,14 +316,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         }
         else
         {
-            */
+        */
             #ifdef HAS_WEIGHT
             iss >> triple.row >> triple.col >> triple.weight;
             #else
             iss >> triple.row >> triple.col;
             #endif
-        //}
-        
+
         // Remove self-loops
         if (triple.row == triple.col)
         {
