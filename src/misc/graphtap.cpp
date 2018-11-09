@@ -110,7 +110,7 @@ void popu_csc()
     for(auto &triple: *triples)
     {
 
-        //printf("%d %d %d %d, %d %d %d %d\n", i, triple.row, rows[triple.row], rows_val[triple.row], j, triple.col, cols[triple.col], cols_val[triple.col]);
+       // printf("%d %d %d %d, %d %d %d %d\n", i, triple.row, rows[triple.row], rows_val[triple.row], j, triple.col, cols[triple.col], cols_val[triple.col]);
         
         while((j - 1) != cols_val[triple.col])
         {
@@ -120,19 +120,32 @@ void popu_csc()
                 
         A[i] = 1;
         JA[j]++;
-        IA[i] = rows[triple.row];
+        IA[i] = rows_val[triple.row];
         i++;
     }
-
+    /*
     while((j + 1) < (nnz_cols + 1))
     {
         j++;
         JA[j] = JA[j - 1];
     }
+    */
 }
 
 
-void kernel()
+void walk_csc()
+{
+    for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
+    {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+        {
+            printf("   i=%d j=%d\n", IA[i], j);
+        }
+    }
+}
+
+void spmv()
 {
     std::vector<uint32_t> y(nnz_rows);
     std::vector<uint32_t> x(nnz_cols);
@@ -141,13 +154,13 @@ void kernel()
     {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
         {
-            printf("%d %d %d %d %d\n", IA[i], j, y[IA[i]], A[i], x[j]);
+            //printf("%d %d %d %d %d\n", IA[i], j, y[IA[i]], A[i], x[j]);
             y[IA[i]] += A[i] * x[j]; 
         }
     }
     
-    uint32_t value = 0;
+    //uint32_t value = 0;
     for(uint32_t i = 0; i < nnz_rows; i++)
         value += y[i];
-    printf("value=%d\n", value);
+    //printf("value=%d\n", value);
 }
