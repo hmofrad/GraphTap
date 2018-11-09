@@ -286,7 +286,7 @@ void spmv_regulars(uint32_t offset)
 {
     //if(accumulator_has_not_initialized)
     //std::vector<uint32_t> y(nnz_regulars);
-    std::vector<uint32_t> x(ncols_regulars);
+    std::vector<uint32_t> x(ncols_regulars - 1);
     //uint32_t ncols = ncols_regulars;
     
     uint32_t ncols = 0;
@@ -373,21 +373,6 @@ void popu_csc_sources()
         entries_sources[i].weight = 1;
         i++;     
     }
-    
-    /*
-    for (uint32_t j = 0; j < ncols_sources - 1; j++)
-    {
-        printf("j=%d, %d %d\n", j, colptrs_sources[j], colptrs_sources[j + 1]);
-        for (uint32_t i = colptrs_sources[j]; i < colptrs_sources[j + 1]; i++)
-        {
-            auto& entry = entries_sources[i];
-            printf("i=%d, gidx=%d, idx=%d, j=%d, col=%d\n", i, entry.global_idx, entry.idx, j, colidxs_sources[j]);
-        //auto& entry = entries[i];
-        }
-        //printf("\n");
-        //printf("i=%d, colidxs[i]=%d, colptrs[i]=%d, %d\n", i, colidxs[i], colptrs[i],  colptrs[i + 1] -  colptrs[i]);
-    }
-    */
 }
 
 void walk_csc_sources()
@@ -401,6 +386,56 @@ void walk_csc_sources()
             printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_sources[j]);
         }
     }
+}
+
+void spmv_sources(uint32_t offset)
+{
+    //if(accumulator_has_not_initialized)
+    //std::vector<uint32_t> y(nnz_regulars);
+    std::vector<uint32_t> x(ncols_sources - 1);
+    //uint32_t ncols = ncols_regulars;
+    
+    uint32_t ncols = 0;
+    if(offset)
+    {
+       // x.resize(nnz_regulars_sinks_cols);
+        ncols = ncols_regulars - 1;    
+    }
+    else
+    {
+       // x.resize(nnz_regulars_cols);
+        ncols = nnz_regulars_cols;
+    }
+    
+    std::fill(x.begin(), x.end(), 1);
+    
+    
+    
+    
+    printf("%d %d\n\n", ncols, nnz_regulars_cols);
+    for(uint32_t j = offset; j < ncols; j++)
+    {
+        ///printf("j=%d\n", j);
+        for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
+        {
+            auto& entry = entries_regulars[i];
+            y_regulars[entry.global_idx] = entry.weight * x[j];
+            //y[IA[i]] += A[i] * x[j];
+            printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+            //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+        }
+    }
+    
+    
+    if(offset)
+    {
+        uint32_t value = 0;
+        for(uint32_t i = 0; i < nnz_regulars; i++)
+            value += y_regulars[i];
+        printf("value=%d\n", value);
+    }
+    
+    
 }
 
 
