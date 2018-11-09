@@ -28,7 +28,7 @@ std::vector<uint32_t> cols_val;
 
 uint32_t nnz;
 uint32_t ncols_plus_one;
-char *A;
+uint32_t *A;
 uint32_t *IA;
 uint32_t *JA;
 
@@ -76,13 +76,13 @@ void init_csc(uint32_t nnz_, uint32_t ncols)
 {
     nnz = nnz_;
     ncols_plus_one = ncols + 1;
-    if((A = (char *) mmap(nullptr, nnz * sizeof(char), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
+    if((A = (uint32_t *) mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
                                                | MAP_PRIVATE, -1, 0)) == (void*) -1)
     {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
-    memset(A, 0, nnz * sizeof(char));
+    memset(A, 0, nnz * sizeof(uint32_t));
     
     if((IA = (uint32_t *) mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
                                                | MAP_PRIVATE, -1, 0)) == (void*) -1)
@@ -98,6 +98,7 @@ void init_csc(uint32_t nnz_, uint32_t ncols)
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
+    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t));
 }
 
 void popu_csc()
