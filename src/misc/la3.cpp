@@ -16,16 +16,20 @@
 #include <cstring> 
 #include <vector>
 #include <algorithm>
-
+#include <unordered_set>
 
 std::vector<struct Triple> *triples_regulars;
-std::vector<struct Triple> *triples_sinks;
+std::vector<struct Triple> *triples_sources;
 
 struct CSCEntry
 {
   uint32_t global_idx;
   uint32_t idx;
+  char weight;
 };
+
+std::vector<uint32_t> y_regulars;
+std::vector<uint32_t> y_sources;
 
 // Vertex classification
 uint32_t nnz_outgoings;
@@ -47,8 +51,12 @@ uint32_t nnz_isolates;
 std::vector<char> isolates;
 std::vector<uint32_t> isolates_val;
 
-uint32_t regulars_sinks_offset = 1;
-uint32_t sinks_sinks_offset = 1;
+uint32_t nnz_regulars_cols;
+uint32_t nnz_regulars_sinks_cols;
+uint32_t regulars_sinks_offset;
+uint32_t nnz_sources_cols;
+uint32_t nnz_sources_sinks_cols;
+uint32_t sources_sinks_offset;
 
 uint32_t nentries_regulars;
 uint32_t ncols_regulars;
@@ -56,11 +64,11 @@ uint32_t* colptrs_regulars;
 uint32_t* colidxs_regulars;
 CSCEntry* entries_regulars;
 
-uint32_t nentries_sinks;
-uint32_t ncols_sinks;
-uint32_t* colptrs_sinks;
-uint32_t* colidxs_sinks;
-CSCEntry* entries_sinks;
+uint32_t nentries_sources;
+uint32_t ncols_sources;
+uint32_t* colptrs_sources;
+uint32_t* colidxs_sources;
+CSCEntry* entries_sources;
 
 void classification(uint32_t num_vertices)
 {
@@ -138,7 +146,7 @@ void classification(uint32_t num_vertices)
     {
         printf("i=%d: out=%d, in=%d, reg=%d, src=%d, snk=%d, iso=%d\n", i, outgoings[i], ingoings[i], regulars[i], sources[i], sinks[i], isolates[i]);
     }
-    
+    std::unordered_set<uint32_t> uniques;
     printf("regulars->regulars\n");
     for(auto &triple: *triples)
     {
@@ -146,10 +154,13 @@ void classification(uint32_t num_vertices)
         {
             triples_regulars->push_back(triple);
             printf("%d %d\n", triple.row, triple.col);
-            regulars_sinks_offset++;
+            uniques.insert(triple.col);
         }
     }
-
+    regulars_sinks_offset = uniques.size();
+    nnz_regulars_cols = regulars_sinks_offset;
+    nnz_regulars_sinks_cols = nnz_ingoings - regulars_sinks_offset;
+    uniques.clear();
     printf("regulars->sinks\n");
     for(auto &triple: *triples)
     {
@@ -165,26 +176,31 @@ void classification(uint32_t num_vertices)
     {
         if(sources[triple.row] and regulars[triple.col])
         {
-            triples_sinks->push_back(triple);
+            triples_sources->push_back(triple);
             printf("%d %d\n", triple.row, triple.col);
-            sinks_sinks_offset++;
+            uniques.insert(triple.col);
+            //sources_sinks_offset++;
         }
     }
+    sources_sinks_offset = uniques.size();
+    nnz_sources_cols = sources_sinks_offset;
+    nnz_sources_sinks_cols = nnz_outgoings - sources_sinks_offset;
+    uniques.clear();
     printf("sources->sinks\n");
     for(auto &triple: *triples)
     {
         if(sources[triple.row] and sinks[triple.col])
         {
-            triples_sinks->push_back(triple);
+            triples_sources->push_back(triple);
             printf("%d %d\n", triple.row, triple.col);
         }
     }
     
 
     
-    printf("nnz_outgoings=%d\nnnz_ingoings=%d\nnnz_regulars=%d\nnnz_sources=%d\nnnz_sinks=%d\nnnz_isolates=%d\n", 
+    printf("nnz_outgoings=%d, nnz_ingoings=%d, nnz_regulars=%d, nnz_sources=%d, nnz_sinks=%d, nnz_isolates=%d\n", 
             nnz_outgoings, nnz_ingoings, nnz_regulars, nnz_sources, nnz_sinks, nnz_isolates);
-    
+    printf("nnz_regulars_cols=%d, nnz_regulars_sinks_cols=%d, regulars_sinks_offset=%d, nnz_sources_cols=%d, nnz_sources_sinks_cols=%d, sources_sinks_offset=%d\n", nnz_regulars_cols, nnz_regulars_sinks_cols, regulars_sinks_offset, nnz_sources_cols, nnz_sources_sinks_cols, sources_sinks_offset);
         
 }
 
@@ -208,92 +224,36 @@ void init_csc_regulars(uint32_t nnz_, uint32_t ncols_)
     memset(entries_regulars, 0, nentries_regulars * sizeof(CSCEntry));        
 }
 
-void init_csc_sinks(uint32_t nnz_, uint32_t ncols_)
-{
-    nentries_sinks = nnz_;
-    ncols_sinks = ncols_ + 1;
-    
-    colptrs_sinks = (uint32_t*) mmap(nullptr, (ncols_sinks) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
-                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(colptrs_sinks != nullptr);
-    memset(colptrs_sinks, 0, (ncols_sinks) * sizeof(uint32_t));
-    colidxs_sinks = (uint32_t*) mmap(nullptr, (ncols_sinks) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
-                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(colidxs_sinks != nullptr);
-    memset(colidxs_sinks, 0, (ncols_sinks) * sizeof(uint32_t));
-    entries_sinks = (CSCEntry*) mmap(nullptr, nentries_sinks * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
-                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(entries_sinks != nullptr); 
-    memset(entries_sinks, 0, nentries_sinks * sizeof(CSCEntry));    
-}
-
-
 void popu_csc_regulars()
 {
-    //colptrs_regulars // JA
-    //colidxs_regulars // Extra
-    //entries_regulars // A, IA
     uint32_t i = 0;
     uint32_t j = 1;
-    //int c = 1;
-    //int last_col = 0;
     colptrs_regulars[0] = 0;
     for(auto &triple: *triples_regulars)
     {
-        //if(i == 0)
-        //    last_col = ingoings_val[triple.col];
-        /*
-        if(c < regulars_sinks_offset)
+       // printf("1.<%d j=%d> <idx=%d colidxs=%d> <g_idx=%d %d>off=%d,%d\n", i, j, triple.row, triple.col, regulars_val[triple.row], ingoings_val[triple.col], regulars_sinks_offset, nnz_ingoings);
+        if((i != 0) and colidxs_regulars[j-1] != triple.col)
         {
-            
-            printf("1.<%d j=%d> <idx=%d colidxs=%d> <g_idx=%d %d>\n", i, j, triple.row, triple.col, regulars_val[triple.row], ingoings_val[triple.col]);
-
-            
-        }
-        else
-        {
-            printf("2.<%d j=%d> <id=%d colidxs=%d> <gid=%d %d> %d c=%d\n", i, j, triple.row, triple.col, sinks_val[triple.row], ingoings_val[triple.col], regulars_sinks_offset, c);
-            //break;
-            
-        }
-        */
-        
-        //if((j - 1) != ingoings_val[triple.col])
-        if(colidxs_regulars[j-1] != triple.col)//ingoings_val[triple.col])// and last_col != ingoings_val[triple.col])
-
-        {
-            //printf("%d %d %d \n", j, triple.col, ingoings_val[triple.col]);
-           // printf("?? %d %d\n", j, ingoings_val[triple.col]);
             j++;
             colptrs_regulars[j] = colptrs_regulars[j - 1];
-            //printf("%d %d %d \n", j, triple.col, ingoings_val[triple.col]);
         }  
         
         colptrs_regulars[j]++;
         colidxs_regulars[j-1] = triple.col;
-        printf("(i=%d j=%d colidxs=%d)\n", i, j, triple.col);
-        
         entries_regulars[i].idx = triple.row;
-        //if(c < regulars_sinks_offset)
-            entries_regulars[i].global_idx = regulars_val[triple.row];
-        //else
-        //{
-          //  entries_regulars[i].global_idx = sinks_val[triple.row];
-           // printf(">>>>>%d %d\n", c, i);
-        //}
-        
-        //printf("j=%d colptr=%d colidx=%d idx=%d gidx=%d\n", j, colptrs_regulars[j], colidxs_regulars[j], entries_regulars[i].idx, entries_regulars[i].global_idx);        
-        
-        
-        //IA[i] = pair.row;
+        entries_regulars[i].global_idx = regulars_val[triple.row];
+        entries_regulars[i].weight = 1;
         i++;     
-        //c++;
-       // last_col = ingoings_val[triple.col];
-        //break;
-        //    break;
-        
     }
     
+    while((j + 1) < (ncols_regulars + 1))
+    {
+        j++;
+        colptrs_regulars[j] = colptrs_regulars[j - 1];
+    }
+    
+    
+    /*
     for (uint32_t j = 0; j < ncols_regulars - 1; j++)
     {
         printf("j=%d, %d %d\n", j, colptrs_regulars[j], colptrs_regulars[j + 1]);
@@ -306,57 +266,165 @@ void popu_csc_regulars()
         //printf("\n");
         //printf("i=%d, colidxs[i]=%d, colptrs[i]=%d, %d\n", i, colidxs[i], colptrs[i],  colptrs[i + 1] -  colptrs[i]);
     }
-    
-    /*
-                JA[0] = 0;
-            for (auto& triple : *(tile.triples))
-            {
-                pair = rebase(triple);
-                while((j - 1) != pair.col)
-                {
-                    j++;
-                    JA[j] = JA[j - 1];
-                }            
-                // In case weights are there
-                #ifdef HAS_WEIGHT
-                A[i] = triple.weight;
-                #endif
-                
-                JA[j]++;
-                IA[i] = pair.row;
-                i++;
-            }
-            while((j + 1) < (tile_width + 1))
-            {
-                j++;
-                JA[j] = JA[j - 1];
-            }
-    
-    
-    */
-
-    /*
-    for(auto &triple: *triples)
-    {
-
-        //printf("%d %d %d %d, %d %d %d %d\n", i, triple.row, rows[triple.row], rows_val[triple.row], j, triple.col, cols[triple.col], cols_val[triple.col]);
-        
-        while((j - 1) != cols_val[triple.col])
-        {
-            j++;
-            JA[j] = JA[j - 1];
-        }  
-                
-        A[i] = 1;
-        JA[j]++;
-        IA[i] = rows[triple.row];
-        i++;
-    }
-
-    while((j + 1) < (nnz_cols + 1))
-    {
-        j++;
-        JA[j] = JA[j - 1];
-    }   
     */
 }
+
+void walk_csc_regulars()
+{
+    for(uint32_t j = 0; j < ncols_regulars - 1; j++)
+    {
+        printf("j=%d\n", j);
+        for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
+        {
+            auto& entry = entries_regulars[i];
+            printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+        }
+    }
+}
+
+void spmv_regulars(uint32_t offset)
+{
+    //if(accumulator_has_not_initialized)
+    //std::vector<uint32_t> y(nnz_regulars);
+    std::vector<uint32_t> x(ncols_regulars);
+    //uint32_t ncols = ncols_regulars;
+    
+    uint32_t ncols = 0;
+    if(offset)
+    {
+       // x.resize(nnz_regulars_sinks_cols);
+        ncols = ncols_regulars - 1;    
+    }
+    else
+    {
+       // x.resize(nnz_regulars_cols);
+        ncols = nnz_regulars_cols;
+    }
+    
+    std::fill(x.begin(), x.end(), 1);
+    
+    
+    
+    
+    printf("%d %d\n\n", ncols, nnz_regulars_cols);
+    for(uint32_t j = offset; j < ncols; j++)
+    {
+        ///printf("j=%d\n", j);
+        for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
+        {
+            auto& entry = entries_regulars[i];
+            y_regulars[entry.global_idx] = entry.weight * x[j];
+            //y[IA[i]] += A[i] * x[j];
+            printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+            //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+        }
+    }
+    
+    
+    if(offset)
+    {
+        uint32_t value = 0;
+        for(uint32_t i = 0; i < nnz_regulars; i++)
+            value += y_regulars[i];
+        printf("value=%d\n", value);
+    }
+    
+    
+}
+
+
+void init_csc_sources(uint32_t nnz_, uint32_t ncols_)
+{
+    nentries_sources = nnz_;
+    ncols_sources = ncols_ + 1;
+    
+    colptrs_sources = (uint32_t*) mmap(nullptr, (ncols_sources) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
+                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(colptrs_sources != nullptr);
+    memset(colptrs_sources, 0, (ncols_sources) * sizeof(uint32_t));
+    colidxs_sources = (uint32_t*) mmap(nullptr, (ncols_sources) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
+                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(colidxs_sources != nullptr);
+    memset(colidxs_sources , 0, (ncols_sources) * sizeof(uint32_t));
+    entries_sources = (CSCEntry*) mmap(nullptr, nentries_sources * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
+                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(entries_sources != nullptr); 
+    memset(entries_sources, 0, nentries_sources * sizeof(CSCEntry));    
+}
+
+void popu_csc_sources()
+{
+    uint32_t i = 0;
+    uint32_t j = 1;
+    colptrs_sources[0] = 0;
+    for(auto &triple: *triples_sources)
+    {
+        //printf("2.<%d j=%d> <idx=%d colidxs=%d> <gidx=%d %d>off=%d,%d\n", i, j, triple.row, triple.col, sources_val[triple.row], outgoings_val[triple.col], sources_sinks_offset, nnz_outgoings);
+     
+        if((i != 0) and colidxs_sources[j-1] != triple.col)
+        {
+            j++;
+            colptrs_sources[j] = colptrs_sources[j - 1];
+        }
+        colptrs_sources[j]++;
+        colidxs_sources[j-1] = triple.col;
+        entries_sources[i].idx = triple.row;
+        entries_sources[i].global_idx = sources_val[triple.row]; 
+        entries_sources[i].weight = 1;
+        i++;     
+    }
+    
+    /*
+    for (uint32_t j = 0; j < ncols_sources - 1; j++)
+    {
+        printf("j=%d, %d %d\n", j, colptrs_sources[j], colptrs_sources[j + 1]);
+        for (uint32_t i = colptrs_sources[j]; i < colptrs_sources[j + 1]; i++)
+        {
+            auto& entry = entries_sources[i];
+            printf("i=%d, gidx=%d, idx=%d, j=%d, col=%d\n", i, entry.global_idx, entry.idx, j, colidxs_sources[j]);
+        //auto& entry = entries[i];
+        }
+        //printf("\n");
+        //printf("i=%d, colidxs[i]=%d, colptrs[i]=%d, %d\n", i, colidxs[i], colptrs[i],  colptrs[i + 1] -  colptrs[i]);
+    }
+    */
+}
+
+void walk_csc_sources()
+{
+    for(uint32_t j = 0; j < ncols_sources - 1; j++)
+    {
+        printf("j=%d\n", j);
+        for (uint32_t i = colptrs_sources[j]; i < colptrs_sources[j + 1]; i++)
+        {
+            auto& entry = entries_sources[i];
+            printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_sources[j]);
+        }
+    }
+}
+
+
+/*
+void kernel()
+{
+    std::vector<uint32_t> y(nnz_rows);
+    std::vector<uint32_t> x(nnz_cols);
+    std::fill(x.begin(), x.end(), 1);
+    for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
+    {
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+        {
+            printf("%d %d %d %d %d\n", IA[i], j, y[IA[i]], A[i], x[j]);
+            y[IA[i]] += A[i] * x[j]; 
+        }
+    }
+    
+    uint32_t value = 0;
+    for(uint32_t i = 0; i < nnz_rows; i++)
+        value += y[i];
+    printf("value=%d\n", value);
+}
+*/
+
+
+
