@@ -25,7 +25,7 @@ struct CSCEntry
 {
   uint32_t global_idx;
   uint32_t idx;
-  char weight;
+  uint32_t weight;
 };
 
 
@@ -234,7 +234,9 @@ void init_csc_regulars(uint32_t nnz_, uint32_t ncols_)
     entries_regulars = (CSCEntry*) mmap(nullptr, nentries_regulars * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
                             MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     assert(entries_regulars != nullptr);    
-    memset(entries_regulars, 0, nentries_regulars * sizeof(CSCEntry));        
+    memset(entries_regulars, 0, nentries_regulars * sizeof(CSCEntry));   
+
+    size = (ncols_regulars * (sizeof(uint32_t) +  sizeof(uint32_t))) + (nentries_regulars * sizeof(CSCEntry));
 }
 
 void popu_csc_regulars()
@@ -365,7 +367,9 @@ void init_csc_sources(uint32_t nnz_, uint32_t ncols_)
     entries_sources = (CSCEntry*) mmap(nullptr, nentries_sources * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
                             MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     assert(entries_sources != nullptr); 
-    memset(entries_sources, 0, nentries_sources * sizeof(CSCEntry));    
+    memset(entries_sources, 0, nentries_sources * sizeof(CSCEntry)); 
+
+    size += (ncols_sources * (sizeof(uint32_t) +  sizeof(uint32_t))) + (nentries_sources * sizeof(CSCEntry));
 }
 
 void popu_csc_sources()
