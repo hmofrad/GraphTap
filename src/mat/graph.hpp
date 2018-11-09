@@ -41,9 +41,9 @@ class Graph
         ~Graph();
         
         void load(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
-            bool directed_ = true, bool transpose_ = false, bool self_loops_ = false, bool acyclic_ = false,
-            bool parallel_edges_ = false, Tiling_type tiling_type_ = _2D_, Compression_type compression_type_ = _CSC_, 
-            Filtering_type filtering_type_ = _NONE_, bool parread_ = true);
+            bool directed_ = true, bool transpose_ = false, bool self_loops_ = true, bool acyclic_ = false,
+            bool parallel_edges_ = true, Tiling_type tiling_type_ = _2D_, Compression_type compression_type_ = _CSC_, 
+            Filtering_type filtering_type_ = _SOME_, bool parread_ = true);
         void load_binary(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
             Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
