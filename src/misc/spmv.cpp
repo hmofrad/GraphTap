@@ -16,6 +16,10 @@
 #include <cstring> 
 #include <vector>
 #include <algorithm>
+#include <stdio.h>
+#include <chrono>
+
+
 
 struct Triple
 {
@@ -24,6 +28,11 @@ struct Triple
 };
 
 std::vector<struct Triple> *triples;
+uint32_t value;
+
+std::chrono::steady_clock::time_point begin;
+std::chrono::steady_clock::time_point end;
+
 
 #include "graphtap.cpp"
 #include "la3.cpp"
@@ -93,22 +102,49 @@ int main(int argc, char **argv)
         filtering(num_vertices);
         init_csc(triples->size(), nnz_cols);
         popu_csc();
-        kernel();
+        //walk_csc();
+        
+        begin = std::chrono::steady_clock::now();
+        spmv();
+        end = std::chrono::steady_clock::now();
     }
     else
     {
         triples_regulars = new std::vector<struct Triple>;
-        triples_sinks = new std::vector<struct Triple>;
+        triples_sources = new std::vector<struct Triple>;
         classification(num_vertices);
-        init_csc_regulars(triples_regulars->size(), nnz_ingoings);
-        init_csc_sinks(triples_sinks->size(), nnz_ingoings);
-        popu_csc_regulars();
-        triples_regulars->clear();
-        triples_sinks->clear();
         
+        init_csc_regulars(triples_regulars->size(), nnz_ingoings);
+        popu_csc_regulars();
+        //walk_csc_regulars();
+        y_regulars.resize(nnz_regulars);
+        
+        init_csc_sources(triples_sources->size(), nnz_outgoings);
+        popu_csc_sources();
+        //walk_csc_sources();
+        y_sources.resize(nnz_sources);
+        
+        begin = std::chrono::steady_clock::now();
+        spmv_regulars(0);
+        spmv_regulars(regulars_sinks_offset);
+        spmv_sources(0);
+        spmv_sources(sources_sinks_offset);
+        end = std::chrono::steady_clock::now();
+        
+        value = y_regulars_value + y_sources_value;
+        triples_regulars->clear();
+        triples_sources->clear();
     }
+            
+        
+        std::cout << "Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
+        std::cout << "Value: " << value <<std::endl;
+    //elapsed_secs = 
+    //std::time_t temp = difftime (end, start);
+
+    //std::cout << temp << std::endl;
+    //printf("Time=%f, Value=%d\n",  elapsed_secs, value);
     triples->clear();
-    
     //classification(num_vertices);
 	return(0);
 }
