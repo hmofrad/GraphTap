@@ -28,7 +28,9 @@ struct Triple
 };
 
 std::vector<struct Triple> *triples;
-uint32_t value;
+uint32_t value = 0;
+uint64_t size = 0;
+uint64_t extra = 0;
 
 std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
@@ -84,7 +86,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    printf("SpMV kernel uint test...\n");
+    printf("SpMV kernel unit test...\n");
     std::string file_path = argv[2]; 
     uint32_t num_vertices = std::atoi(argv[3]) + 1; // For 0
     triples = new std::vector<struct Triple>;
@@ -134,11 +136,20 @@ int main(int argc, char **argv)
         value = y_regulars_value + y_sources_value;
         triples_regulars->clear();
         triples_sources->clear();
+        extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
+        //std::cout << "CSC extra memory: " << ((nentries_regulars * sizeof(CSCEntry)) + (nentries_sources * sizeof(CSCEntry))) / 1e3 << "KB" << std::endl;
+        
     }
             
-        
+        std::cout << "Memory: " << size / 1e3 << " K" << std::endl;
+        if(std::atoi(argv[1]))
+            std::cout << "Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
         std::cout << "Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
         std::cout << "Value: " << value <<std::endl;
+        ;
+        
+        
+        
     //elapsed_secs = 
     //std::time_t temp = difftime (end, start);
 
