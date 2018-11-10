@@ -37,7 +37,6 @@ uint64_t extra = 0;
 std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
-
 #include "graphtap.cpp"
 #include "la3.cpp"
 
@@ -95,27 +94,19 @@ int main(int argc, char **argv)
     num_vertices = std::atoi(argv[4]) + 1; // For 0
     triples = new std::vector<struct Triple>;
     read_binary(file_path);
-    //std::sort(tile.triples->begin(), tile.triples->end(), f_row);
-    //for(auto& triple: *triples)
-    //    printf("%d %d\n", triple.row, triple.col);
 
     ColSort f_col;
     std::sort(triples->begin(), triples->end(), f_col);
-    //for(auto &triple: *triples)
-    //    printf("row=%d col=%d\n", triple.row, triple.col);
     if(not which)
     {
         filtering(num_vertices);
         csc();
-        //init_csc(triples->size(), nnz_cols);
-        //popu_csc();
-        //walk_csc();
-
+        
         begin = std::chrono::steady_clock::now();
-        init();
-        for(iter = 0; iter < num_iter; iter++)
-            spmv();
-        done();
+            init();
+            for(iter = 0; iter < num_iter; iter++)
+                spmv();
+            done();
         end = std::chrono::steady_clock::now();
         
     }
@@ -124,51 +115,25 @@ int main(int argc, char **argv)
         triples_regulars = new std::vector<struct Triple>;
         triples_sources = new std::vector<struct Triple>;
         classification(num_vertices);
-        
-        //init_csc_regulars(triples_regulars->size(), nnz_ingoings);
-        //popu_csc_regulars();
-        //walk_csc_regulars();
-        //y_regulars.resize(nnz_regulars);
-        
-        //init_csc_sources(triples_sources->size(), nnz_outgoings);
-        //popu_csc_sources();
-        //walk_csc_sources();
-        //y_sources.resize(nnz_sources);
         csc_la3();
         begin = std::chrono::steady_clock::now();
-        init_la3();
-        for(uint32_t i = 0; i < num_iter; i++)
-            spmv_la3();
-        done_la3();
-        //spmv_regulars(0);
-        //spmv_regulars(regulars_sinks_offset);
-        //spmv_sources(0);
-        //spmv_sources(sources_sinks_offset);
+            init_la3();
+            for(uint32_t i = 0; i < num_iter; i++)
+                spmv_la3();
+            done_la3();
         end = std::chrono::steady_clock::now();
         
-        //value = y_regulars_value + y_sources_value;
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
-        //std::cout << "CSC extra memory: " << ((nentries_regulars * sizeof(CSCEntry)) + (nentries_sources * sizeof(CSCEntry))) / 1e3 << "KB" << std::endl;
-        
     }
+    triples->clear();
+    
     std::cout << "Stats:" << std::endl;
     std::cout << "    Memory: " << size / 1e3 << " K" << std::endl;
     if(std::atoi(argv[1]))
     std::cout << "    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
     std::cout << "    Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
     std::cout << "    Value: " << value <<std::endl;
-    
-        
-        
-        
-    //elapsed_secs = 
-    //std::time_t temp = difftime (end, start);
-
-    //std::cout << temp << std::endl;
-    //printf("Time=%f, Value=%d\n",  elapsed_secs, value);
-    triples->clear();
-    //classification(num_vertices);
 	return(0);
 }
