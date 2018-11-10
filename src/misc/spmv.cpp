@@ -26,8 +26,9 @@ struct Triple
     uint32_t row;
     uint32_t col;
 };
-
+uint32_t num_vertices;
 std::vector<struct Triple> *triples;
+std::vector<uint32_t> values;
 uint32_t value = 0;
 uint64_t size = 0;
 uint64_t extra = 0;
@@ -80,15 +81,17 @@ void read_binary(std::string filepath)
 
 int main(int argc, char **argv)
 { 
-    if(argc != 4)
+    if(argc != 5)
     {
-        std::cout << "\"Usage: " << argv[0] << " <GraphTap(0)|LA3(1)> <file_path> <num_vertices>\"" << std::endl;
+        std::cout << "\"Usage: " << argv[0] << " <GraphTap(0)|LA3(1)> <iterations> <file_path> <num_vertices>\"" << std::endl;
         exit(1);
     }
     
     printf("[x]SpMV kernel unit test...\n");
-    std::string file_path = argv[2]; 
-    uint32_t num_vertices = std::atoi(argv[3]) + 1; // For 0
+    bool which = std::atoi(argv[1]) == 0 ? false : true;
+    uint32_t num_iter = std::atoi(argv[2]);
+    std::string file_path = argv[3];
+    num_vertices = std::atoi(argv[4]) + 1; // For 0
     triples = new std::vector<struct Triple>;
     read_binary(file_path);
     //std::sort(tile.triples->begin(), tile.triples->end(), f_row);
@@ -99,16 +102,19 @@ int main(int argc, char **argv)
     std::sort(triples->begin(), triples->end(), f_col);
     //for(auto &triple: *triples)
     //    printf("row=%d col=%d\n", triple.row, triple.col);
-    if(not std::atoi(argv[1]))
+    if(not which)
     {
         filtering(num_vertices);
         csc();
         //init_csc(triples->size(), nnz_cols);
         //popu_csc();
         //walk_csc();
-        
+
         begin = std::chrono::steady_clock::now();
-        spmv();
+        init();
+        for(uint32_t i = 0; i < num_iter; i++)
+            spmv();
+        done();
         end = std::chrono::steady_clock::now();
         
     }
