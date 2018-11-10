@@ -70,6 +70,7 @@ void filtering(uint32_t num_vertices)
     
     nnz_rows = i;
     nnz_cols = j;
+    printf("[x]Filtering is done\n");
 }
 
 void init_csc(uint32_t nnz_, uint32_t ncols)
@@ -133,6 +134,13 @@ void popu_csc()
     */
 }
 
+void csc()
+{
+    init_csc(triples->size(), nnz_cols);
+    popu_csc();
+    //walk_csc();
+    printf("[x]Compression is done\n");
+}
 
 void walk_csc()
 {
