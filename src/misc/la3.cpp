@@ -28,7 +28,6 @@ struct CSCEntry
   uint32_t weight;
 };
 
-
 struct Edge
 {
   const uint32_t src, dst;
@@ -43,6 +42,21 @@ struct Edge
 
 std::vector<uint32_t> y_regulars;
 std::vector<uint32_t> y_sources;
+std::vector<uint32_t> x_regulars;
+std::vector<uint32_t> x_sources;
+
+std::vector<uint32_t> regulars2ingoings;
+std::vector<uint32_t> ingoings2regulars;
+uint32_t nnz_regulars2ingoings = 0;
+
+std::vector<uint32_t> sources2outgoings;
+std::vector<uint32_t> outgoings2sources;
+uint32_t nnz_sources2outgoings = 0;
+
+std::vector<uint32_t> regulars2vals;
+std::vector<uint32_t> sources2vals;
+
+
 uint32_t y_regulars_value = 0;
 uint32_t y_sources_value = 0;
 
@@ -124,12 +138,14 @@ void classification(uint32_t num_vertices)
         }
         if(outgoings[o] and ingoings[o])
         {
+            regulars2vals.push_back(o);
             regulars[o] = 1;
             regulars_val[o] = k;
             k++;
         }
         if(outgoings[o] and not ingoings[o])
         {
+            sources2vals.push_back(o);
             sources[o] = 1;
             sources_val[o] = l;
             l++;
@@ -154,6 +170,30 @@ void classification(uint32_t num_vertices)
     nnz_sources = l;
     nnz_sinks = m;
     nnz_isolates = n;
+    
+    
+    for(uint32_t i = 0; i < num_vertices; i++)
+    {
+        if(regulars[i] and ingoings[i])
+        {
+            regulars2ingoings.push_back(regulars_val[i]);
+            ingoings2regulars.push_back(ingoings_val[i]);
+            nnz_regulars2ingoings++;
+        }
+        
+        if(sources[i] and outgoings[i])
+        {
+        
+            sources2outgoings.push_back(sources_val[i]);
+            outgoings2sources.push_back(outgoings_val[i]);
+            nnz_sources2outgoings++;
+        }
+        
+        //printf("%d %d %d\n", i, regulars[i], ingoings[i]);
+    }
+    //printf("\n");
+   // for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
+     //   printf("%d %d %d\n", i, regulars2ingoings[i], ingoings2regulars[i]);
     
     /*
     for(uint32_t i = 0; i < num_vertices; i++)
@@ -302,7 +342,7 @@ void spmv_regulars(uint32_t offset)
 {
     //if(accumulator_has_not_initialized)
     //std::vector<uint32_t> y(nnz_regulars);
-    std::vector<uint32_t> x(ncols_regulars - 1);
+    //std::vector<uint32_t> x(ncols_regulars - 1);
     //uint32_t ncols = ncols_regulars;
     
     uint32_t ncols = 0;
@@ -317,7 +357,7 @@ void spmv_regulars(uint32_t offset)
         ncols = nnz_regulars_cols;
     }
     
-    std::fill(x.begin(), x.end(), 1);
+    //std::fill(x.begin(), x.end(), 1);
     
     
     
@@ -325,20 +365,20 @@ void spmv_regulars(uint32_t offset)
     //printf("%d %d %d\n\n", ncols, nnz_regulars_cols, nnz_regulars);
     for(uint32_t j = offset; j < ncols; j++)
     {
-        ///printf("j=%d\n", j);
+        //printf("j=%d\n", j);
         for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
         {
             auto& entry = entries_regulars[i];
-            auto edge = Edge(colidxs_regulars[offset + j], entry.idx, entry.weight);
-            y_regulars[entry.global_idx] += entry.weight * x[j];
-
+            auto edge = Edge(colidxs_regulars[j], entry.idx, entry.weight);
+            y_regulars[entry.global_idx] += entry.weight * x_regulars[j];
             //y[IA[i]] += A[i] * x[j];
             //printf("   i=%d, global_index=%d, index=%d, weight=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, entry.weight, j, colidxs_regulars[j]);
             //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
         }
     }
     
-    
+    /*
+    printf("????\n");
     if(offset)
     {
         //uint32_t value = 0;
@@ -346,8 +386,22 @@ void spmv_regulars(uint32_t offset)
             y_regulars_value += y_regulars[i];
         //printf("value=%d\n", value);
     }
-    
-    
+    */
+    if(offset)
+    {
+        
+        for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
+        {
+            
+            
+            //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
+            x_regulars[ingoings2regulars[i]] = y_regulars[regulars2ingoings[i]];
+        //y[rows2cols[i]]
+        }
+        
+        //regulars2ingoings.push_back(regulars_val[i]);
+            //ingoings2regulars.push_back(ingoings_val[i]);
+    }
 }
 
 
@@ -427,7 +481,7 @@ void spmv_sources(uint32_t offset)
 {
     //if(accumulator_has_not_initialized)
     //std::vector<uint32_t> y(nnz_regulars);
-    std::vector<uint32_t> x(ncols_sources - 1);
+    //std::vector<uint32_t> x(ncols_sources - 1);
     //uint32_t ncols = ncols_regulars;
     
     uint32_t ncols = 0;
@@ -442,7 +496,7 @@ void spmv_sources(uint32_t offset)
         ncols = nnz_sources_cols;
     }
     
-    std::fill(x.begin(), x.end(), 1);
+    //std::fill(x.begin(), x.end(), 1);
     
     
     
@@ -454,16 +508,29 @@ void spmv_sources(uint32_t offset)
         for (uint32_t i = colptrs_sources[j]; i < colptrs_sources[j + 1]; i++)
         {
             auto& entry = entries_sources[i];
-            auto edge = Edge(colidxs_sources[offset + j], entry.idx, entry.weight);
+            auto edge = Edge(colidxs_sources[j], entry.idx, entry.weight);
 
-            y_sources[entry.global_idx] += entry.weight * x[j];
+            y_sources[entry.global_idx] += entry.weight * x_sources[j];
+            
             //y[IA[i]] += A[i] * x[j];
             //printf("   i=%d, global_index=%d, index=%d, weight=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, entry.weight, j, colidxs_sources[j]);
             //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
         }
     }
     
+    if(offset)
+    {
+        for(uint32_t i = 0; i < nnz_sources2outgoings; i++)
+        {
+            
+            
+            //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
+            x_sources[outgoings2sources[i]] = y_sources[sources2outgoings[i]];
+        //y[rows2cols[i]]
+        }
+    }
     
+    /*
     if(offset)
     {
         //uint32_t value = 0;
@@ -471,20 +538,65 @@ void spmv_sources(uint32_t offset)
             y_sources_value += y_sources[i];
         //printf("value=%d\n", value);
     }
+    */
+    
+}
+
+void init_la3()
+{
+    values.resize(num_vertices);
+    
+    y_regulars.resize(nnz_regulars);
+    x_regulars.resize(ncols_regulars - 1, 1);
+    
+    y_sources.resize(nnz_sources);
+    x_sources.resize(ncols_sources - 1, 1);
+    //y.resize(nnz_rows);
+    //x.resize(nnz_cols, 1);
+}
+
+
+void spmv_la3()
+{
+    //printf("spmv_regulars(0)\n");
+    spmv_regulars(0);
+    //printf("spmv_regulars(regulars_sinks_offset)\n");
+    spmv_regulars(regulars_sinks_offset);
+    
+    //printf("spmv_sources(0)\n");
+    spmv_sources(0);
+    //printf("spmv_sources(sources_sinks_offset)\n");
+    spmv_sources(sources_sinks_offset);
+}
+
+
+void done_la3()
+{
+    uint32_t j = 0;
+    for(uint32_t i = 0; i < nnz_regulars; i++)
+    {
+        //if(rows[i])
+        //{
+        values[regulars2vals[i]] += y_regulars[i];
+        //}
+        //printf("<%d %d %d>\n", i, y_regulars[i], values[regulars2vals[i]]);
+    }
+    
+    for(uint32_t i = 0; i < nnz_sources; i++)
+    {
+        //if(rows[i])
+        //{
+        values[sources2vals[i]] += y_sources[i];
+        //printf("<%d %d %d>\n", i, y_sources[i], values[sources2vals[i]]);
+        //}
+    }
+    
+    for(uint32_t i = 0; i < num_vertices; i++)
+        value += values[i];
     
     
 }
 
-void spmv_la3()
-{
-    y_regulars.resize(nnz_regulars);
-    spmv_regulars(0);
-    spmv_regulars(regulars_sinks_offset);
-    
-    y_sources.resize(nnz_sources);
-    spmv_sources(0);
-    spmv_sources(sources_sinks_offset);
-}
 
 /*
 void kernel()
