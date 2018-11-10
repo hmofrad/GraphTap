@@ -20,13 +20,14 @@
 #include <chrono>
 
 
-
 struct Triple
 {
     uint32_t row;
     uint32_t col;
 };
 uint32_t num_vertices;
+uint32_t num_iter;
+uint32_t iter;
 std::vector<struct Triple> *triples;
 std::vector<uint32_t> values;
 uint32_t value = 0;
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
     
     printf("[x]SpMV kernel unit test...\n");
     bool which = std::atoi(argv[1]) == 0 ? false : true;
-    uint32_t num_iter = std::atoi(argv[2]);
+    num_iter = std::atoi(argv[2]);
     std::string file_path = argv[3];
     num_vertices = std::atoi(argv[4]) + 1; // For 0
     triples = new std::vector<struct Triple>;
@@ -112,7 +113,7 @@ int main(int argc, char **argv)
 
         begin = std::chrono::steady_clock::now();
         init();
-        for(uint32_t i = 0; i < num_iter; i++)
+        for(iter = 0; iter < num_iter; iter++)
             spmv();
         done();
         end = std::chrono::steady_clock::now();
@@ -135,14 +136,17 @@ int main(int argc, char **argv)
         //y_sources.resize(nnz_sources);
         csc_la3();
         begin = std::chrono::steady_clock::now();
-        spmv_la3();
+        init_la3();
+        for(uint32_t i = 0; i < num_iter; i++)
+            spmv_la3();
+        done_la3();
         //spmv_regulars(0);
         //spmv_regulars(regulars_sinks_offset);
         //spmv_sources(0);
         //spmv_sources(sources_sinks_offset);
         end = std::chrono::steady_clock::now();
         
-        value = y_regulars_value + y_sources_value;
+        //value = y_regulars_value + y_sources_value;
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
