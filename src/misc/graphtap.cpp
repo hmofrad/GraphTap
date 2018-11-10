@@ -17,14 +17,21 @@
 #include <vector>
 #include <algorithm>
 
+std::vector<uint32_t> y;
+std::vector<uint32_t> x;
 
 // Vertex filtering 
 uint32_t nnz_rows;
 std::vector<char> rows;
 std::vector<uint32_t> rows_val;
+std::vector<uint32_t> rows2vals;
 uint32_t nnz_cols;
 std::vector<char> cols;
 std::vector<uint32_t> cols_val;
+std::vector<int> rows2cols;
+uint32_t nnz_rows2cols;
+std::vector<int> cols2rows;
+//uint32_t nnz_cols2rows;
 
 uint32_t nnz;
 uint32_t ncols_plus_one;
@@ -47,6 +54,10 @@ void filtering(uint32_t num_vertices)
     cols.resize(num_vertices);
     cols_val.resize(num_vertices);
     
+    //std::vector<int> I;
+    //std::vector<int> J;
+    //std::vector<int> rows2cols;
+    
     for(auto &triple: *triples)
     {
         rows[triple.row] = 1;
@@ -56,20 +67,51 @@ void filtering(uint32_t num_vertices)
     uint32_t i = 0, j = 0;
     for(uint32_t k = 0; k < num_vertices; k++)
     {
+        if(rows[k] and cols[k])
+        {
+            rows2cols.push_back(i);
+            cols2rows.push_back(j);
+        }
+        
         if(rows[k])
         {
+            rows2vals.push_back(k);
+            //I.push_back(k);
             rows_val[k] = i;
             i++;
         }
         if(cols[k])
         {
+            //J.push_back(k);
             cols_val[k] = j;
             j++;
         }
+
+        //printf("%d %d %d\n", rows[k], cols[k], rows[k] and cols[k]);
     }
-    
     nnz_rows = i;
     nnz_cols = j;
+    nnz_rows2cols = rows2cols.size();
+    //nnz_cols2rows = cols2rows.size();
+    /*
+    printf("\n");
+    for(uint32_t i = 0; i < nnz_rows; i++)
+        printf("%d\n", I[i]);
+    printf("\n");
+    
+    for(uint32_t i = 0; i < nnz_cols; i++)
+        printf("%d\n", J[i]);
+    printf("\n");
+    
+    
+    */
+    
+    //for(uint32_t i = 0; i < nnz_rows2cols; i++)
+    //    printf("%d %d\n", rows2cols[i], cols2rows[i]);
+    //I2J.resize(nnz_cols);
+    
+    
+    
     printf("[x]Filtering is done\n");
 }
 
@@ -154,11 +196,15 @@ void walk_csc()
     }
 }
 
+void init()
+{
+    values.resize(num_vertices);
+    y.resize(nnz_rows);
+    x.resize(nnz_cols, 1);
+}
+
 void spmv()
 {
-    std::vector<uint32_t> y(nnz_rows);
-    std::vector<uint32_t> x(nnz_cols);
-    std::fill(x.begin(), x.end(), 1);
     for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
     {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
@@ -169,7 +215,31 @@ void spmv()
     }
     
     //uint32_t value = 0;
-    for(uint32_t i = 0; i < nnz_rows; i++)
-        value += y[i];
+//    for(uint32_t i = 0; i < nnz_rows; i++)
+  //      value += y[i];
     //printf("value=%d\n", value);
+    
+    for(uint32_t i = 0; i < nnz_rows2cols; i++)
+    {
+        //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
+        x[cols2rows[i]] = y[rows2cols[i]];
+        //y[rows2cols[i]]
+    }
+}
+
+void done()
+{
+    uint32_t j = 0;
+    for(uint32_t i = 0; i < nnz_rows; i++)
+    {
+        //if(rows[i])
+        //{
+            values[rows2vals[i]] = y[i];
+        //}
+    }
+    
+    for(uint32_t i = 0; i < num_vertices; i++)
+        value += values[i];
+    
+    
 }
