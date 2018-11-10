@@ -409,6 +409,20 @@ void walk_csc_sources()
     }
 }
 
+void csc_la3()
+{
+    init_csc_regulars(triples_regulars->size(), nnz_ingoings);
+    popu_csc_regulars();
+    //walk_csc_regulars();
+    
+    
+    init_csc_sources(triples_sources->size(), nnz_outgoings);
+    popu_csc_sources();
+    //walk_csc_sources();
+    
+    printf("[x]Compression is done\n");
+}
+
 void spmv_sources(uint32_t offset)
 {
     //if(accumulator_has_not_initialized)
@@ -461,6 +475,16 @@ void spmv_sources(uint32_t offset)
     
 }
 
+void spmv_la3()
+{
+    y_regulars.resize(nnz_regulars);
+    spmv_regulars(0);
+    spmv_regulars(regulars_sinks_offset);
+    
+    y_sources.resize(nnz_sources);
+    spmv_sources(0);
+    spmv_sources(sources_sinks_offset);
+}
 
 /*
 void kernel()
