@@ -75,7 +75,7 @@ void read_binary(std::string filepath)
     fin.close();
     assert(offset == filesize);
     
-    printf("\n%s: Read %lu edges\n", filepath.c_str(), nedges);
+    printf("[x]I/O is done: Read %lu edges\n", nedges);
 }
 
 int main(int argc, char **argv)
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     
-    printf("SpMV kernel unit test...\n");
+    printf("[x]SpMV kernel unit test...\n");
     std::string file_path = argv[2]; 
     uint32_t num_vertices = std::atoi(argv[3]) + 1; // For 0
     triples = new std::vector<struct Triple>;
@@ -102,13 +102,15 @@ int main(int argc, char **argv)
     if(not std::atoi(argv[1]))
     {
         filtering(num_vertices);
-        init_csc(triples->size(), nnz_cols);
-        popu_csc();
+        csc();
+        //init_csc(triples->size(), nnz_cols);
+        //popu_csc();
         //walk_csc();
         
         begin = std::chrono::steady_clock::now();
         spmv();
         end = std::chrono::steady_clock::now();
+        
     }
     else
     {
@@ -116,21 +118,22 @@ int main(int argc, char **argv)
         triples_sources = new std::vector<struct Triple>;
         classification(num_vertices);
         
-        init_csc_regulars(triples_regulars->size(), nnz_ingoings);
-        popu_csc_regulars();
+        //init_csc_regulars(triples_regulars->size(), nnz_ingoings);
+        //popu_csc_regulars();
         //walk_csc_regulars();
-        y_regulars.resize(nnz_regulars);
+        //y_regulars.resize(nnz_regulars);
         
-        init_csc_sources(triples_sources->size(), nnz_outgoings);
-        popu_csc_sources();
+        //init_csc_sources(triples_sources->size(), nnz_outgoings);
+        //popu_csc_sources();
         //walk_csc_sources();
-        y_sources.resize(nnz_sources);
-        
+        //y_sources.resize(nnz_sources);
+        csc_la3();
         begin = std::chrono::steady_clock::now();
-        spmv_regulars(0);
-        spmv_regulars(regulars_sinks_offset);
-        spmv_sources(0);
-        spmv_sources(sources_sinks_offset);
+        spmv_la3();
+        //spmv_regulars(0);
+        //spmv_regulars(regulars_sinks_offset);
+        //spmv_sources(0);
+        //spmv_sources(sources_sinks_offset);
         end = std::chrono::steady_clock::now();
         
         value = y_regulars_value + y_sources_value;
@@ -140,13 +143,13 @@ int main(int argc, char **argv)
         //std::cout << "CSC extra memory: " << ((nentries_regulars * sizeof(CSCEntry)) + (nentries_sources * sizeof(CSCEntry))) / 1e3 << "KB" << std::endl;
         
     }
-            
-        std::cout << "Memory: " << size / 1e3 << " K" << std::endl;
-        if(std::atoi(argv[1]))
-            std::cout << "Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
-        std::cout << "Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
-        std::cout << "Value: " << value <<std::endl;
-        ;
+    std::cout << "Stats:" << std::endl;
+    std::cout << "    Memory: " << size / 1e3 << " K" << std::endl;
+    if(std::atoi(argv[1]))
+    std::cout << "    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
+    std::cout << "    Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
+    std::cout << "    Value: " << value <<std::endl;
+    
         
         
         
