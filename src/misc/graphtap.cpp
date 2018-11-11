@@ -31,7 +31,6 @@ std::vector<uint32_t> cols_val;
 std::vector<int> rows2cols;
 uint32_t nnz_rows2cols;
 std::vector<int> cols2rows;
-//uint32_t nnz_cols2rows;
 
 uint32_t nnz;
 uint32_t ncols_plus_one;
@@ -54,10 +53,6 @@ void filtering(uint32_t num_vertices)
     cols.resize(num_vertices);
     cols_val.resize(num_vertices);
     
-    //std::vector<int> I;
-    //std::vector<int> J;
-    //std::vector<int> rows2cols;
-    
     for(auto &triple: *triples)
     {
         rows[triple.row] = 1;
@@ -76,42 +71,19 @@ void filtering(uint32_t num_vertices)
         if(rows[k])
         {
             rows2vals.push_back(k);
-            //I.push_back(k);
             rows_val[k] = i;
             i++;
         }
         if(cols[k])
         {
-            //J.push_back(k);
             cols_val[k] = j;
             j++;
         }
-
-        //printf("%d %d %d\n", rows[k], cols[k], rows[k] and cols[k]);
+        //printf("%d %d %d\n", k, rows[k], cols[k]);
     }
     nnz_rows = i;
     nnz_cols = j;
     nnz_rows2cols = rows2cols.size();
-    //nnz_cols2rows = cols2rows.size();
-    /*
-    printf("\n");
-    for(uint32_t i = 0; i < nnz_rows; i++)
-        printf("%d\n", I[i]);
-    printf("\n");
-    
-    for(uint32_t i = 0; i < nnz_cols; i++)
-        printf("%d\n", J[i]);
-    printf("\n");
-    
-    
-    */
-    
-    //for(uint32_t i = 0; i < nnz_rows2cols; i++)
-    //    printf("%d %d\n", rows2cols[i], cols2rows[i]);
-    //I2J.resize(nnz_cols);
-    
-    
-    
     printf("[x]Filtering is done\n");
 }
 
@@ -148,39 +120,25 @@ void popu_csc()
 {
     uint32_t i = 0;
     uint32_t j = 1;
-    
     JA[0] = 0;
-
     for(auto &triple: *triples)
     {
-
-       // printf("%d %d %d %d, %d %d %d %d\n", i, triple.row, rows[triple.row], rows_val[triple.row], j, triple.col, cols[triple.col], cols_val[triple.col]);
-        
         while((j - 1) != cols_val[triple.col])
         {
             j++;
             JA[j] = JA[j - 1];
-        }  
-                
+        }                  
         A[i] = 1;
         JA[j]++;
         IA[i] = rows_val[triple.row];
         i++;
     }
-    /*
-    while((j + 1) < (nnz_cols + 1))
-    {
-        j++;
-        JA[j] = JA[j - 1];
-    }
-    */
 }
 
 void csc()
 {
     init_csc(triples->size(), nnz_cols);
     popu_csc();
-    //walk_csc();
     printf("[x]Compression is done\n");
 }
 
@@ -209,34 +167,23 @@ void spmv()
     {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
         {
-            //printf("%d %d %d %d %d\n", IA[i], j, y[IA[i]], A[i], x[j]);
             y[IA[i]] += A[i] * x[j]; 
+            nOps++;
+            
         }
     }
-    
-    //uint32_t value = 0;
-//    for(uint32_t i = 0; i < nnz_rows; i++)
-  //      value += y[i];
-    //printf("value=%d\n", value);
-    
     for(uint32_t i = 0; i < nnz_rows2cols; i++)
     {
-        //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
         x[cols2rows[i]] = y[rows2cols[i]];
-        //y[rows2cols[i]]
+        x[cols2rows[i]] = 1;
     }
 }
 
 void done()
 {
-    uint32_t j = 0;
+    
     for(uint32_t i = 0; i < nnz_rows; i++)
-    {
-        //if(rows[i])
-        //{
             values[rows2vals[i]] = y[i];
-        //}
-    }
     
     for(uint32_t i = 0; i < num_vertices; i++)
         value += values[i];
