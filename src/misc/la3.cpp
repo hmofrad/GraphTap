@@ -44,10 +44,33 @@ std::vector<uint32_t> y_regulars;
 std::vector<uint32_t> y_sources;
 std::vector<uint32_t> x_regulars;
 std::vector<uint32_t> x_sources;
+std::vector<uint32_t> x_all;
+std::vector<char> cols_all;
+std::vector<uint32_t> cols_all_val;
+uint32_t nnz_cols_all = 0;
+std::vector<uint32_t> regulars2cols_all;
+std::vector<uint32_t> cols_all2regulars;
+uint32_t nnz_regulars2cols_all = 0;
+std::vector<uint32_t> sources2cols_all;
+std::vector<uint32_t> cols_all2sources;
+uint32_t nnz_sources2cols_all = 0;
 
 std::vector<uint32_t> regulars2ingoings;
 std::vector<uint32_t> ingoings2regulars;
 uint32_t nnz_regulars2ingoings = 0;
+
+std::vector<uint32_t> ingoings2outgoigns;
+std::vector<uint32_t> outgoigns2ingoings;
+uint32_t nnz_ingoings2outgoigns = 0;
+
+std::vector<uint32_t> regulars2outgoings;
+std::vector<uint32_t> outgoings2regulars;
+uint32_t nnz_regulars2outgoings = 0;
+
+std::vector<uint32_t> sources2ingoings;
+std::vector<uint32_t> ingoings2sources;
+uint32_t nnz_sources2ingoings = 0;
+
 
 std::vector<uint32_t> sources2outgoings;
 std::vector<uint32_t> outgoings2sources;
@@ -113,6 +136,8 @@ void classification(uint32_t num_vertices)
     sinks_val.resize(num_vertices);
     isolates.resize(num_vertices);
     isolates_val.resize(num_vertices);
+    cols_all.resize(num_vertices);
+    cols_all_val.resize(num_vertices);
     
     for(auto &triple: *triples)
     {
@@ -120,9 +145,7 @@ void classification(uint32_t num_vertices)
         ingoings[triple.col]  = 1;
     }
     
-
-    uint32_t i = 0, j = 0, k = 0, l = 0, m = 0, n = 0;
-
+    uint32_t i = 0, j = 0, k = 0, l = 0, m = 0, n = 0, p = 0;
     for(uint32_t o = 0; o < num_vertices; o++)
     {
         if(outgoings[o])
@@ -162,6 +185,12 @@ void classification(uint32_t num_vertices)
             isolates_val[o] = n;
             n++;
         }
+        if(outgoings[o] or ingoings[o])
+        {
+            cols_all[o] = 1;
+            cols_all_val[o] = p;
+            p++;
+        }
     }
 
     nnz_outgoings = i;
@@ -170,7 +199,7 @@ void classification(uint32_t num_vertices)
     nnz_sources = l;
     nnz_sinks = m;
     nnz_isolates = n;
-    
+    nnz_cols_all = p;
     
     for(uint32_t i = 0; i < num_vertices; i++)
     {
@@ -183,32 +212,49 @@ void classification(uint32_t num_vertices)
         
         if(sources[i] and outgoings[i])
         {
-        
             sources2outgoings.push_back(sources_val[i]);
             outgoings2sources.push_back(outgoings_val[i]);
             nnz_sources2outgoings++;
         }
+        if(ingoings[i] and outgoings[i])
+        {
+            ingoings2outgoigns.push_back(ingoings_val[i]);
+            outgoigns2ingoings.push_back(outgoings_val[i]);
+            nnz_ingoings2outgoigns++;
+        }
+        if(regulars[i] and outgoings[i])
+        {
+            regulars2outgoings.push_back(regulars_val[i]);
+            outgoings2regulars.push_back(outgoings_val[i]);
+            nnz_regulars2outgoings++;
+        }
+        if(sources[i] and ingoings[i])
+        {
+            sources2ingoings.push_back(sources_val[i]);
+            ingoings2sources.push_back(ingoings_val[i]);
+            nnz_sources2ingoings++;
+        }
         
-        //printf("%d %d %d\n", i, regulars[i], ingoings[i]);
+        if(regulars[i] and ingoings[i])
+        {
+            regulars2cols_all.push_back(regulars_val[i]);
+            cols_all2regulars.push_back(ingoings_val[i]);
+            nnz_regulars2cols_all++;
+        }
+        if(sources[i] and ingoings[i])
+        {
+            sources2cols_all.push_back(sources_val[i]);
+            cols_all2sources.push_back(ingoings_val[i]);
+            nnz_sources2cols_all++;
+        }
     }
-    //printf("\n");
-   // for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
-     //   printf("%d %d %d\n", i, regulars2ingoings[i], ingoings2regulars[i]);
-    
-    /*
-    for(uint32_t i = 0; i < num_vertices; i++)
-    {
-        printf("i=%d: out=%d, in=%d, reg=%d, src=%d, snk=%d, iso=%d\n", i, outgoings[i], ingoings[i], regulars[i], sources[i], sinks[i], isolates[i]);
-    }
-    */
+
     std::unordered_set<uint32_t> uniques;
-    //printf("regulars->regulars\n");
     for(auto &triple: *triples)
     {
         if(regulars[triple.row] and regulars[triple.col])
         {
             triples_regulars->push_back(triple);
-            //printf("%d %d\n", triple.row, triple.col);
             uniques.insert(triple.col);
         }
     }
@@ -216,45 +262,33 @@ void classification(uint32_t num_vertices)
     nnz_regulars_cols = regulars_sinks_offset;
     nnz_regulars_sinks_cols = nnz_ingoings - regulars_sinks_offset;
     uniques.clear();
-    //printf("regulars->sinks\n");
+    
     for(auto &triple: *triples)
     {
         if(regulars[triple.row] and sinks[triple.col])
-        {
             triples_regulars->push_back(triple);
-            //printf("%d %d\n", triple.row, triple.col);
-        }
     }
-    
-    //printf("sources->regulars\n");
+
     for(auto &triple: *triples)
     {
         if(sources[triple.row] and regulars[triple.col])
         {
             triples_sources->push_back(triple);
-            //printf("%d %d\n", triple.row, triple.col);
             uniques.insert(triple.col);
         }
     }
     sources_sinks_offset = uniques.size();
     nnz_sources_cols = sources_sinks_offset;
     nnz_sources_sinks_cols = nnz_outgoings - sources_sinks_offset;
+    
     uniques.clear();
-    //printf("sources->sinks\n");
     for(auto &triple: *triples)
     {
         if(sources[triple.row] and sinks[triple.col])
-        {
             triples_sources->push_back(triple);
-            //printf("%d %d\n", triple.row, triple.col);
-        }
     }
-    
-
-    
     //printf("nnz_outgoings=%d, nnz_ingoings=%d, nnz_regulars=%d, nnz_sources=%d, nnz_sinks=%d, nnz_isolates=%d\n", nnz_outgoings, nnz_ingoings, nnz_regulars, nnz_sources, nnz_sinks, nnz_isolates);
     //printf("nnz_regulars_cols=%d, nnz_regulars_sinks_cols=%d, regulars_sinks_offset=%d, nnz_sources_cols=%d, nnz_sources_sinks_cols=%d, sources_sinks_offset=%d\n", nnz_regulars_cols, nnz_regulars_sinks_cols, regulars_sinks_offset, nnz_sources_cols, nnz_sources_sinks_cols, sources_sinks_offset);
-        
 }
 
 
@@ -286,13 +320,11 @@ void popu_csc_regulars()
     colptrs_regulars[0] = 0;
     for(auto &triple: *triples_regulars)
     {
-       // printf("1.<%d j=%d> <idx=%d colidxs=%d> <g_idx=%d %d>off=%d,%d\n", i, j, triple.row, triple.col, regulars_val[triple.row], ingoings_val[triple.col], regulars_sinks_offset, nnz_ingoings);
         if((i != 0) and colidxs_regulars[j-1] != triple.col)
         {
             j++;
             colptrs_regulars[j] = colptrs_regulars[j - 1];
         }  
-        
         colptrs_regulars[j]++;
         colidxs_regulars[j-1] = triple.col;
         entries_regulars[i].idx = triple.row;
@@ -306,22 +338,6 @@ void popu_csc_regulars()
         j++;
         colptrs_regulars[j] = colptrs_regulars[j - 1];
     }
-    
-    
-    /*
-    for (uint32_t j = 0; j < ncols_regulars - 1; j++)
-    {
-        printf("j=%d, %d %d\n", j, colptrs_regulars[j], colptrs_regulars[j + 1]);
-        for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
-        {
-            auto& entry = entries_regulars[i];
-            printf("i=%d, gidx=%d, idx=%d, j=%d, col=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
-        //auto& entry = entries[i];
-        }
-        //printf("\n");
-        //printf("i=%d, colidxs[i]=%d, colptrs[i]=%d, %d\n", i, colidxs[i], colptrs[i],  colptrs[i + 1] -  colptrs[i]);
-    }
-    */
 }
 
 void walk_csc_regulars()
@@ -340,67 +356,20 @@ void walk_csc_regulars()
 
 void spmv_regulars(uint32_t offset)
 {
-    //if(accumulator_has_not_initialized)
-    //std::vector<uint32_t> y(nnz_regulars);
-    //std::vector<uint32_t> x(ncols_regulars - 1);
-    //uint32_t ncols = ncols_regulars;
-    
     uint32_t ncols = 0;
     if(offset)
-    {
-       // x.resize(nnz_regulars_sinks_cols);
-        ncols = ncols_regulars - 1;    
-    }
+        ncols = ncols_regulars - 1;  
     else
-    {
-       // x.resize(nnz_regulars_cols);
         ncols = nnz_regulars_cols;
-    }
-    
-    //std::fill(x.begin(), x.end(), 1);
-    
-    
-    
-    
-    //printf("%d %d %d\n\n", ncols, nnz_regulars_cols, nnz_regulars);
     for(uint32_t j = offset; j < ncols; j++)
     {
-        //printf("j=%d\n", j);
         for (uint32_t i = colptrs_regulars[j]; i < colptrs_regulars[j + 1]; i++)
         {
             auto& entry = entries_regulars[i];
             auto edge = Edge(colidxs_regulars[j], entry.idx, entry.weight);
             y_regulars[entry.global_idx] += entry.weight * x_regulars[j];
-            //y[IA[i]] += A[i] * x[j];
-            //printf("   i=%d, global_index=%d, index=%d, weight=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, entry.weight, j, colidxs_regulars[j]);
-            //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+            nOps++;
         }
-    }
-    
-    /*
-    printf("????\n");
-    if(offset)
-    {
-        //uint32_t value = 0;
-        for(uint32_t i = 0; i < nnz_regulars; i++)
-            y_regulars_value += y_regulars[i];
-        //printf("value=%d\n", value);
-    }
-    */
-    if(offset)
-    {
-        
-        for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
-        {
-            
-            
-            //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
-            x_regulars[ingoings2regulars[i]] = y_regulars[regulars2ingoings[i]];
-        //y[rows2cols[i]]
-        }
-        
-        //regulars2ingoings.push_back(regulars_val[i]);
-            //ingoings2regulars.push_back(ingoings_val[i]);
     }
 }
 
@@ -433,8 +402,6 @@ void popu_csc_sources()
     colptrs_sources[0] = 0;
     for(auto &triple: *triples_sources)
     {
-        //printf("2.<%d j=%d> <idx=%d colidxs=%d> <gidx=%d %d>off=%d,%d\n", i, j, triple.row, triple.col, sources_val[triple.row], outgoings_val[triple.col], sources_sinks_offset, nnz_outgoings);
-     
         if((i != 0) and colidxs_sources[j-1] != triple.col)
         {
             j++;
@@ -446,6 +413,11 @@ void popu_csc_sources()
         entries_sources[i].global_idx = sources_val[triple.row]; 
         entries_sources[i].weight = 1;
         i++;     
+    }
+    while((j + 1) < (ncols_sources + 1))
+    {
+        j++;
+        colptrs_sources[j] = colptrs_sources[j - 1];
     }
 }
 
@@ -465,81 +437,32 @@ void walk_csc_sources()
 
 void csc_la3()
 {
+    
     init_csc_regulars(triples_regulars->size(), nnz_ingoings);
     popu_csc_regulars();
-    //walk_csc_regulars();
-    
-    
     init_csc_sources(triples_sources->size(), nnz_outgoings);
-    popu_csc_sources();
-    //walk_csc_sources();
-    
+    popu_csc_sources();    
     printf("[x]Compression is done\n");
 }
-
+void done_la3();
 void spmv_sources(uint32_t offset)
 {
-    //if(accumulator_has_not_initialized)
-    //std::vector<uint32_t> y(nnz_regulars);
-    //std::vector<uint32_t> x(ncols_sources - 1);
-    //uint32_t ncols = ncols_regulars;
-    
     uint32_t ncols = 0;
     if(offset)
-    {
-       // x.resize(nnz_regulars_sinks_cols);
         ncols = ncols_sources - 1;    
-    }
     else
-    {
-       // x.resize(nnz_regulars_cols);
         ncols = nnz_sources_cols;
-    }
     
-    //std::fill(x.begin(), x.end(), 1);
-    
-    
-    
-    
-    //printf("%d %d %d %d\n\n", ncols, nnz_regulars_cols, nnz_sources, y_sources.size());
     for(uint32_t j = offset; j < ncols; j++)
     {
-        ///printf("j=%d\n", j);
         for (uint32_t i = colptrs_sources[j]; i < colptrs_sources[j + 1]; i++)
         {
             auto& entry = entries_sources[i];
             auto edge = Edge(colidxs_sources[j], entry.idx, entry.weight);
-
             y_sources[entry.global_idx] += entry.weight * x_sources[j];
-            
-            //y[IA[i]] += A[i] * x[j];
-            //printf("   i=%d, global_index=%d, index=%d, weight=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, entry.weight, j, colidxs_sources[j]);
-            //printf("   i=%d, global_index=%d, index=%d, j=%d, col_index=%d\n", i, entry.global_idx, entry.idx, j, colidxs_regulars[j]);
+            nOps++;
         }
     }
-    
-    if(offset)
-    {
-        for(uint32_t i = 0; i < nnz_sources2outgoings; i++)
-        {
-            
-            
-            //printf("%d %d %d\n", i, y[rows2cols[i]], x[cols2rows[i]]);
-            x_sources[outgoings2sources[i]] = y_sources[sources2outgoings[i]];
-        //y[rows2cols[i]]
-        }
-    }
-    
-    /*
-    if(offset)
-    {
-        //uint32_t value = 0;
-        for(uint32_t i = 0; i < nnz_sources; i++)
-            y_sources_value += y_sources[i];
-        //printf("value=%d\n", value);
-    }
-    */
-    
 }
 
 void init_la3()
@@ -547,78 +470,55 @@ void init_la3()
     values.resize(num_vertices);
     
     y_regulars.resize(nnz_regulars);
-    x_regulars.resize(ncols_regulars - 1, 1);
+    x_regulars.resize(ncols_regulars, 1);
     
     y_sources.resize(nnz_sources);
-    x_sources.resize(ncols_sources - 1, 1);
-    //y.resize(nnz_rows);
-    //x.resize(nnz_cols, 1);
+    x_sources.resize(ncols_sources, 1);
 }
-
 
 void spmv_la3()
 {
-    //printf("spmv_regulars(0)\n");
     spmv_regulars(0);
-    //printf("spmv_regulars(regulars_sinks_offset)\n");
     spmv_regulars(regulars_sinks_offset);
-    
-    //printf("spmv_sources(0)\n");
-    spmv_sources(0);
-    //printf("spmv_sources(sources_sinks_offset)\n");
-    spmv_sources(sources_sinks_offset);
-}
 
+    spmv_sources(0);
+    spmv_sources(sources_sinks_offset);
+
+    for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
+    {
+        x_regulars[ingoings2regulars[i]] = y_regulars[regulars2ingoings[i]];
+        x_regulars[ingoings2regulars[i]] = 1;
+    }
+
+    for(uint32_t i = 0; i < nnz_regulars2outgoings; i++)
+    {
+       x_sources[outgoings2regulars[i]] = y_regulars[regulars2outgoings[i]];
+       x_sources[outgoings2regulars[i]] = 1;
+    }
+    
+    for(uint32_t i = 0; i < nnz_sources2ingoings; i++)
+    {
+        x_sources[ingoings2sources[i]] = y_sources[sources2ingoings[i]];
+        x_sources[ingoings2sources[i]] = 1;
+    }
+    
+    for(uint32_t i = 0; i < nnz_sources2outgoings; i++)
+    {
+        x_regulars[sources2outgoings[i]] = y_sources[sources2outgoings[i]];
+        x_regulars[sources2outgoings[i]] = 1;
+    }
+   
+}
 
 void done_la3()
 {
-    uint32_t j = 0;
+    
     for(uint32_t i = 0; i < nnz_regulars; i++)
-    {
-        //if(rows[i])
-        //{
         values[regulars2vals[i]] += y_regulars[i];
-        //}
-        //printf("<%d %d %d>\n", i, y_regulars[i], values[regulars2vals[i]]);
-    }
     
     for(uint32_t i = 0; i < nnz_sources; i++)
-    {
-        //if(rows[i])
-        //{
         values[sources2vals[i]] += y_sources[i];
-        //printf("<%d %d %d>\n", i, y_sources[i], values[sources2vals[i]]);
-        //}
-    }
     
     for(uint32_t i = 0; i < num_vertices; i++)
-        value += values[i];
-    
-    
+        value += values[i];   
 }
-
-
-/*
-void kernel()
-{
-    std::vector<uint32_t> y(nnz_rows);
-    std::vector<uint32_t> x(nnz_cols);
-    std::fill(x.begin(), x.end(), 1);
-    for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
-    {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-        {
-            printf("%d %d %d %d %d\n", IA[i], j, y[IA[i]], A[i], x[j]);
-            y[IA[i]] += A[i] * x[j]; 
-        }
-    }
-    
-    uint32_t value = 0;
-    for(uint32_t i = 0; i < nnz_rows; i++)
-        value += y[i];
-    printf("value=%d\n", value);
-}
-*/
-
-
-
