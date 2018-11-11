@@ -28,6 +28,7 @@ struct Triple
 uint32_t num_vertices;
 uint32_t num_iter;
 uint32_t iter;
+uint32_t nOps = 0;
 std::vector<struct Triple> *triples;
 std::vector<uint32_t> values;
 uint32_t value = 0;
@@ -101,7 +102,7 @@ int main(int argc, char **argv)
     {
         filtering(num_vertices);
         csc();
-        
+        //walk_csc();
         begin = std::chrono::steady_clock::now();
             init();
             for(iter = 0; iter < num_iter; iter++)
@@ -116,6 +117,8 @@ int main(int argc, char **argv)
         triples_sources = new std::vector<struct Triple>;
         classification(num_vertices);
         csc_la3();
+        //walk_csc_regulars();
+        //walk_csc_sources();
         begin = std::chrono::steady_clock::now();
             init_la3();
             for(uint32_t i = 0; i < num_iter; i++)
@@ -130,10 +133,11 @@ int main(int argc, char **argv)
     triples->clear();
     
     std::cout << "Stats:" << std::endl;
-    std::cout << "    Memory: " << size / 1e3 << " K" << std::endl;
+    std::cout << "    Utilized Memory: " << size / 1e3 << " K" << std::endl;
     if(std::atoi(argv[1]))
-    std::cout << "    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
-    std::cout << "    Time: " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 <<std::endl;
-    std::cout << "    Value: " << value <<std::endl;
+    std::cout << "    Extra    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
+    std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
+    std::cout << "    Final value:     " << value <<std::endl;
+    std::cout << "    Num SpMV Ops:    " << nOps <<std::endl;
 	return(0);
 }
