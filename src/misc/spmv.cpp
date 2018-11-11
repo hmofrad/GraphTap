@@ -77,7 +77,7 @@ void read_binary(std::string filepath)
     fin.close();
     assert(offset == filesize);
     
-    printf("[x]I/O is done: Read %lu edges\n", nedges);
+    printf("[x]I/O for %s is done: Read %lu edges\n", filepath.c_str(), nedges);
 }
 
 int main(int argc, char **argv)
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
                 spmv();
             done();
         end = std::chrono::steady_clock::now();
-        
+        std::cout << "GraphTap ";
     }
     else
     {
@@ -129,6 +129,7 @@ int main(int argc, char **argv)
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
+        std::cout << "LA3 ";
     }
     triples->clear();
     
