@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=64
-#SBATCH --nodes=8
-#SBATCH --ntasks-per-node=8
+#SBATCH --ntasks=16
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
@@ -16,7 +16,6 @@
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
 ## strings graphtap.out | grep 'Execute'
-
 
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
@@ -38,39 +37,55 @@ export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-NP=$SLURM_NTASKS
-APP=bin/./pr
-ITERS_OR_SRC=20
 
-if [ "$SLURM_NNODES" = "4" ]
+NP=$SLURM_NTASKS
+MPI="mpirun -np"
+APPS_PERFIX="bin"
+APPS=("./pr" "/./cc" "./bfs" "./sssp_w")
+N_APPS=4
+GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
+GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28_1.bin")
+GRAPHS_W=("rmat26_1_w.bin" "rmat27_1_w.bin" "rmat28_1_w.bin")
+GRAPHS_V=("67108864" "134217728" "268435456")
+
+if [ "${SLURM_NNODES}" = "4" ]
 then
-    echo "RMAT=26"
-    if [ "${APP}" = "sssp" ]
-    then
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1_w.bin 67108864 ${ITERS_OR_SRC}
-    else
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat26_1.bin 67108864 ${ITERS_OR_SRC}
-    fi
+    I="0"
 elif [ "$SLURM_NNODES" = "8" ]
 then
-    echo "RMAT=27"
-    if [ "${APP}" = "sssp" ]
-    then
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27_1_w.bin 134217728 ${ITERS_OR_SRC}
-    else
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat27_1.bin 134217728 ${ITERS_OR_SRC}
-    fi    
+    I="1"
+    #GRAPH=${GRAPHS[1]}
 elif [ "$SLURM_NNODES" = "16" ]
 then
-    echo "RMAT=28"
-    if [ "${APP}" = "sssp" ]
-    then
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28_1_w.bin 268435456 ${ITERS_OR_SRC}
-    else
-        mpirun -np ${NP} ${APP}  /zfs1/cs3580_2017F/moh18/graph500/rmat/rmat28_1.bin 268435456 ${ITERS_OR_SRC}
-    fi    
+    I="2"
+    #GRAPH=${GRAPHS[2]}
 else
-        echo "RMAT=$SLURM_NNODES N/A"
+    echo "Invalid input graph"
+    exit;     
 fi
+GRAPH=${GRAPHS[${I}]}    
+GRAPH_V=${GRAPHS_V[${I}]}
+ITERS=20
+SRC=1554330
+NTIMES=("1");
+for A in "${APPS[@]}";
+do
+    for N in "${NTIMES[@]}";
+    do
+        if [ "${A}" = "./pr" ]
+        then
+            ITER_OR_SRC=${ITERS}
+        else
+            ITER_OR_SRC=${SRC}
+        fi
+        
+        if [ "${A}" = "./sssp_w" ]
+        then
+            GRAPH="${GRAPHS_W[${I}]}"    
+        fi    
+        CMD="${MPI} ${NP} ${APPS_PERFIX}/${A} ${GRAPHS_PERFIX}/${GRAPH} ${GRAPH_V} ${ITER_OR_SRC}"
+        ${CMD}
+    done
+done
 
 strings graphtap.out | grep 'Execute'
