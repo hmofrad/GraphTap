@@ -68,6 +68,8 @@ class Vertex_Program
         void init_stationary();
         void init_nonstationary();
         void init_tc_family();
+        void init_stationary_postprocess();
+        //void init_nonstationary_postprocess();
         void scatter_gather();
         void scatter_gather_stationary();
         void scatter_gather_nonstationary();
@@ -175,6 +177,12 @@ class Vertex_Program
         //std::vector<std::vector<Integer_Type>> *IV;
         std::vector<std::vector<char>> *J;
         //std::vector<std::vector<Integer_Type>> *JV;
+        std::vector<Integer_Type> *V2J;
+        std::vector<Integer_Type> *J2V;
+        std::vector<Integer_Type> *Y2V;
+        std::vector<Integer_Type> *V2Y;
+        std::vector<Integer_Type> *I2V;
+        std::vector<Integer_Type> *V2I;
 
         std::vector<Integer_Type> nnz_row_sizes_loc;
         std::vector<Integer_Type> nnz_col_sizes_loc;
@@ -268,6 +276,12 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         //IV= &(Graph.A->IV);
         J = &(Graph.A->J);
         //JV= &(Graph.A->JV);
+        V2J = &(Graph.A->V2J);
+        J2V = &(Graph.A->J2V);
+        Y2V = &(Graph.A->Y2V);
+        V2Y = &(Graph.A->V2Y);
+        I2V = &(Graph.A->I2V);
+        V2I = &(Graph.A->V2I);
     }
     else if (ordering_type == _COL_)
     {
@@ -310,6 +324,12 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         //IV= &(Graph.A->JV);
         J = &(Graph.A->I);
         //JV= &(Graph.A->IV);
+        V2J = &(Graph.A->J2V);
+        J2V = &(Graph.A->V2J);
+        Y2V = &(Graph.A->V2Y);
+        V2Y = &(Graph.A->Y2V);
+        I2V = &(Graph.A->V2I);
+        V2I = &(Graph.A->I2V);
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
@@ -521,6 +541,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
             Vertex_State &state = V[i]; 
             C[i] = initializer(get_vid(i), state, (const State&) VProgram.V[i]);
         }
+        init_stationary_postprocess();
         
         if(not stationary)
             init_nonstationary();
@@ -624,8 +645,38 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
             Y[i][0].resize(y_sizes[i]);
         }
     }
+    init_stationary_postprocess();
 }
 
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_stationary_postprocess()
+{
+    uint32_t xo = accu_segment_col;
+    std::vector<Fractional_Type> &x_data = X[xo];
+    Integer_Type v_nitems = V.size();
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            Vertex_State &state = V[i];
+            x_data[i] = messenger(state);
+        }
+    }
+    else if(filtering_type == _SOME_)
+    {
+        auto &j_data = (*J)[xo];
+        Integer_Type j = 0;
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            if(j_data[i])
+            {
+                Vertex_State &state = V[i];
+                x_data[j] = messenger(state);
+                j++;
+            }
+        }
+    }
+}
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_nonstationary()
@@ -650,8 +701,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
         XI[i].resize(x_sizes[i]);
     
     msgs_activity_statuses.resize(colgrp_nranks);
-    
-    
+
     std::vector<Integer_Type> y_sizes;
     if(filtering_type == _NONE_)
         y_sizes.resize(rank_nrowgrps, tile_height);
@@ -734,7 +784,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 
     if(stationary)
     {
-        scatter_gather_stationary();
+        if(iteration > 0)
+            scatter_gather_stationary();
         if(Env::comm_split)
             bcast_stationary();
         else
@@ -745,7 +796,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     else
     {
-        scatter_gather_nonstationary();
+        if(iteration > 0)
+            scatter_gather_nonstationary();
         if(Env::comm_split)
             bcast_nonstationary();
         else
@@ -762,8 +814,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather_stationary()
 {
-    uint32_t xo = accu_segment_col;
+   // uint32_t yi = accu_segment_row;
+    //uint32_t yo = accu_segment_rg;
+    //std::vector<Fractional_Type> &y_data = Y[yi][yo];
     
+
+    
+    //Integer_Type y_nitems = y_data.size();
+    
+    uint32_t xo = accu_segment_col;    
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
     
@@ -777,6 +836,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     else if(filtering_type == _SOME_)
     {
+        
+            auto &v2j_data = (*V2J);
+            auto &j2v_data = (*J2V);
+            Integer_Type v2j_nitems = v2j_data.size();
+            for(uint32_t i = 0; i < v2j_nitems; i++)
+            {
+                Vertex_State &state = V[v2j_data[i]];
+                x_data[j2v_data[i]] = messenger(state);
+            }
+        
+        /*
         auto &j_data = (*J)[xo];
         Integer_Type j = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -788,6 +858,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 j++;
             }
         }
+        */
     }
 }
 
@@ -819,14 +890,34 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     else if(filtering_type == _SOME_)
     {
+        auto &v2j_data = (*V2J);
+        auto &j2v_data = (*J2V);
+        Integer_Type v2j_nitems = v2j_data.size();
         if(not directed)
         {
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v2j_nitems; i++)
+            {
+                
+                Vertex_State &state = V[v2j_data[i]];
+                if(C[v2j_data[i]])
+                {
+                    x_data[j2v_data[i]] = messenger(state);
+                    xv_data[k] = x_data[j2v_data[i]];
+                    xi_data[k] = j2v_data[i];
+                    k++;
+                }
+                else
+                    x_data[j2v_data[i]] = infinity();
+            }
+            
+            /*
+            // Wider range value exchange
             uint32_t yi = accu_segment_row;
             auto &i_data = (*I)[yi];
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                
+            {    
                 if(i_data[i])
                 {
                     Vertex_State &state = V[i];
@@ -842,39 +933,55 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                     j++;
                 }
             }
+            */
+            
         }
         else
         {
-            //if(transpose)
-            //{                
-                auto &j_data = (*J)[xo];
-                Integer_Type j = 0;
-                for(uint32_t i = 0; i < v_nitems; i++)
+          
+            auto &v2i_data = (*V2I);
+            auto &i2v_data = (*I2V);
+            Integer_Type v2i_nitems = v2i_data.size();
+            for(uint32_t i = 0; i < v2i_nitems; i++)
+            {
+                Vertex_State &state = V[v2i_data[i]];
+                if(C[v2i_data[i]])
                 {
-                    
-                    if(j_data[i])
-                    {
-                        Vertex_State &state = V[i];
-                        if(C[i])                            
-                        {
-                            x_data[j] = messenger(state);
-                            xv_data[k] = x_data[j];
-                            xi_data[k] = j;
-                            k++;
-                        }
-                        else
-                            x_data[j] = infinity();
-                        j++;
-                    }
+                    x_data[i2v_data[i]] = messenger(state);
+                    xv_data[k] = x_data[i2v_data[i]];
+                    xi_data[k] = i2v_data[i];
+                    k++;
                 }
-            //}
-            //else
-            //{
-                //fprintf(stderr, "Directed graphs for non-stationary algorithms should be transposed\n");
-              //  Env::exit(1);
-            //}
+                else
+                    x_data[i2v_data[i]] = infinity();
+            
+            }
+            
+
+            /*
+            // Wider range value exchange
+            auto &j_data = (*J)[xo];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                
+                if(j_data[i])
+                {
+                    Vertex_State &state = V[i];
+                    if(C[i])                            
+                    {
+                        x_data[j] = messenger(state);
+                        xv_data[k] = x_data[j];
+                        xi_data[k] = j;
+                        k++;
+                    }
+                    else
+                        x_data[j] = infinity();
+                    j++;
+                }
+            }
+            */
         }
-        
     }
     
     if(activity_filtering)
@@ -2012,6 +2119,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         //    printf("%d ", accus_activity_statuses[i]);
         //printf("\n");
     //}
+    
     std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
     std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
 }
@@ -2058,19 +2166,32 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     }
     else if(filtering_type == _SOME_)
     {
-        Fractional_Type tmp = 0;
-        auto &i_data = (*I)[yi];
-        Integer_Type j = 0;
-        for(uint32_t i = 0; i < v_nitems; i++)
+        if(iteration == 0)
         {
-            Vertex_State &state = V[i];
-            if(i_data[i])
+            auto &i_data = (*I)[yi];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
             {
-                C[i] = applicator(state, y_data[j]);
-                j++;
+                Vertex_State &state = V[i];
+                if(i_data[i])
+                {
+                    C[i] = applicator(state, y_data[j]);
+                    j++;
+                }
+                else
+                    C[i] = applicator(state);
             }
-            else
-                C[i] = applicator(state);
+        }
+        else    
+        {
+            auto &y2v_data = (*Y2V);
+            auto &v2y_data = (*V2Y);
+            Integer_Type y2v_nitems = y2v_data.size();
+            for(uint32_t i = 0; i < y2v_nitems; i++)
+            {
+                Vertex_State &state = V[v2y_data[i]];
+                C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]]);
+            }
         }
     }
 
@@ -2116,31 +2237,58 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         Integer_Type j = 0;
         if(apply_depends_on_iter)
         {
-            for(uint32_t i = 0; i < v_nitems; i++)
+            if(iteration == 0)
             {
-                Vertex_State &state = V[i];
-                if(i_data[i])
+                for(uint32_t i = 0; i < v_nitems; i++)
                 {
-                    C[i] = applicator(state, y_data[j], iteration);
-                    j++;
-                }
-                else
-                    C[i] = applicator(state);    
+                    Vertex_State &state = V[i];
+                    if(i_data[i])
+                    {
+                        C[i] = applicator(state, y_data[j], iteration);
+                        j++;
+                    }
+                    else
+                        C[i] = applicator(state);    
+                }  
             }
-            
+            else
+            {
+                auto &y2v_data = (*Y2V);
+                auto &v2y_data = (*V2Y);
+                Integer_Type y2v_nitems = y2v_data.size();
+                for(uint32_t i = 0; i < y2v_nitems; i++)
+                {
+                    Vertex_State &state = V[v2y_data[i]];
+                    C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]], iteration);
+                }
+            }
         }
         else
         {
-            for(uint32_t i = 0; i < v_nitems; i++)
+            if(iteration == 0)
             {
-                Vertex_State &state = V[i];
-                if(i_data[i])
+                for(uint32_t i = 0; i < v_nitems; i++)
                 {
-                    C[i] = applicator(state, y_data[j]);
-                    j++;
+                    Vertex_State &state = V[i];
+                    if(i_data[i])
+                    {
+                        C[i] = applicator(state, y_data[j]);
+                        j++;
+                    }
+                    else
+                        C[i] = applicator(state);
                 }
-                else
-                    C[i] = applicator(state);
+            }
+            else
+            {
+                auto &y2v_data = (*Y2V);
+                auto &v2y_data = (*V2Y);
+                Integer_Type y2v_nitems = y2v_data.size();
+                for(uint32_t i = 0; i < y2v_nitems; i++)
+                {
+                    Vertex_State &state = V[v2y_data[i]];
+                    C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]]);
+                }
             }
         }
     }
