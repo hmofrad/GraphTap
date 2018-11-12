@@ -69,10 +69,11 @@ class Vertex_Program
         void init_nonstationary();
         void init_tc_family();
         void init_stationary_postprocess();
-        //void init_nonstationary_postprocess();
+        void init_nonstationary_postprocess();
         void scatter_gather();
         void scatter_gather_stationary();
         void scatter_gather_nonstationary();
+        void scatter_gather_nonstationary_activity_filtering();
         void scatter();
         void gather();
         void bcast();
@@ -491,9 +492,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     }
     else
     {
-        init_stationary();
-        if(not stationary)
+        if(stationary)
+        {
+            init_stationary();
+            init_stationary_postprocess();
+        }
+        else
+        {
+            init_stationary();
             init_nonstationary();
+            init_nonstationary_postprocess();
+        }
     }
 
     t2 = Env::clock();
@@ -534,17 +543,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     }
     else
     {
-        init_stationary();
-        Integer_Type v_nitems = V.size();
-        for(uint32_t i = 0; i < v_nitems; i++)
+        if(stationary)
         {
-            Vertex_State &state = V[i]; 
-            C[i] = initializer(get_vid(i), state, (const State&) VProgram.V[i]);
+            init_stationary();
+            Integer_Type v_nitems = V.size();
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V[i]; 
+                C[i] = initializer(get_vid(i), state, (const State&) VProgram.V[i]);
+            }
+            
+            init_stationary_postprocess();
         }
-        init_stationary_postprocess();
-        
-        if(not stationary)
+        else
+        {
+            init_stationary();
             init_nonstationary();
+            init_nonstationary_postprocess();
+        }
     }
     already_initialized = true;
     t2 = Env::clock();
@@ -645,7 +661,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
             Y[i][0].resize(y_sizes[i]);
         }
     }
-    init_stationary_postprocess();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -777,6 +792,89 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_nonstationary_postprocess()
+{
+    uint32_t xo = accu_segment_col;
+    std::vector<Fractional_Type> &x_data = X[xo];
+    std::vector<Fractional_Type> &xv_data = XV[xo];
+    std::vector<Integer_Type> &xi_data = XI[xo];
+    Integer_Type x_nitems = x_data.size();
+    Integer_Type v_nitems = V.size();
+    Integer_Type k = 0;
+    if(filtering_type == _NONE_)
+    {
+        for(uint32_t i = 0; i < v_nitems; i++)
+        {
+            Vertex_State &state = V[i];
+            if(C[i])
+            {
+                x_data[i] = messenger(state);
+                xv_data[k] = x_data[i];
+                xi_data[k] = i;
+                k++;
+            }
+            else
+                x_data[i] = infinity();
+        }
+    }
+    else if(filtering_type == _SOME_)
+    {
+        if(not directed)
+        {
+            uint32_t yi = accu_segment_row;
+            auto &i_data = (*I)[yi];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {    
+                if(i_data[i])
+                {
+                    Vertex_State &state = V[i];
+                    if(C[i])
+                    {
+                        x_data[j] = messenger(state);
+                        xv_data[k] = x_data[j];
+                        xi_data[k] = j;
+                        k++;
+                    }
+                    else
+                        x_data[j] = infinity();
+                    j++;
+                }
+            }
+        }
+        else
+        {
+            auto &j_data = (*J)[xo];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                
+                if(j_data[i])
+                {
+                    Vertex_State &state = V[i];
+                    if(C[i])                            
+                    {
+                        x_data[j] = messenger(state);
+                        xv_data[k] = x_data[j];
+                        xi_data[k] = j;
+                        k++;
+                    }
+                    else
+                        x_data[j] = infinity();
+                    j++;
+                }
+            }
+        }
+    }
+    
+    if(activity_filtering)
+        msgs_activity_statuses[xo] = k;
+    else
+        msgs_activity_statuses[xo] = 0;
+    
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather()
 {
     double t1, t2;
@@ -798,6 +896,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     {
         if(iteration > 0)
             scatter_gather_nonstationary();
+        scatter_gather_nonstationary_activity_filtering();
         if(Env::comm_split)
             bcast_nonstationary();
         else
@@ -987,6 +1086,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     if(activity_filtering)
     {
         msgs_activity_statuses[xo] = k;
+        //scatter_gather_nonstationary_activity_filtering();
+        /*
         int nitems = msgs_activity_statuses[xo];
         // 0 all, 1 nothing, else nitems
         double ratio = (double) nitems/x_nitems;
@@ -1009,10 +1110,45 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             }
         }
         Env::barrier();            
+        */
     }
     else
         msgs_activity_statuses[xo] = 0;
 }
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather_nonstationary_activity_filtering()
+{
+    uint32_t xo = accu_segment_col;
+    std::vector<Fractional_Type> &x_data = X[xo];
+    Integer_Type x_nitems = x_data.size();
+    if(activity_filtering)
+    {
+        int nitems = msgs_activity_statuses[xo];
+        // 0 all, 1 nothing, else nitems
+        double ratio = (double) nitems/x_nitems;
+        if(ratio <= activity_filtering_ratio)
+            nitems++;
+        else
+            nitems = 0;
+        msgs_activity_statuses[xo] = nitems;
+        
+        activity_statuses[owned_segment] = msgs_activity_statuses[xo];
+        
+        Env::barrier();
+        for(uint32_t i = 0; i < Env::nranks; i++)
+        {
+            uint32_t r = leader_ranks[i];
+            if(r != Env::rank)
+            {
+                MPI_Sendrecv(&activity_statuses[owned_segment], 1, TYPE_INT, r, Env::rank, 
+                             &activity_statuses[i], 1, TYPE_INT, r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+            }
+        }
+        Env::barrier();
+    }
+}
+
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_stationary()
@@ -2659,7 +2795,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     }
     MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
+    {
+        std::cout << "Iterations: " << iteration << std::endl;
         std::cout << std::fixed << "Value checksum: " << v_sum_global << std::endl;
+    }
 
     if(apply_depends_on_iter or gather_depends_on_apply)
     {
