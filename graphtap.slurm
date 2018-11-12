@@ -42,7 +42,6 @@ NP=$SLURM_NTASKS
 MPI="mpirun -np"
 APPS_PERFIX="bin"
 APPS=("./pr" "/./cc" "./bfs" "./sssp_w")
-N_APPS=4
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28_1.bin")
 GRAPHS_W=("rmat26_1_w.bin" "rmat27_1_w.bin" "rmat28_1_w.bin")
@@ -83,9 +82,14 @@ do
         then
             GRAPH="${GRAPHS_W[${I}]}"    
         fi    
+        
         CMD="${MPI} ${NP} ${APPS_PERFIX}/${A} ${GRAPHS_PERFIX}/${GRAPH} ${GRAPH_V} ${ITER_OR_SRC}"
+        echo "Command=${CMD}"
         ${CMD}
     done
 done
 
-strings graphtap.out | grep 'Execute'
+strings graphtap.out | grep 'Execute time'
+strings graphtap.out | grep 'Iterations'
+strings graphtap.out | grep 'Value checksum'
+strings graphtap.out | grep 'Reachable vertices'
