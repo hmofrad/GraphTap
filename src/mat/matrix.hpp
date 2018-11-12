@@ -1610,7 +1610,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
 {
-    printf("Start post_processing\n");
+    //printf("Start post_processing\n");
     
     uint32_t ii = accu_segment_row;
     auto &i_data = I[ii];
@@ -1619,7 +1619,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
     auto &j_data = J[jj];
     auto &jv_data = JV[jj];
     
-    printf("%d %d %d\n", Env::rank, accu_segment_row, accu_segment_col);
+    //printf("%d %d %d\n", Env::rank, accu_segment_row, accu_segment_col);
     Integer_Type j = 0;
     for(uint32_t i = 0; i < tile_height; i++)
     {
