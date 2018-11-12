@@ -2800,8 +2800,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         std::cout << std::fixed << "Value checksum: " << v_sum_global << std::endl;
     }
 
-    if(apply_depends_on_iter or gather_depends_on_apply)
-    {
+    //if(apply_depends_on_iter or gather_depends_on_apply)
+    //{
 
         uint64_t v_sum_local_ = 0, v_sum_global_ = 0;
         for(uint32_t i = 0; i < v_nitems; i++)
@@ -2813,8 +2813,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
 
         MPI_Allreduce(&v_sum_local_, &v_sum_global_, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(Env::is_master)
-            std::cout << std::fixed << "Reachable Vertices: " << v_sum_global_ << std::endl;
-    }
+            std::cout << std::fixed << "Reachable vertices: " << v_sum_global_ << std::endl;
+    //}
     Env::barrier();
 }
 
