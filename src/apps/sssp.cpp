@@ -32,11 +32,7 @@ int main(int argc, char **argv)
     bool transpose = false;
     bool self_loops = false;
     bool acyclic = false;
-    #ifdef HAS_WEIGHT
-    bool parallel_edges = true;
-    #else
     bool parallel_edges = false;
-    #endif
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _SOME_;
