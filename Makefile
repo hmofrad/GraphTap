@@ -22,7 +22,7 @@ all: $(objs)
 
 $(objs): %: src/apps/%.cpp
 	@mkdir -p bin
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE)            -o bin/$@   -I src $<
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE)           -o bin/$@   -I src $<
 	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(MACROS) -o bin/$@_w -I src $<
 
 clean:
