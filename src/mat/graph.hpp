@@ -205,10 +205,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     
     // Filter the graph
     A->init_filtering();
-    
+
     // Compress the graph
     A->init_compression();
-    
+
     // Delete triples
     A->del_triples();
 }
@@ -248,10 +248,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     
     // Filter the graph
     A->init_filtering();
-    
+
     // Compress the graph
     A->init_compression();
-    
+
     // Delete triples
     A->del_triples();
 }
