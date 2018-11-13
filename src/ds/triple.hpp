@@ -62,7 +62,19 @@ struct RowSort
 {
     bool operator()(const struct Triple<Weight, Integer_Type> &a, const struct Triple<Weight, Integer_Type> &b)
     {
+        #ifdef HAS_WEIGHT
+        if(a.row < b.row)
+            return(true);
+        if(b.row < a.row)
+            return(false);
+        // a == b
+        if(a.weight < b.weight)
+            return(true);
+        if(b.weight < a.weight)
+            return(false);
+        #else
         return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
+        #endif
     }
 };
 
@@ -71,8 +83,19 @@ struct ColSort
 {
     bool operator()(const struct Triple<Weight, Integer_Type> &a, const struct Triple<Weight, Integer_Type> &b)
     {
+        #ifdef HAS_WEIGHT
+        if(a.col < b.col)
+            return(true);
+        if(b.col < a.col)
+            return(false);
+        
+        if(a.weight < b.weight)
+            return(true);
+        if(b.weight < a.weight)
+            return(false);
+        #else
         return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
+        #endif
     }
 };
-
 #endif
