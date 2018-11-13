@@ -994,6 +994,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         Integer_Type v2j_nitems = v2j_data.size();
         if(not directed)
         {
+            
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v2j_nitems; i++)
             {
@@ -1037,7 +1038,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         }
         else
         {
-          
+            
             auto &v2i_data = (*V2I);
             auto &i2v_data = (*I2V);
             Integer_Type v2i_nitems = v2i_data.size();
@@ -1057,7 +1058,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             }
             
 
-            /*
+            /*            
             // Wider range value exchange
             auto &j_data = (*J)[xo];
             Integer_Type j = 0;
@@ -1080,6 +1081,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 }
             }
             */
+            
         }
     }
     
@@ -2386,6 +2388,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     else
                         C[i] = applicator(state);    
                 }  
+               
             }
             else
             {
@@ -2398,6 +2401,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]], iteration);
                 }
             }
+            
         }
         else
         {
@@ -2414,6 +2418,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     else
                         C[i] = applicator(state);
                 }
+               
             }
             else
             {
@@ -2426,6 +2431,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]]);
                 }
             }
+            /*
+            for(uint32_t i = 0; i < v_nitems; i++)
+                printf("%d ", i);
+            printf("\n");
+            for(uint32_t i = 0; i < v_nitems; i++)
+                printf("%d ", C[i]);
+            printf("\n");
+            */
         }
     }
     
@@ -2772,6 +2785,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
         if(not C[i]) 
             c_sum_local++;
     }
+    printf("%d %lu\n", iteration, (tile_height * Env::nranks) - c_sum_local);
    
     MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(c_sum_gloabl == (tile_height * Env::nranks))
