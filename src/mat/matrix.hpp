@@ -835,7 +835,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
                 break;
             }
         }
-        //printf("\n");
     }
 }
 
@@ -852,7 +851,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
     Triple<Weight, Integer_Type> pair;
     RowSort<Weight, Integer_Type> f_row;
     ColSort<Weight, Integer_Type> f_col;
-	auto f_comp = [] (const Triple<Weight, Integer_Type> &a, const Triple<Weight, Integer_Type> &b) {return (a.row == b.row and a.col == b.col);};
+    auto f_comp = [] (const Triple<Weight, Integer_Type> &a, const Triple<Weight, Integer_Type> &b) {return (a.row == b.row and a.col == b.col);};    
     for(uint32_t t: local_tiles_row_order)
     {
         pair = tile_of_local_tile(t);
@@ -864,6 +863,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
                 std::sort(tile.triples->begin(), tile.triples->end(), f_row);
             if(compression_type == Compression_type::_CSC_)
                 std::sort(tile.triples->begin(), tile.triples->end(), f_col);
+            
             /* remove parallel edges (duplicates), necessary for triangle couting */
             if(not parallel_edges)
             {
@@ -1892,6 +1892,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 i++;
                 //printf("%d %d %d\n", triple.row, triple.col, iv_data[pair1.row]);
             }
+
             while((j + 1) < (c_nitems + 1))
             {
                 j++;
