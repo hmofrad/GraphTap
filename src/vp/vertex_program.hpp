@@ -89,8 +89,10 @@ class Vertex_Program
         void combine_2d_stationary();
         void combine_2d_nonstationary();
         void combine_postprocess();
-        void combine_postprocess_stationary();
-        void combine_postprocess_nonstationary();
+        void combine_postprocess_stationary_for_all();
+        void combine_postprocess_nonstationary_for_all();
+        void combine_postprocess_stationary_for_some();
+        void combine_postprocess_nonstationary_for_some();
         void combine_2d_for_tc();
         void apply();                        
         void apply_stationary();
@@ -463,8 +465,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         while(true)
         {
             scatter_gather();
+            
             combine();
             apply();
+            
             iteration++;
             Env::print_me("Iteration: ", iteration);            
             if(check_for_convergence)
@@ -1859,7 +1863,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
-    wait_for_all();
+    //wait_for_all();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2010,7 +2014,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
-    wait_for_all();   
+    //wait_for_all();   
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2176,21 +2180,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
-    wait_for_all();
+    //wait_for_all();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess()
 {
+    
     if(stationary)
-        combine_postprocess_stationary();
+        //combine_postprocess_stationary_for_all();
+        combine_postprocess_stationary_for_some();
     else
-        combine_postprocess_nonstationary();
+        combine_postprocess_nonstationary_for_all();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_stationary()
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_stationary_for_all()
 {
+    wait_for_all();
+    
     uint32_t accu = 0;
     uint32_t yi = accu_segment_row;
     uint32_t yo = accu_segment_rg;
@@ -2212,8 +2220,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_nonstationary()
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_nonstationary_for_all()
 {
+    wait_for_all();
+    
     uint32_t accu = 0;
     uint32_t yi = accu_segment_row;
     uint32_t yo = accu_segment_rg;
@@ -2260,6 +2270,57 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     
     std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
     std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_stationary_for_some()
+{
+    
+    uint32_t accu = 0;
+    uint32_t yi = accu_segment_row;
+    uint32_t yo = accu_segment_rg;
+    std::vector<Fractional_Type> &y_data = Y[yi][yo];
+    Integer_Type y_nitems = y_data.size();
+    
+    int32_t incount = in_requests.size();
+    int32_t outcount = 0;
+    int32_t incounts = rowgrp_nranks - 1;
+    std::vector<MPI_Status> statuses(incounts);
+    std::vector<int32_t> indices(incounts);
+    uint32_t received = 0;
+    uint32_t r = 0;
+    int32_t index = 0;
+
+    while(received < incount)
+    {
+        MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
+        assert(outcount != MPI_UNDEFINED);
+        for(uint32_t i = 0; i < outcount; i++)
+        {
+            
+            uint32_t j = indices[i];
+            if(Env::comm_split)
+                accu = A->follower_rowgrp_ranks_accu_seg_rg[j];
+            else
+                accu = A->follower_rowgrp_ranks_accu_seg[j];
+            
+            std::vector<Fractional_Type> &yj_data = Y[yi][accu];
+            Integer_Type yj_nitems = yj_data.size();
+            for(uint32_t i = 0; i < yj_nitems; i++)
+                combiner(y_data[i], yj_data[i]);            
+        }
+        received += outcount;
+    }
+    
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_nonstationary_for_some()
+{
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2689,7 +2750,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_f
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     out_requests.clear();
-    Env::barrier();
+    //Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2785,7 +2846,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
         if(not C[i]) 
             c_sum_local++;
     }
-    printf("%d %lu\n", iteration, (tile_height * Env::nranks) - c_sum_local);
+    //printf("%d %lu\n", iteration, (tile_height * Env::nranks) - c_sum_local);
    
     MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(c_sum_gloabl == (tile_height * Env::nranks))
