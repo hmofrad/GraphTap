@@ -2311,38 +2311,288 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess_nonstationary_for_some()
 {
-    //if(activity_filtering and activity_statuses[tile.rg])
-    uint32_t accu = 0;
-    uint32_t yi = accu_segment_row;
-    uint32_t yo = accu_segment_rg;
-    std::vector<Fractional_Type> &y_data = Y[yi][yo];
-    Integer_Type y_nitems = y_data.size();
-    
-    int32_t incount = in_requests.size();
-    int32_t outcount = 0;
-    int32_t incounts = rowgrp_nranks - 1;
-    std::vector<MPI_Status> statuses(incounts);
-    std::vector<int32_t> indices(incounts);
-    uint32_t received = 0;
-    uint32_t r = 0;
-    int32_t index = 0;
-    printf("incounts=%d\n", incounts);
-    while(received < incount)
+    if(activity_filtering)
     {
-        MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
-        assert(outcount != MPI_UNDEFINED);
-        printf("outcount=%d %d\n", outcount, rowgrp_nranks);//A->follower_rowgrp_ranks_accu_seg_rg[0]);
-        for(uint32_t i = 0; i < outcount; i++)
+        if(in_requests.size())
         {
-            uint32_t j = indices[i];
-            
-            if(Env::comm_split)
-                accu = follower_rowgrp_ranks_accu_seg_rg[j];
-            else
-                accu = follower_rowgrp_ranks_accu_seg[j];
-            
-            if(activity_filtering and accus_activity_statuses[accu])
+            if(not in_requests_.size())
             {
+                printf("combine_postprocess_stationary_for_some %d\n", Env::rank);
+                combine_postprocess_stationary_for_some();
+            }
+            else
+            {
+                uint32_t accu = 0;
+                uint32_t yi = accu_segment_row;
+                uint32_t yo = accu_segment_rg;
+                std::vector<Fractional_Type> &y_data = Y[yi][yo];
+                Integer_Type y_nitems = y_data.size();
+                /*
+                int32_t incount;
+                int32_t incounts;
+                int32_t outcount  = 0;
+                std::vector<MPI_Status> statuses(incounts);
+                std::vector<int32_t> indices(incounts);
+                
+                int32_t incount_ = in_requests_.size();
+                int32_t incounts_ = rowgrp_nranks - 1;
+                int32_t outcount_ = 0;
+                std::vector<MPI_Status> statuses_(incounts);
+                std::vector<int32_t> indices_(incounts);
+
+                uint32_t received = 0;
+                
+                std::vector<int32_t> indices_all(rowgrp_nranks - 1);
+                std::vector<int32_t> indices_accu(rowgrp_nranks - 1);
+                
+                uint32_t idx = 0;
+                uint32_t idx_ = 0;
+                */
+                int32_t outcount  = 0;
+                int32_t outcount_ = 0;
+                uint32_t received = 0;
+                //if(Env::rank == 5)
+                //    printf("%d %d ", indices_all[accu], accus_activity_statuses[accu]);
+                /*
+                if(Env::rank == 5)
+                printf(" %d\n", incount);
+                if(incount and incount < (rowgrp_nranks - 1) * 2)
+                    printf("Partial\n");
+                */
+                // Even requests
+                if((in_requests.size() + in_requests_.size()) == 2 * (rowgrp_nranks - 1))
+                {
+                    int32_t incount  = rowgrp_nranks - 1;
+                    int32_t incounts = rowgrp_nranks - 1;
+                    std::vector<MPI_Status> statuses(incounts);
+                    std::vector<int32_t> indices(incounts);
+                    
+                    int32_t incount_  = rowgrp_nranks - 1;
+                    int32_t incounts_ = rowgrp_nranks - 1;
+                    std::vector<MPI_Status> statuses_(incounts);
+                    std::vector<int32_t> indices_(incounts);
+                    
+                    std::vector<int32_t> indices_all(rowgrp_nranks - 1);
+                    
+                    printf("Implemented %d\n", Env::rank);
+                    while(received < (incount + incount_))
+                    {
+                        MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
+                        MPI_Waitsome(in_requests_.size(), in_requests_.data(), &outcount_, indices_.data(), statuses_.data());
+                        assert(outcount != MPI_UNDEFINED);
+                        assert(outcount_ != MPI_UNDEFINED);
+                        //printf("outcount=%d %d\n", outcount, rowgrp_nranks);//A->follower_rowgrp_ranks_accu_seg_rg[0]);
+                        for(uint32_t i = 0; i < outcount; i++)
+                        {
+                            uint32_t j = indices[i];
+                            indices_all[j] ++;
+                            if(indices_all[j] == 2)
+                            {                
+                                if(Env::comm_split)
+                                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                                else
+                                    accu = follower_rowgrp_ranks_accu_seg[j];
+                                
+                                std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
+                                {
+                                    Integer_Type l = yij_data[k];
+                                    combiner(y_data[l], yvj_data[k]);
+                                }
+                                
+                                indices_all[j]++;
+                            } 
+                        }
+                        received += outcount;
+                        
+                        for(uint32_t i = 0; i < outcount_; i++)
+                        {
+                            uint32_t j = indices[i];
+                            indices_all[j]++;
+                            if(indices_all[j] == 2)
+                            {                
+                                if(Env::comm_split)
+                                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                                else
+                                    accu = follower_rowgrp_ranks_accu_seg[j];
+                                
+                                std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
+                                {
+                                    Integer_Type l = yij_data[k];
+                                    combiner(y_data[l], yvj_data[k]);
+                                }
+                                indices_all[j]++;
+                            } 
+                        }
+                        received += outcount;
+                    }
+                                                        
+                    for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+                    {
+                        if(indices_all[j] == 2)
+                        {                                    
+                            if(Env::comm_split)
+                                accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                            else
+                                accu = follower_rowgrp_ranks_accu_seg[j];
+                            
+                            std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                            std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                            for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
+                            {
+                                Integer_Type k = yij_data[i];
+                                combiner(y_data[k], yvj_data[i]);
+                            }
+                        }
+                    }
+                    
+                    
+                }
+                else // Non-even requests
+                {
+                    printf("Not implemented %d, %d %d\n", Env::rank, in_requests.size(), in_requests_.size());
+                    int32_t incount  = in_requests.size();
+                    int32_t incounts = in_requests.size();
+                    std::vector<MPI_Status> statuses(incounts);
+                    std::vector<int32_t> indices(incounts);
+                    
+                    int32_t incount_  = in_requests_.size();
+                    int32_t incounts_ = in_requests_.size();
+                    std::vector<MPI_Status> statuses_(incounts);
+                    std::vector<int32_t> indices_(incounts);
+                    
+                    std::vector<int32_t> indices_all(incount);
+                    std::vector<int32_t> indices_accu(incount);
+                    
+                    
+                    
+                    // -1 NA, 0 empty, 1 recieved half, 2 received the other half, 3 processed
+                    
+                    for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+                    {
+                        if(Env::comm_split)
+                            accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                        else
+                            accu = follower_rowgrp_ranks_accu_seg[j];
+                        
+                        if(accus_activity_statuses[accu] == 1)
+                        {
+                            if(Env::comm_split)
+                            {
+                                for(uint32_t k = j + 1; k < rowgrp_nranks - 1; k++)
+                                    indices_accu[k-1] = follower_rowgrp_ranks_accu_seg_rg[k];
+                            }
+                            else
+                            {
+                                for(uint32_t k = j + 1; k < rowgrp_nranks - 1; k++)
+                                    indices_accu[k-1] = follower_rowgrp_ranks_accu_seg[k];
+                            }
+                        }
+                        else
+                            indices_accu[j] = accu;
+                        
+                     //  printf("<%d %d>\n", accu, accus_activity_statuses[accu]);     
+                    }
+                    /*
+                    for(uint32_t j=0; j < incount;j++)
+                    {
+                        printf("%d\n", indices_accu[j]);
+                    }
+                    */
+                    
+                    
+                    while(received < (incount + incount_))
+                    {
+                        MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
+                        MPI_Waitsome(in_requests_.size(), in_requests_.data(), &outcount_, indices_.data(), statuses_.data());
+                        printf("outcount=%d\n", outcount);
+                        assert(outcount != MPI_UNDEFINED);
+                        assert(outcount_ != MPI_UNDEFINED);
+                        //printf("outcount=%d %d\n", outcount, rowgrp_nranks);//A->follower_rowgrp_ranks_accu_seg_rg[0]);
+                        for(uint32_t i = 0; i < outcount; i++)
+                        {
+                            uint32_t j = indices[i];
+                            //while(indices_all[l] == -1)
+                              //  l++;
+                            indices_all[j] += 1;
+                            
+                            if(indices_all[j] == 2)
+                            {                
+                                accu = indices_accu[j];
+
+                                std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
+                                {
+                                    Integer_Type k = yij_data[i];
+                                    combiner(y_data[k], yvj_data[i]);
+                                }
+                                
+                                indices_all[j] = 3;
+                            } 
+                        }
+                        received += outcount;
+                    }
+                }
+
+                
+                
+                
+            }
+        }
+        else
+            printf("Nothing %d\n", Env::rank);
+        
+
+        /*
+        while(received < incount)
+        {
+            MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
+            MPI_Waitsome(in_requests_.size(), in_requests_.data(), &outcount_, indices_.data(), statuses_.data());
+            assert(outcount != MPI_UNDEFINED);
+            assert(outcount_ != MPI_UNDEFINED);
+            printf("outcount=%d %d\n", outcount, rowgrp_nranks);//A->follower_rowgrp_ranks_accu_seg_rg[0]);
+            for(uint32_t i = 0; i < outcount; i++)
+            {
+                indices_all[indices[i]] += 1;
+            }
+            received += outcount;
+            
+            for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+            {
+                if(indices_all[j] == 2)
+                {                
+                    if(Env::comm_split)
+                        accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                    else
+                        accu = follower_rowgrp_ranks_accu_seg[j];
+                    if(accus_activity_statuses[accu] > 1)
+                    {
+                        std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                        std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                        for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
+                        {
+                            Integer_Type k = yij_data[i];
+                            combiner(y_data[k], yvj_data[i]);
+                        }
+                    }
+                    indices_all[j] = 3;
+                } 
+            }
+        }
+        
+        for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+        {
+            if(indices_all[j] == 2)
+            {                                    
+                if(Env::comm_split)
+                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                else
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                
                 if(accus_activity_statuses[accu] > 1)
                 {
                     std::vector<Integer_Type> &yij_data = YI[yi][accu];
@@ -2355,20 +2605,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 }
             }
             else
-            {
-                std::vector<Fractional_Type> &yj_data = Y[yi][accu];
-                Integer_Type yj_nitems = yj_data.size();
-                for(uint32_t i = 0; i < yj_nitems; i++)
-                    combiner(y_data[i], yj_data[i]);
-            }         
+                indices_all[j] == 3;
         }
-        received += outcount;
-    }
+        
 
-    in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
+        in_requests.clear();
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();
+        
+        in_requests_.clear();
+        MPI_Waitall(out_requests_.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests_.clear();
+    */
+    }
+    else
+        combine_postprocess_stationary_for_some();
     
+            Env::barrier();
+        exit(0);
     std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
     std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
 }
