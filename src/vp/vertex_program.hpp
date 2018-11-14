@@ -2193,8 +2193,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         //combine_postprocess_stationary_for_all();
         combine_postprocess_stationary_for_some();
     else
-        combine_postprocess_nonstationary_for_all();
-        //combine_postprocess_nonstationary_for_some();
+        //combine_postprocess_nonstationary_for_all();
+        combine_postprocess_nonstationary_for_some();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2315,12 +2315,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     {
         if(in_requests.size())
         {
-            if(not in_requests_.size())
-            {
-                printf("combine_postprocess_stationary_for_some %d\n", Env::rank);
-                combine_postprocess_stationary_for_some();
-            }
-            else
+            if(in_requests_.size())
             {
                 uint32_t accu = 0;
                 uint32_t yi = accu_segment_row;
@@ -2453,7 +2448,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 }
                 else // Non-even requests
                 {
-                    printf("Not implemented %d, %d %d\n", Env::rank, in_requests.size(), in_requests_.size());
+                    printf("Not implemented %d, %lu %lu\n", Env::rank, in_requests.size(), in_requests_.size());
                     int32_t incount  = in_requests.size();
                     int32_t incounts = in_requests.size();
                     std::vector<MPI_Status> statuses(incounts);
@@ -2470,7 +2465,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     
                     
                     // -1 NA, 0 empty, 1 recieved half, 2 received the other half, 3 processed
-                    
+                    uint32_t idx = 0;
                     for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
                     {
                         if(Env::comm_split)
@@ -2478,8 +2473,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         else
                             accu = follower_rowgrp_ranks_accu_seg[j];
                         
-                        if(accus_activity_statuses[accu] == 1)
+                        if(accus_activity_statuses[accu] > 1)
                         {
+                            indices_accu[idx] = accu;
+                            idx++;
+                            
+                            /*
                             if(Env::comm_split)
                             {
                                 for(uint32_t k = j + 1; k < rowgrp_nranks - 1; k++)
@@ -2490,12 +2489,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 for(uint32_t k = j + 1; k < rowgrp_nranks - 1; k++)
                                     indices_accu[k-1] = follower_rowgrp_ranks_accu_seg[k];
                             }
+                            */
                         }
-                        else
-                            indices_accu[j] = accu;
+                        //else
+                          //  indices_accu[j] = accu;
                         
-                     //  printf("<%d %d>\n", accu, accus_activity_statuses[accu]);     
+                       printf("<%d %d %d %d>\n", idx, accu, accus_activity_statuses[accu], Env::rank);     
                     }
+                    printf("[%d %d %d]\n", idx, incount, Env::rank);
+                    assert(idx == incount);
+                    
                     /*
                     for(uint32_t j=0; j < incount;j++)
                     {
@@ -2508,7 +2511,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     {
                         MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
                         MPI_Waitsome(in_requests_.size(), in_requests_.data(), &outcount_, indices_.data(), statuses_.data());
-                        printf("outcount=%d\n", outcount);
+                        printf("outcount=%d %d\n", outcount, Env::rank);
                         assert(outcount != MPI_UNDEFINED);
                         assert(outcount_ != MPI_UNDEFINED);
                         //printf("outcount=%d %d\n", outcount, rowgrp_nranks);//A->follower_rowgrp_ranks_accu_seg_rg[0]);
@@ -2535,12 +2538,64 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                             } 
                         }
                         received += outcount;
+                        
+                        for(uint32_t i = 0; i < outcount_; i++)
+                        {
+                            uint32_t j = indices[i];
+                            //while(indices_all[l] == -1)
+                              //  l++;
+                            indices_all[j] += 1;
+                            
+                            if(indices_all[j] == 2)
+                            {                
+                                accu = indices_accu[j];
+
+                                std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
+                                {
+                                    Integer_Type k = yij_data[i];
+                                    combiner(y_data[k], yvj_data[i]);
+                                }
+                                
+                                indices_all[j] = 3;
+                            } 
+                        }
+                        received += outcount_;
                     }
+                    
+                    for(uint32_t j = 0; j < incount; j++)
+                    {
+                        if(indices_all[j] == 2)
+                        {
+                            accu = indices_accu[j];
+                            
+                            std::vector<Integer_Type> &yij_data = YI[yi][accu];
+                            std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                            for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
+                            {
+                                Integer_Type k = yij_data[i];
+                                combiner(y_data[k], yvj_data[i]);
+                            }
+                        }
+                    }
+                    
+                    
+                    
                 }
 
-                
-                
-                
+                in_requests.clear();
+                MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+                out_requests.clear();
+                    
+                in_requests_.clear();
+                MPI_Waitall(out_requests_.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+                out_requests_.clear();
+            }
+            else
+            {
+                printf("combine_postprocess_stationary_for_some %d\n", Env::rank);
+                combine_postprocess_stationary_for_some();
             }
         }
         else
@@ -2617,12 +2672,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         MPI_Waitall(out_requests_.size(), out_requests.data(), MPI_STATUSES_IGNORE);
         out_requests_.clear();
     */
+    
+
     }
     else
         combine_postprocess_stationary_for_some();
     
-            Env::barrier();
-        exit(0);
     std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
     std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
 }
