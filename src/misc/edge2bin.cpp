@@ -21,19 +21,20 @@ int main(int argc, char **argv) {
        1 1: in.w.bin/txt --> out.w.bin
     */
 	
-	if (argc != 6 and argc != 7) {
-        std::cout << "Usage: " << argv[0] << " <filepath_in> <filepath_out> <infile_type [0(txt)|1(bin)]> <filepath_in is weighted [0|1]> <Want filepath_out be weighted [0|1]> [<offsetted by ?>]"  << std::endl;
+	if (argc != 7 and argc != 8) {
+        std::cout << "Usage: " << argv[0] << " <filepath_in> <filepath_in is [0(txt)|1(bin)]> <filepath_in is weighted [0|1]>  <filepath_out> <Want filepath_out be [0(txt)|1(bin)]> <Want filepath_out be weighted [0|1]> [<offsetted by ?>]"  << std::endl;
         std::cout << "Converts graph from edge list pairs (uint32_t i, uint32_t j, [uint32_t w]) "
 	             "to bianry pairs (uint32_t i, uint32_t j, [uint32_t w])" << std::endl;
     	exit(1);
 	}
 
-	std::string filepath_in = argv[1];
-  	std::string filepath_out = argv[2];
-    bool in_is_binary = (atoi(argv[3]) == 1) ? true : false;
-    bool in_is_weighted = (atoi(argv[4]) == 1) ? true : false;
-    bool out_be_weighted = (atoi(argv[5]) == 1) ? true : false;
-    uint32_t displacement = (argc == 7) ? (atoi(argv[6])) : 0;
+	std::string filepath_in  = argv[1];
+    bool in_is_binary        = (atoi(argv[2]) == 1) ? true : false;
+    bool in_is_weighted      = (atoi(argv[3]) == 1) ? true : false;
+    std::string filepath_out = argv[4];
+    bool out_be_binary       = (atoi(argv[5]) == 1) ? true : false;
+    bool out_be_weighted     = (atoi(argv[6]) == 1) ? true : false;
+    uint32_t displacement    = (argc == 8) ? (atoi(argv[7])) : 0;
     
     std::ifstream fin;
     if(in_is_binary)
@@ -47,7 +48,11 @@ int main(int argc, char **argv) {
         exit(1); 
     }
     
-	std::ofstream fout(filepath_out.c_str(), std::ios_base::binary);
+    std::ofstream fout;
+    if(out_be_binary)
+        fout.open(filepath_out.c_str(), std::ios_base::binary);
+    else
+        fout.open(filepath_out.c_str(), std::ios_base::in);
     
     // Consume comments identified by '#' and '%' characters
     // Linebased read/write of pairs
@@ -74,23 +79,34 @@ int main(int argc, char **argv) {
             fin.read(reinterpret_cast<char*>(&j), sizeof(uint32_t));
             j = j + displacement;
             offset += sizeof(uint32_t);
+            
             if(in_is_weighted)
             {
                 fin.read(reinterpret_cast<char*>(&w), sizeof(uint32_t));
                 offset += sizeof(uint32_t);
             }
-            fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
-            fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
+            else
+                w = 1 + (std::rand() % (127 + 1));
+            
+            if(out_be_binary)
+            {
+                fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
+                fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
+            }
+            else
+                fout << i << " " << j;
+            
             if(out_be_weighted)
             {
-                if(in_is_weighted)
+                if(out_be_binary)
                     fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
                 else
-                {
-                    w = 1 + (std::rand() % (127 + 1));
-                    fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
-                }
+                    fout << " " << w;
             }
+            
+            if(not out_be_binary)
+                fout << "\n";
+            
             //printf("%d %d %d\n", i, j, w);
             num_edges++;
             num_vertices = (num_vertices < i) ? i : num_vertices;
@@ -120,21 +136,32 @@ int main(int argc, char **argv) {
                 if(in_is_weighted)
                     iss >> i >> j >> w;
                 else
+                {
+                    w = 1 + (std::rand() % (127 + 1));
                     iss >> i >> j;
+                }
                 i = i + displacement;
                 j = j + displacement;
-                fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
-                fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
+                
+                if(out_be_binary)
+                {
+                    fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
+                    fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
+                }
+                else
+                    fout << i << " " << j;
+                
                 if(out_be_weighted)
                 {
-                    if(in_is_weighted)
+                    if(out_be_binary)
                         fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
                     else
-                    {
-                        w = 1 + (std::rand() % (127 + 1));
-                        fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
-                    }
+                        fout << " " << w;
                 }
+                
+                if(not out_be_binary)
+                    fout << "\n";
+                
                 num_edges++;
                 num_vertices = (num_vertices < i) ? i : num_vertices;
                 num_vertices = (num_vertices < j) ? j : num_vertices;
