@@ -2193,18 +2193,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     //Env::barrier();
     
     if(stationary)
-        //combine_postprocess_stationary_for_all();
-        combine_postprocess_stationary_for_some();
+        combine_postprocess_stationary_for_all();
+        //combine_postprocess_stationary_for_some();
     else
     {
-        //combine_postprocess_nonstationary_for_all();
-        combine_postprocess_nonstationary_for_some();
+        combine_postprocess_nonstationary_for_all();
+        //combine_postprocess_nonstationary_for_some();
         
         std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
         std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
     }
     //wait_for_all();
-    Env::barrier();    
+   // Env::barrier();    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
