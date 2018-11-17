@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     if(out_be_binary)
         fout.open(filepath_out.c_str(), std::ios_base::binary);
     else
-        fout.open(filepath_out.c_str(), std::ios_base::in);
+        fout.open(filepath_out.c_str(), std::ios_base::out);
     
     // Consume comments identified by '#' and '%' characters
     // Linebased read/write of pairs
