@@ -35,9 +35,10 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
+    Hashing_type HT = BUCKET;
     bool parread = true;
     Graph<wp, ip, ip> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
     bool stationary = true;
     bool activity_filtering = false; // Has no effect (Always off)
     bool tc_family = false;
