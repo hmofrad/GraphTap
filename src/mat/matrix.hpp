@@ -12,6 +12,7 @@
 #include <vector>
 #include "mpi/types.hpp" 
 #include "mat/tiling.hpp" 
+#include "mat/hashers.hpp" 
 #include "ds/vector.hpp" 
 #include "ds/indexed_sort.hpp"
 
@@ -78,7 +79,7 @@ class Matrix
     
     public:    
         Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_,
-               Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
+               Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_);
         ~Matrix();
     private:
         Integer_Type nrows, ncols;
@@ -91,6 +92,8 @@ class Matrix
         bool directed;
         bool transpose;
         bool parallel_edges;
+        Hashing_type hashing_type;
+        ReversibleHasher *hasher = nullptr;
         bool parread;
         /*
         Vector<Weight, Integer_Type, char> *I = nullptr; // Row indices
@@ -175,6 +178,7 @@ class Matrix
         std::vector<Integer_Type> nnz_col_sizes_loc;
         
         void free_tiling();
+        void free_hasher();
         void init_matrix();
         void del_triples();
         void init_tiles();
@@ -217,7 +221,7 @@ class Matrix
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
     Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_, Tiling_type tiling_type_, 
-    Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
+    Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -230,6 +234,12 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     transpose = transpose_;
     parallel_edges = parallel_edges_;
     parread = parread_;
+    
+    hashing_type = hashing_type_;
+    if (hashing_type == NONE)
+        hasher = new NullHasher();
+    else if (hashing_type == BUCKET)
+        hasher = new SimpleBucketHasher(nrows, Env::nranks);
     
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type_);
@@ -245,6 +255,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::free_tiling()
 {
     delete tiling;
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::free_hasher()
+{
+    delete hasher;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
