@@ -15,6 +15,7 @@
 #include "ds/triple.hpp"
 #include "ds/compressed_storage.hpp"
 #include "mat/matrix.hpp"
+#include "mat/hashers.hpp"
 
 /* Class template specialization for Weight
  * We think of two ways for processing graphs with empty weights:
@@ -43,13 +44,13 @@ class Graph
         void load(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_ = true, bool transpose_ = false, bool self_loops_ = true, bool acyclic_ = false,
             bool parallel_edges_ = true, Tiling_type tiling_type_ = _2D_, Compression_type compression_type_ = _CSC_, 
-            Filtering_type filtering_type_ = _SOME_, bool parread_ = true);
+            Filtering_type filtering_type_ = _SOME_, Hashing_type hashing_type_ = NONE, bool parread_ = true);
         void load_binary(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-            Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
+            Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_);
         void load_text(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-            Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
+            Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_);
             
         void free();
 
@@ -62,13 +63,15 @@ class Graph
         bool self_loops;
         bool acyclic;
         bool parallel_edges;
+        Hashing_type hashing_type; 
+        ReversibleHasher *hasher = nullptr;
         bool parread;
         Matrix<Weight, Integer_Type, Fractional_Type> *A;
         
         void init_graph(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_, 
                bool directed_, bool transpose_, bool self_loops_, bool acyclic_,
-               bool parallel_edges_, Tiling_type tiling_type, 
-               Compression_type compression_type_, Filtering_type filtering_type_, bool parread_);
+               bool parallel_edges_, Tiling_type tiling_type, Compression_type compression_type_, 
+               Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_);
         void read_text();
         void read_binary();
         void parread_text();
@@ -89,16 +92,19 @@ void Graph<Weight, Integer_Type, Fractional_Type>::free()
  
     A->del_filtering();
 
+    A->free_hasher();
+   
     A->free_tiling();
     
     delete A;
+    delete hasher;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepath_, 
            Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
            bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_,
-           Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
+           Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
 {
     filepath  = filepath_;
     nrows = nrows_ + 1; // In favor of vertex id 0
@@ -110,11 +116,20 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     acyclic = acyclic_;
     parallel_edges = parallel_edges_;
     parread = parread_;
+
+    hashing_type = hashing_type_;
+    
+    if (hashing_type == NONE)
+        hasher = new NullHasher();
+    else if (hashing_type == BUCKET)
+        hasher = new SimpleBucketHasher(nrows, Env::nranks);
+    
+    
     
     // Initialize matrix
     A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, directed_, transpose_, 
                                                           parallel_edges_, tiling_type_, compression_type_,
-                                                          filtering_type_, parread_);
+                                                          filtering_type_, hashing_type_, parread_);
 }
 
 /* The read_text and read_binary functions can be called indivdually from the user program.
@@ -124,7 +139,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
         bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-        Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
+        Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
 {
     double t1, t2;
     t1 = Env::clock();
@@ -155,11 +170,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* data1 = "Hitachi";
     if(!strcmp(token, text))
     {
-        load_text(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, tiling_type_, compression_type_, filtering_type_, parread_);
+        load_text(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
+        tiling_type_, compression_type_, filtering_type_, hashing_type_, parread_);
     }
     else if(!strcmp(token, data) or !strcmp(token, data1))
     {
-        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, tiling_type_, compression_type_, filtering_type_, parread_);
+        load_binary(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
+        tiling_type_, compression_type_, filtering_type_, hashing_type_, parread_);
     }
     else
     {
@@ -174,12 +191,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_,
-        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
+        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
 {
     // Initialize graph
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_,
-               tiling_type_, compression_type_, filtering_type_, parread_);
+               tiling_type_, compression_type_, filtering_type_, hashing_type_, parread_);
  
+    
     // Read graph
     if(parread_)
     {
@@ -217,11 +235,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_,
-        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, bool parread_)
+        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
 {
     // Initialize graph
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
-               tiling_type_, compression_type_, filtering_type_, parread_);
+               tiling_type_, compression_type_, filtering_type_, hashing_type_, parread_);
  
     // Read graph
     if(parread_)
@@ -630,7 +648,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
         
-        //printf("%d %d %d\n", triple.row, triple.col, triple.weight);
+        
         
         // Remove self-loops
         if (triple.row == triple.col)
@@ -650,12 +668,18 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         
         // Transpose
         if(transpose)
-        //{
             std::swap(triple.row, triple.col);
-        //}
+        
+       // printf("%d %d %d %d %d %d\n", triple.row, triple.col, hasher->hash(triple.row), hasher->hash(triple.col), hasher->unhash(hasher->hash(triple.row)), hasher->unhash(hasher->hash(triple.col)));
+       
+       // Hash
+        triple.row = (uint32_t) hasher->hash(triple.row);
+        triple.col = (uint32_t) hasher->hash(triple.col);
 
         // Insert edge
         A->insert(triple);
+        
+
         
         // Only for undirected graphs        
         if(not directed)
