@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
-    Hashing_type HT = BUCKET;
+    Hashing_type HT = NONE;
     bool parread = true;
     
     /* Degree execution */
