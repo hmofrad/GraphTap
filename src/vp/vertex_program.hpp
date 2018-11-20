@@ -922,6 +922,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 
     t2 = Env::clock();
     Env::print_time("Scatter_gather", t2 - t1);
+    //printf("rank=%d\n", Env::rank);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1169,7 +1170,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_stationary()
 {
-    printf("scatter:r=%d colgrp_nranks=%d rowgrp_nranks=%d\n", Env::rank, colgrp_nranks, rowgrp_nranks);
+   // printf("SCATTER:r=%d colgrp_nranks=%d rowgrp_nranks=%d\n", Env::rank, colgrp_nranks, rowgrp_nranks);
     uint32_t xo = accu_segment_col;
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type x_nitems = x_data.size();
@@ -1186,16 +1187,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             if(Env::comm_split)
             {
                follower = follower_colgrp_ranks_cg[i];
+               //printf("scatter:r=%d leader=%d --> follower=%d %d\n", Env::rank, Env::rank, follower, follower_rowgrp_ranks_rg.size());
                MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
                out_requests.push_back(request);
             }
             else
             {
                 follower = follower_colgrp_ranks[i];
+                //printf("scatter:r=%d leader=%d --> follower=%d\n", Env::rank, Env::rank, follower);
                 MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
             }
-            printf("scatter:r=%d leader=%d --> follower=%d\n", Env::rank, Env::rank, follower);
+            
         }
     }
     else if(tiling_type == Tiling_type::_1D_COL)
@@ -1212,8 +1215,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather_stationary()
 {  
-    printf("gather:r=%d rank_ncolgrps=%d rank_nrowgrps=%d\n", Env::rank, rank_ncolgrps, rank_nrowgrps);
-    uint32_t leader;
+   // printf("GATHER:r=%d rank_ncolgrps=%d rank_nrowgrps=%d\n", Env::rank, rank_ncolgrps, rank_nrowgrps);
+    uint32_t leader, my_rank;
     MPI_Request request;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW)
@@ -1227,11 +1230,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
             if(Env::comm_split)
             {
                 leader = leader_ranks_cg[col_group];
-                if(leader != Env::rank_cg)
+                if(ordering_type == _ROW_)
+                    my_rank = Env::rank_cg;
+                else
+                    my_rank = Env::rank_rg;
+                    
+                if(leader != my_rank)
                 {
                     MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
                     in_requests.push_back(request);
-                    printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
+                    //printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
                 }
             }
             else
@@ -1241,7 +1249,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
                 {
                     MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
                     in_requests.push_back(request);
-                    printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
+                 //   printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
                 }
             }
         }
