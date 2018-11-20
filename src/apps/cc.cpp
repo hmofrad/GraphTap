@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     // Only CSC is supported for nonstationary algorithms
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
-    Hashing_type HT = BUCKET;
+    Hashing_type HT = NONE;
     bool parread = true;
     
     /* Connected component execution */
