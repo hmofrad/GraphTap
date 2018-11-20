@@ -9,14 +9,14 @@ MPI_CXX = mpicxx
 CXX_FLAGS = -std=c++14 -fpermissive
 MACROS=-DHAS_WEIGHT
 # Definitely Turn this on for faster binaries
-OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 # Do not turn on the DEBUG flag unless using mpich
 #DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 
 .PHONY: all clean
 
-objs  = deg #deg pr tc cc bfs sssp
+objs  = deg pr tc cc bfs sssp
 
 all: $(objs)
 
