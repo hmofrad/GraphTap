@@ -893,7 +893,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         if(iteration > 0)
             scatter_gather_stationary();
         if(Env::comm_split)
-            bcast_stationary();
+        {
+            //bcast_stationary();
+            
+            scatter_stationary();
+            gather_stationary();
+            
+        }
         else
         {
             scatter_stationary();
@@ -1163,6 +1169,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_stationary()
 {
+    printf("scatter:r=%d colgrp_nranks=%d rowgrp_nranks=%d\n", Env::rank, colgrp_nranks, rowgrp_nranks);
     uint32_t xo = accu_segment_col;
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type x_nitems = x_data.size();
@@ -1188,6 +1195,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
             }
+            printf("scatter:r=%d leader=%d --> follower=%d\n", Env::rank, Env::rank, follower);
         }
     }
     else if(tiling_type == Tiling_type::_1D_COL)
@@ -1204,6 +1212,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather_stationary()
 {  
+    printf("gather:r=%d rank_ncolgrps=%d rank_nrowgrps=%d\n", Env::rank, rank_ncolgrps, rank_nrowgrps);
     uint32_t leader;
     MPI_Request request;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
@@ -1222,6 +1231,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
                 {
                     MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
                     in_requests.push_back(request);
+                    printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
                 }
             }
             else
@@ -1231,6 +1241,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
                 {
                     MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
                     in_requests.push_back(request);
+                    printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
                 }
             }
         }
@@ -1261,7 +1272,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
     {
         for(uint32_t i = 0; i < rank_ncolgrps; i++)
         {
-            leader = leader_ranks_cg[local_col_segments[i]];
+            int32_t col_group = local_col_segments[i];
+            leader = leader_ranks_cg[col_group];
+            //leader = leader_ranks_cg[local_col_segments[i]];
             std::vector<Fractional_Type> &xj_data = X[i];
             Integer_Type xj_nitems = xj_data.size();
             if(Env::comm_split)
