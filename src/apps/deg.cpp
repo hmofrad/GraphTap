@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
-    Hashing_type HT = BUCKET;
+    Hashing_type HT = NONE;
     bool parread = true;
     Graph<wp, ip, ip> G;    
     G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
