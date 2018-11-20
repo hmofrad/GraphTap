@@ -36,11 +36,12 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _NONE_; // Do not turn on
+    Hashing_type HT = BUCKET;
     bool parread = true;
     
     /* Triangle counting execution */
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
     bool stationary = false;
     bool activity_filtering = false; // Has no effect (always on)
     bool tc_family = true;
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
     
     transpose = false;
     Graph<wp, ip, fp> GR;    
-    GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
     // Run 2nd vertex program and calculate outgoing adjacency list
     TC_Program<wp, ip, fp> VR(GR, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);  
     VR.initialize(V);
