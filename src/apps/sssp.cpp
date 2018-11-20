@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _SOME_;
+    Hashing_type HT = BUCKET;
     bool parread = true;
     
     /* Single Source Shortest Path (SSSP) execution*/
@@ -44,7 +45,7 @@ int main(int argc, char **argv)
     if(not stationary and directed)
         transpose = not transpose; 
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, parread);
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
     bool activity_filtering = true;
     bool tc_family  = false;
     bool gather_depends_on_apply = true;
