@@ -8,6 +8,8 @@
 #define VERTEX_PROGRAM_HPP
 
 #include <type_traits>
+#include <numeric>
+
 
 #include "ds/vector.hpp"
 #include "mpi/types.hpp" 
@@ -215,7 +217,11 @@ class Vertex_Program
         double activity_filtering_ratio = 0.6;
         bool activity_filtering = true;
         bool accu_activity_filtering = false;
-        bool msgs_activity_filtering = false;        
+        bool msgs_activity_filtering = false;  
+        
+        std::vector<double> scatter_gather_time;
+        std::vector<double> combine_time;
+        std::vector<double> apply_time;
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -885,7 +891,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather()
 {
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
 
     if(stationary)
@@ -921,7 +927,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
 
     t2 = Env::clock();
-    Env::print_time("Scatter_gather", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Scatter_gather", elapsed_time);
+    scatter_gather_time.push_back(elapsed_time);
     //printf("rank=%d\n", Env::rank);
 }
 
@@ -1740,7 +1748,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine()
 {
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
     
     if(stationary)
@@ -1790,7 +1798,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     }
         
     t2 = Env::clock();
-    Env::print_time("Combine", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Combine", elapsed_time);
+    combine_time.push_back(elapsed_time);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2656,7 +2666,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_f
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply()
 {
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
 
     if(stationary)
@@ -2672,7 +2682,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply(
     }
 
     t2 = Env::clock();
-    Env::print_time("Apply", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Apply", elapsed_time);
+    apply_time.push_back(elapsed_time);
 }
 
 
@@ -3222,6 +3234,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     Env::barrier();
     if(!Env::rank)
     {
+        std::cout << "Scatter_gather time (avg): " << std::accumulate(scatter_gather_time.begin(), scatter_gather_time.end(), 0.0) /iteration << std::endl;
+        std::cout << "Combine time        (avg): " << std::accumulate(combine_time.begin(), combine_time.end(), 0.0) / iteration << std::endl;
+        std::cout << "Apply time          (avg): " << std::accumulate(apply_time.begin(), apply_time.end(), 0.0) / iteration << std::endl;
+        
         Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
         {
@@ -3231,7 +3247,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
             Vertex_State &state = V[i];
             std::cout << std::fixed <<  "vertex[" << A->hasher->unhash(pair1.row) << "]:" << state.print_state() << std::endl;
             //std::cout << std::fixed <<  "vertex[" << pair1.row << "]:" << state.print_state() << std::endl;
-        }  
+        }
     }
     Env::barrier();
 }
