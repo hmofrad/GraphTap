@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     Env::init(comm_split);    
     double time1 = Env::clock();   
     
-    if(argc != 4)
+    if(argc > 4)
     {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> <root>\"" << std::endl; 
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     Tiling_type TT = _2D_;
     Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _SOME_;
-    Hashing_type HT = BUCKET;
+    Hashing_type HT = NONE;
     bool parread = true;
     
     /* Single Source Shortest Path (SSSP) execution*/
