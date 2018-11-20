@@ -1091,6 +1091,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         uint32_t r = (Env::rank + i) % Env::nranks;
         if(r != Env::rank)
         {
+            auto &inbox = inboxes[r];
+            inbox.resize(inbox_sizes[r]);
+            MPI_Irecv(inbox.data(), inbox.size(), MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);    
+            in_requests.push_back(request);
+        }
+    }
+    
+    for (uint32_t i = 0; i < Env::nranks; i++)
+    {
+        uint32_t r = (Env::rank + i) % Env::nranks;
+        if(r != Env::rank)
+        {
             auto &outbox = outboxes[r];
             uint32_t outbox_bound = outbox.size();
             MPI_Isend(outbox.data(), outbox.size(), MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);
@@ -1098,18 +1110,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }     
      
-     
-    for (uint32_t i = 0; i < Env::nranks; i++)
-    {
-        uint32_t r = (Env::rank + i) % Env::nranks;
-        if(r != Env::rank)
-        {
-            auto &inbox = inboxes[r];
-            inbox.resize(inbox_sizes[r]);
-            MPI_Irecv(inbox.data(), inbox.size(), MANY_TRIPLES, r, 1, Env::MPI_WORLD, &request);    
-            in_requests.push_back(request);
-        }
-    }
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);   
