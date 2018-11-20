@@ -27,7 +27,6 @@ int main(int argc, char **argv)
     
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    //ip num_iterations = 1;
     bool directed = true;
     bool transpose = true;
     bool self_loops = false;
@@ -55,6 +54,7 @@ int main(int argc, char **argv)
     Env::barrier();
     
     transpose = false;
+    //OT = _ROW_;
     Graph<wp, ip, fp> GR;    
     GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
     // Run 2nd vertex program and calculate outgoing adjacency list
