@@ -12,6 +12,7 @@
 #include "ds/vector.hpp"
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
+#include "mat/hashers.hpp"
 
 struct State { State() {}; };
 
@@ -208,7 +209,6 @@ class Vertex_Program
         std::vector<std::vector<std::vector<Integer_Type>>> Z_SIZE; // Accumulators sizes
         std::vector<std::vector<Integer_Type>> inboxes; // Temporary buffers for deserializing the adjacency lists
         std::vector<std::vector<Integer_Type>> outboxes;// Temporary buffers for  serializing the adjacency lists
-        
         
         bool directed;
         bool transpose;
@@ -3200,7 +3200,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
             pair.col = 0;
             pair1 = A->base(pair, owned_segment, owned_segment);
             Vertex_State &state = V[i];
-            std::cout << std::fixed <<  "vertex[" << pair1.row << "]:" << state.print_state() << std::endl;
+            std::cout << std::fixed <<  "vertex[" << A->hasher->unhash(pair1.row) << "]:" << state.print_state() << std::endl;
+            //std::cout << std::fixed <<  "vertex[" << pair1.row << "]:" << state.print_state() << std::endl;
         }  
     }
     Env::barrier();
