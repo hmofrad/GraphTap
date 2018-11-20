@@ -1532,10 +1532,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                     }
                 }
             }
-            else
+            else if(ordering_type == _COL_)
             {
-                fprintf(stderr, "Invalid ordering type\n");
-                Env::exit(1);
+                
+                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                {
+                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                    {
+                        //pair = A->base({j + (owned_segment * tile_width), IA[i]}, tile.rg, tile.cg);
+                        pair = A->base({IA[i] + (owned_segment * tile_height), j}, tile.rg, tile.cg);
+                        z_data[j].push_back(pair.col);
+                    }
+                }
             }                
         }
         else
