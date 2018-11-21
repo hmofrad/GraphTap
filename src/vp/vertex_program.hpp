@@ -900,10 +900,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             scatter_gather_stationary();
         if(Env::comm_split)
         {
-            //bcast_stationary();
+            bcast_stationary();
             
-            scatter_stationary();
-            gather_stationary();
+            //scatter_stationary();
+            //gather_stationary();
             
         }
         else
