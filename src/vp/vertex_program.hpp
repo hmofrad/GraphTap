@@ -1263,8 +1263,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
         }
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -1281,6 +1281,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_stationary()
 {
+    MPI_Request request;
     uint32_t leader;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW) 
@@ -1294,13 +1295,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
             std::vector<Fractional_Type> &xj_data = X[i];
             Integer_Type xj_nitems = xj_data.size();
             if(Env::comm_split)
-                MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator);
+            {
+                //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator);
+                MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator, &request);
+                out_requests.push_back(request);
+            }
             else
             {
                 fprintf(stderr, "Invalid communicator\n");
                 Env::exit(1);
             }
-        }        
+        }
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();        
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -2232,12 +2239,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     //Env::barrier();
     
     if(stationary)
-        combine_postprocess_stationary_for_all();
-        //combine_postprocess_stationary_for_some();
+        //combine_postprocess_stationary_for_all();
+        combine_postprocess_stationary_for_some();
     else
     {
-        combine_postprocess_nonstationary_for_all();
-        //combine_postprocess_nonstationary_for_some();
+        //combine_postprocess_nonstationary_for_all();
+        combine_postprocess_nonstationary_for_some();
         
         std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
         std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
@@ -2270,7 +2277,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         for(uint32_t i = 0; i < yj_nitems; i++)
             combiner(y_data[i], yj_data[i]);
     }
-    wait_for_sends();
+    //wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2311,7 +2318,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     }
     in_requests.clear();
     
-    wait_for_sends();
+    //wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2354,7 +2361,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         }
     }
 
-    wait_for_sends();
+    //wait_for_sends();
     //Env::barrier();  
 }
 
@@ -2612,7 +2619,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             in_requests.clear();
             in_requests_.clear();   
         }
-        wait_for_sends();
+        //wait_for_sends();
     }
     else
         //combine_postprocess_stationary_for_all();
@@ -3183,7 +3190,9 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
     MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(c_sum_gloabl == (tile_height * Env::nranks))
         converged = true;
-
+    
+    wait_for_sends();
+    
     return(converged);   
 }
 
