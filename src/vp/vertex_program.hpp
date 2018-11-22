@@ -1179,8 +1179,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
         }
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -1379,8 +1379,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
         }
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();
+        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        //out_requests.clear();
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -2169,7 +2169,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         for(uint32_t i = 0; i < yj_nitems; i++)
             combiner(y_data[i], yj_data[i]);
     }
-    wait_for_sends();
+    //wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2207,7 +2207,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         received += outcount;
     }
     in_requests.clear();
-    wait_for_sends();
+    //wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2247,7 +2247,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combiner(y_data[i], yj_data[i]);
         }
     }
-    wait_for_sends();
+    //wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2480,7 +2480,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             }
             in_requests.clear();
             in_requests_.clear();   
-            wait_for_sends();
+            //wait_for_sends();
         }
     }
     else
@@ -2602,6 +2602,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         }
     }
 
+    wait_for_sends();
+    
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < Y[i].size(); j++)
@@ -2708,6 +2710,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             */
         }
     }
+    
+    wait_for_sends();
     
     if(not gather_depends_on_apply and not apply_depends_on_iter)
     {
