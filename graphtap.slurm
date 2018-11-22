@@ -11,7 +11,7 @@
 ##SBATCH --ntasks-per-socket=8
 #SBATCH --time=00:10:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=opa
+#SBATCH --partition=ib
 
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
@@ -33,7 +33,7 @@ export I_MPI_FABRICS=shm:ofa
 
 export SLURM_CPU_BIND="none"
 export I_MPI_FALLBACK=0
-export I_MPI_DEBUG=2
+#export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
@@ -93,3 +93,6 @@ strings graphtap.out | grep 'Execute time'
 strings graphtap.out | grep 'Iterations'
 strings graphtap.out | grep 'Value checksum'
 strings graphtap.out | grep 'Reachable vertices'
+strings graphtap.out | grep 'Scatter_gather time (avg)'
+strings graphtap.out | grep 'Combine time        (avg)'
+strings graphtap.out | grep 'Apply time          (avg)'
