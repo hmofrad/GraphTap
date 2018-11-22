@@ -101,6 +101,7 @@ class Vertex_Program
         void apply_stationary();
         void apply_nonstationary();
         void apply_tc();
+        struct Triple<Weight, double> stats(std::vector<double> &vec);
         
         void spmv(struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
                 std::vector<Fractional_Type> &y_data, 
@@ -2033,26 +2034,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             my_rank = pair2.col;
             if(leader == my_rank)
             {
-                /*
-                if(activity_filtering and activity_statuses[tile.rg])
-                {
-                    std::vector<Integer_Type> &yi_data = YI[yi][yo];
-                    std::vector<Fractional_Type> &yv_data = YV[yi][yo];
-                    std::vector<char> &t_data = T[yi];
-                    Integer_Type j = 0;
-                    for(uint32_t i = 0; i < y_nitems; i++)
-                    {
-                        if(t_data[i])
-                        {
-                            yi_data[j] = i;
-                            yv_data[j] = y_data[i];
-                            j++;
-                        }
-                    }
-                    accus_activity_statuses[yo] = j + 1;
-                }
-                */
-                
                 for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
                 {
                     if(Env::comm_split)
@@ -2114,23 +2095,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                     }
                     nitems = j;
                     nitems++;
-                    /*
-                    double ratio = (double) nitems/y_nitems;
-                    if(ratio <= activity_filtering_ratio)
-                    {
-                        accu_activity_filtering = true;                            
-                        nitems++;
-                    }
-                    else
-                    {
-                        nitems = 0;
-                        accu_activity_filtering = false;
-                    }    
-                    */
-                //}                        
-                
-                //if(activity_filtering and activity_statuses[tile.rg])
-                //{
                     MPI_Send(&nitems, 1, TYPE_INT, leader, pair_idx, communicator);
                     if(nitems > 1)
                     {
@@ -2150,25 +2114,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
-    //wait_for_all();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess()
 {
     if(incremental_accumulation)
-    {
-        if(stationary)
-            combine_postprocess_stationary_for_all();
-        else
-        {
-            combine_postprocess_nonstationary_for_all();
-            
-            std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
-            std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
-        }
-    }
-    else
     {
         if(stationary)
             combine_postprocess_stationary_for_some();
@@ -2179,7 +2130,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
             std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
         }
-        
+    }
+    else
+    {
+        if(stationary)
+            combine_postprocess_stationary_for_all();
+        else
+        {
+            combine_postprocess_nonstationary_for_all();
+            
+            std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
+            std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
+        }
     }
 }
 
@@ -3127,13 +3089,17 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     Integer_Type v_nitems = V.size();
     count = (v_nitems < count) ? v_nitems : count;
     Env::barrier();
+    Triple<Weight, Integer_Type> pair, pair1;
+    Triple<Weight, double> stats_pair;
     if(!Env::rank)
     {
-        std::cout << "Scatter_gather time (avg): " << std::accumulate(scatter_gather_time.begin(), scatter_gather_time.end(), 0.0) /iteration << std::endl;
-        std::cout << "Combine time        (avg): " << std::accumulate(combine_time.begin(), combine_time.end(), 0.0) / iteration << std::endl;
-        std::cout << "Apply time          (avg): " << std::accumulate(apply_time.begin(), apply_time.end(), 0.0) / iteration << std::endl;
+        stats_pair = stats(scatter_gather_time);
+        std::cout << "Scatter_gather time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        stats_pair = stats(combine_time);
+        std::cout << "Combine time        (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        stats_pair = stats(apply_time);
+        std::cout << "Apply time          (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         
-        Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
         {
             pair.row = i;
@@ -3145,5 +3111,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
         }
     }
     Env::barrier();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+struct Triple<Weight, double> Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::stats(std::vector<double> &vec)
+{
+    double sum = std::accumulate(vec.begin(), vec.end(), 0.0);
+    double mean = sum / vec.size();
+    double sq_sum = std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0);
+    double std_dev = std::sqrt(sq_sum / vec.size() - mean * mean);
+    return{mean, std_dev};
 }
 #endif
