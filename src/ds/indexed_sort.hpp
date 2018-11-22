@@ -10,8 +10,9 @@
 template<typename Integer_Type>
 std::vector<Integer_Type> sort_indices(const std::vector<Integer_Type> &v) 
 {
-    std::vector<Integer_Type> idx(v.size());
-    for(Integer_Type i = 0; i < v.size(); i++ )
+    Integer_Type sz = v.size();
+    std::vector<Integer_Type> idx(sz);
+    for(Integer_Type i = 0; i < sz; i++ )
         idx[i] = i;
     //std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(),
