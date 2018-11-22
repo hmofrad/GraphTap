@@ -196,7 +196,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     // Initialize graph
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_,
                tiling_type_, compression_type_, filtering_type_, hashing_type_, parread_);
- 
     
     // Read graph
     if(parread_)
@@ -322,24 +321,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::read_text()
         nedges++;
         offset = fin.tellg();
         
-        /*
-        // Transpose
-        if(transpose)
-        {
-            #ifdef HAS_WEIGHT
-            iss >> triple.col >> triple.row >> triple.weight;
-            #else    
-            iss >> triple.col >> triple.row;
-            #endif
-        }
-        else
-        {
-        */
-            #ifdef HAS_WEIGHT
-            iss >> triple.row >> triple.col >> triple.weight;
-            #else
-            iss >> triple.row >> triple.col;
-            #endif
+        #ifdef HAS_WEIGHT
+        iss >> triple.row >> triple.col >> triple.weight;
+        #else
+        iss >> triple.row >> triple.col;
+        #endif
 
         // Remove self-loops
         if (triple.row == triple.col)
@@ -467,7 +453,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
     }
 
     // Obtain filesize
-    uint64_t filesize = 0, skip = 0,share = 0, offset = 0, endpos = 0;
+    uint64_t filesize = 0, skip = 0, share = 0, offset = 0, endpos = 0;
     fin.seekg (0, std::ios_base::end);
     filesize = (uint64_t) fin.tellg();
     fin.seekg(0, std::ios_base::beg);
@@ -516,7 +502,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
     uint64_t nedges_local = 0;
     uint64_t nedges_global = 0;
     struct Triple<Weight, Integer_Type> triple;
-    struct Triple<Weight, Integer_Type> pair;
     std::istringstream iss;
     while (std::getline(fin, line) && !line.empty() && offset < endpos)
     {
@@ -535,23 +520,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         nedges_local++;
         offset++;
         
-        // Transpose
-        //if(transpose)
-        //{
-            //#ifdef HAS_WEIGHT
-            //iss >> triple.col >> triple.row >> triple.weight;
-          //  #else    
-          //  iss >> triple.col >> triple.row;
-          //  #endif
-        //}
-        //else
-        //{
-            #ifdef HAS_WEIGHT
-            iss >> triple.row >> triple.col >> triple.weight;
-            #else
-            iss >> triple.row >> triple.col;
-            #endif
-        //}
+        #ifdef HAS_WEIGHT
+        iss >> triple.row >> triple.col >> triple.weight;
+        #else
+        iss >> triple.row >> triple.col;
+        #endif
         
         // Remove self-loops
         if (triple.row == triple.col)
@@ -570,7 +543,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         // Transpose
         if(transpose)
             std::swap(triple.row, triple.col);
-        
         
         // Insert edge
         A->insert(triple);
@@ -593,7 +565,10 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text()
         
     }
     fin.close();
-    assert(offset == endpos);   
+    assert(offset == endpos); 
+
+    if(Env::rank == Env::nranks - 1)
+        assert(filesize == endpos);
     
     MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
@@ -615,7 +590,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     }
     
     // Obtain filesize
-    uint64_t filesize = 0, skip = 0,share = 0, offset = 0, endpos = 0;
+    uint64_t filesize = 0, share = 0, offset = 0, endpos = 0;
     fin.seekg (0, std::ios_base::end);
     filesize = (uint64_t) fin.tellg();
     nedges = filesize / sizeof(Triple<Weight, Integer_Type>);
@@ -632,8 +607,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
     uint64_t nedges_global = 0;
     
     struct Triple<Weight, Integer_Type> triple;
-    struct Triple<Weight, Integer_Type> pair;
-    //printf("SZ=%lu\n", sizeof(pair));
+
     while (offset < endpos)
     {
         fin.read(reinterpret_cast<char *>(&triple), sizeof(triple));
@@ -643,12 +617,9 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             fprintf(stderr, "read() failure\n");
             Env::exit(1);
         }
-        //if(triple.row == 2 or triple.col == 2)
-        //    printf("<%d %d>\n", triple.row, triple.col);
+
         nedges_local++;
         offset += sizeof(Triple<Weight, Integer_Type>);
-        
-        
         
         // Remove self-loops
         if (triple.row == triple.col)
@@ -656,8 +627,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
             if(not self_loops)
                 continue;
         }
-        
-
         
         // Remove cycles
         if(acyclic)
@@ -669,17 +638,13 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary()
         // Transpose
         if(transpose)
             std::swap(triple.row, triple.col);
-        
-       // printf("%d %d %d %d %d %d\n", triple.row, triple.col, hasher->hash(triple.row), hasher->hash(triple.col), hasher->unhash(hasher->hash(triple.row)), hasher->unhash(hasher->hash(triple.col)));
-       
-       // Hash
+
+        // Hash
         triple.row = (uint32_t) hasher->hash(triple.row);
         triple.col = (uint32_t) hasher->hash(triple.col);
 
         // Insert edge
         A->insert(triple);
-        
-
         
         // Only for undirected graphs        
         if(not directed)
