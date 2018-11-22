@@ -494,7 +494,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
                     break;
             }
             else if(iteration >= num_iterations)
+            {
                 break;
+            }
         }
     }
     t2 = Env::clock();
@@ -1177,8 +1179,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
         }
         MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
         in_requests.clear();
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -2167,6 +2169,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         for(uint32_t i = 0; i < yj_nitems; i++)
             combiner(y_data[i], yj_data[i]);
     }
+    wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2204,6 +2207,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         received += outcount;
     }
     in_requests.clear();
+    wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2243,6 +2247,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combiner(y_data[i], yj_data[i]);
         }
     }
+    wait_for_sends();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2475,6 +2480,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             }
             in_requests.clear();
             in_requests_.clear();   
+            wait_for_sends();
         }
     }
     else
@@ -3038,8 +3044,6 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
     MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     if(c_sum_gloabl == (tile_height * Env::nranks))
         converged = true;
-    
-    wait_for_sends();
     
     return(converged);   
 }
