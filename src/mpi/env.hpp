@@ -291,8 +291,9 @@ void Env::affinity()
   
     for (it=machines_all.begin(); it!=machines_all.end(); it++)
     {
+        int sz = machines.size();
         int idx = distance(machines.begin(), find(machines.begin(), machines.end(), *it));
-        assert((idx >= 0) && (idx < machines.size()));
+        assert((idx >= 0) && (idx < sz));
 	  
         machines_nranks[idx]++;
         int idx1 = it - machines_all.begin();
@@ -334,7 +335,8 @@ void Env::affinity()
             std::cout << "| machine_ncores=" << machines_ncores[i];
             std::cout << "| machine_nsockets=" << machines_nsockets[i] << "\n";
             std::cout << "Machine " << i << "=[rank,core]: " ;
-            for(int j= 0; j < machines_ranks[i].size(); j++) 
+            int sz = machines_ranks[i].size();
+            for(int j= 0; j < sz; j++) 
             {
                 std::cout << "[" << machines_ranks[i][j] <<  "," << machines_cores[i][j] << "]";
             }
