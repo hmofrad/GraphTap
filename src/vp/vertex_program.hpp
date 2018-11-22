@@ -217,11 +217,17 @@ class Vertex_Program
         double activity_filtering_ratio = 0.6;
         bool activity_filtering = true;
         bool accu_activity_filtering = false;
-        bool msgs_activity_filtering = false;  
+        bool msgs_activity_filtering = false;
+        
+        bool broadcast_communication = true;
+        bool incremental_accumulation = true;
+        
         
         std::vector<double> scatter_gather_time;
         std::vector<double> combine_time;
         std::vector<double> apply_time;
+        
+        
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -898,13 +904,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     {
         if(iteration > 0)
             scatter_gather_stationary();
+        
         if(Env::comm_split)
         {
-            bcast_stationary();
-            
-            //scatter_stationary();
-            //gather_stationary();
-            
+            if(broadcast_communication)
+                bcast_stationary();
+            else
+            {
+                scatter_stationary();
+                gather_stationary();
+            }
         }
         else
         {
@@ -916,9 +925,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     {
         if(iteration > 0)
             scatter_gather_nonstationary();
+        
         scatter_gather_nonstationary_activity_filtering();
+        
         if(Env::comm_split)
-            bcast_nonstationary();
+        {
+            if(broadcast_communication)
+                bcast_nonstationary();
+            else
+            {   
+                scatter_nonstationary();
+                gather_nonstationary();
+            }
+        }
         else
         {
             scatter_nonstationary();
@@ -1481,6 +1500,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_nonstationary()
 {
+    MPI_Request request;
     uint32_t leader, leader_cg;
     if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
         or (tiling_type == Tiling_type::_1D_ROW) 
@@ -1496,7 +1516,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
             int nitems = 0;
             if(Env::rank_cg == leader_cg)
                 nitems = msgs_activity_statuses[i];
-            MPI_Bcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator);
+            //MPI_Bcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator);
+            MPI_Ibcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
+            MPI_Wait(&request, MPI_STATUSES_IGNORE);
+            
             if(Env::rank_cg != leader_cg)
                 msgs_activity_statuses[i] = nitems;
             
@@ -1506,8 +1529,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
                 {
                     if(nitems > 1)
                     {
-                        MPI_Bcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator);
-                        MPI_Bcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                        //MPI_Bcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator);
+                        //MPI_Bcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                        
+                        MPI_Ibcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
+                        out_requests.push_back(request);
+                        MPI_Ibcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
+                        out_requests.push_back(request);
                     }
                 }
                 else
@@ -1519,7 +1547,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
             else
             {
                 if(Env::comm_split)
-                    MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                {
+                    //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                    MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
+                    out_requests.push_back(request);
+                }
                 else
                 {
                     fprintf(stderr, "Invalid communicator\n");
@@ -1527,6 +1559,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
                 }
             }
         }
+        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+        out_requests.clear();     
     }
     else if(tiling_type == Tiling_type::_1D_COL)
     {
@@ -2236,21 +2270,31 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_postprocess()
 {
-    //Env::barrier();
-    
-    if(stationary)
-        //combine_postprocess_stationary_for_all();
-        combine_postprocess_stationary_for_some();
+    if(incremental_accumulation)
+    {
+        if(stationary)
+            combine_postprocess_stationary_for_all();
+        else
+        {
+            combine_postprocess_nonstationary_for_all();
+            
+            std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
+            std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
+        }
+    }
     else
     {
-        //combine_postprocess_nonstationary_for_all();
-        combine_postprocess_nonstationary_for_some();
+        if(stationary)
+            combine_postprocess_stationary_for_some();
+        else
+        {
+            combine_postprocess_nonstationary_for_some();
+            
+            std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
+            std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
+        }
         
-        std::fill(msgs_activity_statuses.begin(), msgs_activity_statuses.end(), 0);
-        std::fill(accus_activity_statuses.begin(), accus_activity_statuses.end(), 0);
     }
-    //wait_for_all();
-   // Env::barrier();    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
