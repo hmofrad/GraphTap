@@ -1,5 +1,5 @@
 /*
- * graphtap.cpp: GraphTap SpMV implementation
+ * tcsc.cpp: TCSC SpMV implementation (GraphTap)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
@@ -17,9 +17,6 @@
 #include <vector>
 #include <algorithm>
 
-std::vector<uint32_t> y;
-std::vector<uint32_t> x;
-
 // Vertex filtering 
 uint32_t nnz_rows;
 std::vector<char> rows;
@@ -32,19 +29,6 @@ std::vector<int> rows2cols;
 uint32_t nnz_rows2cols;
 std::vector<int> cols2rows;
 
-uint32_t nnz;
-uint32_t ncols_plus_one;
-uint32_t *A;
-uint32_t *IA;
-uint32_t *JA;
-
-struct ColSort
-{
-    bool operator()(const struct Triple &a, const struct Triple &b)
-    {
-        return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
-    }
-};
 
 void filtering(uint32_t num_vertices)
 {
@@ -87,7 +71,7 @@ void filtering(uint32_t num_vertices)
     printf("[x]Filtering is done\n");
 }
 
-void init_csc(uint32_t nnz_, uint32_t ncols)
+void init_tcsc(uint32_t nnz_, uint32_t ncols)
 {
     nnz = nnz_;
     ncols_plus_one = ncols + 1;
@@ -116,7 +100,7 @@ void init_csc(uint32_t nnz_, uint32_t ncols)
     size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t));
 }
 
-void popu_csc()
+void popu_tcsc()
 {
     uint32_t i = 0;
     uint32_t j = 1;
@@ -135,14 +119,14 @@ void popu_csc()
     }
 }
 
-void csc()
+void run_tcsc()
 {
-    init_csc(triples->size(), nnz_cols);
-    popu_csc();
+    init_tcsc(triples->size(), nnz_cols);
+    popu_tcsc();
     printf("[x]Compression is done\n");
 }
 
-void walk_csc()
+void walk_tcsc()
 {
     for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
     {
@@ -154,14 +138,14 @@ void walk_csc()
     }
 }
 
-void init()
+void init_tcsc()
 {
     values.resize(num_vertices);
     y.resize(nnz_rows);
     x.resize(nnz_cols, 1);
 }
 
-void spmv()
+void spmv_tcsc()
 {
     for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
     {
@@ -179,7 +163,7 @@ void spmv()
     }
 }
 
-void done()
+void done_tcsc()
 {
     
     for(uint32_t i = 0; i < nnz_rows; i++)
