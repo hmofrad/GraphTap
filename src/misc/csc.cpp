@@ -89,7 +89,7 @@ void walk_csc()
     }
 }
 
-void init_csc()
+void init_csc_vecs()
 {
     values.resize(num_vertices);
     y.resize(num_vertices);
