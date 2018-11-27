@@ -126,9 +126,9 @@ int main(int argc, char **argv)
     if(which == 0)
     {
         run_csc();
-        walk_csc();
+        //walk_csc();
         begin = std::chrono::steady_clock::now();
-            init_csc();
+            init_csc_vecs();
             for(iter = 0; iter < num_iter; iter++)
                 spmv_csc();
             done_csc();
@@ -141,10 +141,10 @@ int main(int argc, char **argv)
         triples_sources = new std::vector<struct Triple>;
         classification_dcsc(num_vertices);
         run_dcsc();
-        walk_dcsc_regulars();
-        walk_dcsc_sources();
+        //walk_dcsc_regulars();
+        //walk_dcsc_sources();
         begin = std::chrono::steady_clock::now();
-            init_dcsc();
+            init_dcsc_vecs();
             for(uint32_t i = 0; i < num_iter; i++)
                 spmv_dcsc();
             done_dcsc();
@@ -159,9 +159,9 @@ int main(int argc, char **argv)
     {
         filtering(num_vertices);
         run_tcsc();
-        walk_tcsc();
+        //walk_tcsc();
         begin = std::chrono::steady_clock::now();
-            init_tcsc();
+            init_tcsc_vecs();
             for(iter = 0; iter < num_iter; iter++)
                 spmv_tcsc();
             done_tcsc();
