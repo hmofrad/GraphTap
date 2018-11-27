@@ -1,8 +1,9 @@
 /*
  * spmv.cpp: Unit test for SpMV Kernels
-          Compressed Sparse Column (CSC)
-   Double Compressed Sparse Column (DCSC)
-   Triple Compressed Sparse Column (TCSC)
+                   Compressed Sparse Column (CSC)
+   Double          Compressed Sparse Column (DCSC)
+   Extended Double Compressed Sparse Column (EDCSC) (LA3)
+            Triple Compressed Sparse Column (TCSC) (GraphTap)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
@@ -62,7 +63,8 @@ std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
 #include "csc.cpp"
-#include "dcsc.cpp"
+//#include "dcsc.cpp"
+#include "edcsc.cpp"
 #include "tcsc.cpp"
 
 void read_binary(std::string filepath)
@@ -137,23 +139,27 @@ int main(int argc, char **argv)
     }
     else if(which == 1)
     {
+        ;
+    }
+    else if(which == 2)
+    {
         triples_regulars = new std::vector<struct Triple>;
         triples_sources = new std::vector<struct Triple>;
-        classification_dcsc(num_vertices);
-        run_dcsc();
-        //walk_dcsc_regulars();
-        //walk_dcsc_sources();
+        classification_edcsc(num_vertices);
+        run_edcsc();
+        //walk_edcsc_regulars();
+        //walk_edcsc_sources();
         begin = std::chrono::steady_clock::now();
-            init_dcsc_vecs();
+            init_edcsc_vecs();
             for(uint32_t i = 0; i < num_iter; i++)
-                spmv_dcsc();
-            done_dcsc();
+                spmv_edcsc();
+            done_edcsc();
         end = std::chrono::steady_clock::now();
         
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
-        std::cout << "DCSC ";
+        std::cout << "EDCSC (LA3)";
     }
     else
     {
@@ -166,7 +172,7 @@ int main(int argc, char **argv)
                 spmv_tcsc();
             done_tcsc();
         end = std::chrono::steady_clock::now();
-        std::cout << "TCSC ";
+        std::cout << "TCSC (GraphTap)";
     }
     triples->clear();
     
