@@ -138,7 +138,7 @@ void walk_tcsc()
     }
 }
 
-void init_tcsc()
+void init_tcsc_vecs()
 {
     values.resize(num_vertices);
     y.resize(nnz_rows);
