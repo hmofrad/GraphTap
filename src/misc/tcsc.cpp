@@ -97,7 +97,8 @@ void init_tcsc(uint32_t nnz_, uint32_t ncols)
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
-    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t));
+    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t)) + (nnz_cols * sizeof(uint32_t)) + (nnz_rows * sizeof(uint32_t));
+    
 }
 
 void popu_tcsc()
