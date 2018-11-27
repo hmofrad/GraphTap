@@ -465,7 +465,7 @@ void spmv_dcsc_sources(uint32_t offset)
     }
 }
 
-void init_dcsc()
+void init_dcsc_vecs()
 {
     values.resize(num_vertices);
     
