@@ -62,8 +62,8 @@ std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
 #include "csc.cpp"
-#include "graphtap.cpp"
-#include "la3.cpp"
+#include "dcsc.cpp"
+#include "tcsc.cpp"
 
 void read_binary(std::string filepath)
 {
