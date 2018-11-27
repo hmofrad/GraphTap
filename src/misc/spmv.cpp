@@ -1,5 +1,8 @@
 /*
- * spmv.cpp: Unit test for SpMV Kernel
+ * spmv.cpp: Unit test for SpMV Kernels
+          Compressed Sparse Column (CSC)
+   Double Compressed Sparse Column (DCSC)
+   Triple Compressed Sparse Column (TCSC)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
@@ -25,6 +28,26 @@ struct Triple
     uint32_t row;
     uint32_t col;
 };
+
+
+struct ColSort
+{
+    bool operator()(const struct Triple &a, const struct Triple &b)
+    {
+        return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
+    }
+};
+/* CSC/TCSC arrays */
+uint32_t nnz;
+uint32_t ncols_plus_one;
+uint32_t *A;
+uint32_t *IA;
+uint32_t *JA;
+
+/* CSC/TCSC SpMV vectors */
+std::vector<uint32_t> y;
+std::vector<uint32_t> x;
+
 uint32_t num_vertices;
 uint32_t num_iter;
 uint32_t iter;
@@ -38,6 +61,7 @@ uint64_t extra = 0;
 std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
+#include "csc.cpp"
 #include "graphtap.cpp"
 #include "la3.cpp"
 
@@ -89,7 +113,7 @@ int main(int argc, char **argv)
     }
     
     printf("[x]SpMV kernel unit test...\n");
-    bool which = std::atoi(argv[1]) == 0 ? false : true;
+    int which = std::atoi(argv[1]);
     num_iter = std::atoi(argv[2]);
     std::string file_path = argv[3];
     num_vertices = std::atoi(argv[4]) + 1; // For 0
@@ -98,44 +122,58 @@ int main(int argc, char **argv)
 
     ColSort f_col;
     std::sort(triples->begin(), triples->end(), f_col);
-    if(not which)
+    
+    if(which == 0)
     {
-        filtering(num_vertices);
-        csc();
-        //walk_csc();
+        run_csc();
+        walk_csc();
         begin = std::chrono::steady_clock::now();
-            init();
+            init_csc();
             for(iter = 0; iter < num_iter; iter++)
-                spmv();
-            done();
+                spmv_csc();
+            done_csc();
         end = std::chrono::steady_clock::now();
-        std::cout << "GraphTap ";
+        std::cout << "CSC ";
     }
-    else
+    else if(which == 1)
     {
         triples_regulars = new std::vector<struct Triple>;
         triples_sources = new std::vector<struct Triple>;
-        classification(num_vertices);
-        csc_la3();
-        //walk_csc_regulars();
-        //walk_csc_sources();
+        classification_dcsc(num_vertices);
+        run_dcsc();
+        walk_dcsc_regulars();
+        walk_dcsc_sources();
         begin = std::chrono::steady_clock::now();
-            init_la3();
+            init_dcsc();
             for(uint32_t i = 0; i < num_iter; i++)
-                spmv_la3();
-            done_la3();
+                spmv_dcsc();
+            done_dcsc();
         end = std::chrono::steady_clock::now();
         
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
-        std::cout << "LA3 ";
+        std::cout << "DCSC ";
+    }
+    else
+    {
+        filtering(num_vertices);
+        run_tcsc();
+        walk_tcsc();
+        begin = std::chrono::steady_clock::now();
+            init_tcsc();
+            for(iter = 0; iter < num_iter; iter++)
+                spmv_tcsc();
+            done_tcsc();
+        end = std::chrono::steady_clock::now();
+        std::cout << "TCSC ";
     }
     triples->clear();
     
+    
     std::cout << "Stats:" << std::endl;
     std::cout << "    Utilized Memory: " << size / 1e3 << " K" << std::endl;
-    if(std::atoi(argv[1]))
+    if(std::atoi(argv[1]) == 1)
     std::cout << "    Extra    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
     std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
     std::cout << "    Final value:     " << value <<std::endl;
