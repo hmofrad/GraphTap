@@ -350,6 +350,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         V2Y = &(Graph.A->Y2V);
         I2V = &(Graph.A->V2I);
         V2I = &(Graph.A->I2V);
+        if(filtering_type == _SNKS_)
+            filtering_type = _SRCS_;
+        else if(filtering_type == _SRCS_)
+            filtering_type = _SNKS_;
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
@@ -655,9 +659,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     
     // Initialize messages
     std::vector<Integer_Type> x_sizes;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         x_sizes.resize(rank_ncolgrps, tile_height);
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
         x_sizes = nnz_col_sizes_loc;
     X.resize(rank_ncolgrps);
     for(uint32_t i = 0; i < rank_ncolgrps; i++)
@@ -665,9 +669,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
 
     // Initialiaze accumulators
     std::vector<Integer_Type> y_sizes;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
         y_sizes.resize(rank_nrowgrps, tile_height);
-    else if(filtering_type == _SOME_) 
+    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
         y_sizes = nnz_row_sizes_loc;
     Y.resize(rank_nrowgrps);
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
@@ -692,7 +696,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     uint32_t xo = accu_segment_col;
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -700,7 +704,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
             x_data[i] = messenger(state);
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
     {
         auto &j_data = (*J)[xo];
         Integer_Type j = 0;
@@ -725,9 +729,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     activity_statuses.resize(ncolgrps);
     
     std::vector<Integer_Type> x_sizes;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         x_sizes.resize(rank_ncolgrps, tile_height);
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
         x_sizes = nnz_col_sizes_loc;
     // Initialize nonstationary messages values
     XV.resize(rank_ncolgrps);
@@ -741,9 +745,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     msgs_activity_statuses.resize(colgrp_nranks);
 
     std::vector<Integer_Type> y_sizes;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
         y_sizes.resize(rank_nrowgrps, tile_height);
-    else if(filtering_type == _SOME_) 
+    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
         y_sizes = nnz_row_sizes_loc;
     
     T.resize(rank_nrowgrps);
@@ -793,12 +797,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
             yo = accu_segment_rg;
         std::vector<Fractional_Type> &y_data = Y[yi][yo];
 
-        if(filtering_type == _NONE_)
+        if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
         {
             for(uint32_t i = 0; i < v_nitems; i++)
                 y_data[i] = infinity();
         }
-        else if(filtering_type == _SOME_)
+        else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
         {
             auto &i_data = (*I)[yi];       
             Integer_Type j = 0;
@@ -824,7 +828,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     
     Integer_Type v_nitems = V.size();
     Integer_Type k = 0;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -840,7 +844,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
                 x_data[i] = infinity();
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
     {
         if(not directed)
         {
@@ -960,7 +964,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
     
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -968,7 +972,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             x_data[i] = messenger(state);
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
     {
         
         auto &v2j_data = (*V2J);
@@ -992,7 +996,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     
     Integer_Type v_nitems = V.size();
     Integer_Type k = 0;
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -1008,7 +1012,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 x_data[i] = infinity();
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
     {
         auto &v2j_data = (*V2J);
         auto &j2v_data = (*J2V);
@@ -2561,9 +2565,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     uint32_t yi = accu_segment_row;
     uint32_t yo = accu_segment_rg;
     std::vector<Fractional_Type> &y_data = Y[yi][yo];
-    
     Integer_Type v_nitems = V.size();
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
         for(uint32_t i = 0; i < v_nitems; i++)
         {
@@ -2571,7 +2574,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             C[i] = applicator(state, y_data[i]);
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
     {
         if(iteration == 0)
         {
@@ -2619,7 +2622,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     std::vector<Fractional_Type> &y_data = Y[yi][yo];
 
     Integer_Type v_nitems = V.size();
-    if(filtering_type == _NONE_)
+    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
         if(apply_depends_on_iter)
         {
@@ -2638,7 +2641,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             }
         }
     }
-    else if(filtering_type == _SOME_)
+    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
     {
         auto &i_data = (*I)[yi];
         Integer_Type j = 0;
