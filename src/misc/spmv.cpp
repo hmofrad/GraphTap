@@ -63,7 +63,7 @@ std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
 #include "csc.cpp"
-//#include "dcsc.cpp"
+#include "dcsc.cpp"
 #include "edcsc.cpp"
 #include "tcsc.cpp"
 
@@ -139,7 +139,16 @@ int main(int argc, char **argv)
     }
     else if(which == 1)
     {
-        ;
+        filtering_dcsc(num_vertices);
+        run_dcsc();
+        //walk_dcsc();
+        begin = std::chrono::steady_clock::now();
+            init_dcsc_vecs();
+            for(iter = 0; iter < num_iter; iter++)
+                spmv_dcsc();
+            done_dcsc();
+        end = std::chrono::steady_clock::now();
+        std::cout << "DCSC ";
     }
     else if(which == 2)
     {
@@ -178,9 +187,9 @@ int main(int argc, char **argv)
     
     
     std::cout << "Stats:" << std::endl;
-    std::cout << "    Utilized Memory: " << size / 1e3 << " K" << std::endl;
-    if(std::atoi(argv[1]) == 1)
-    std::cout << "    Extra    Memory: " << extra / 1e3 << " K (extra per iteration)" << std::endl;
+    std::cout << "    Utilized Memory: " << size / 1e9 << " G" << std::endl;
+    if(std::atoi(argv[1]) == 2)
+    std::cout << "    Extra    Memory: " << extra / 1e9 << " G (extra per iteration)" << std::endl;
     std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
     std::cout << "    Final value:     " << value <<std::endl;
     std::cout << "    Num SpMV Ops:    " << nOps <<std::endl;
