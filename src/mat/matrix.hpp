@@ -171,6 +171,8 @@ class Matrix
         void init_csc();
         void init_tcsr();
         void init_tcsc();
+        void init_dcsr();
+        void init_dcsc();
         void init_bv();
         void del_csr();
         void del_csc();
@@ -1101,7 +1103,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
        if(Env::is_master)
             printf("Vertex filtering: NONE - Filtering is skipped\n");
     }
-    else if(filtering_type == _SOME_)
+    else
+    //else if(filtering_type == _SOME_)
     {
         if(Env::is_master)
             printf("Vertex filtering: SRCS - Filtering isolated rows\n");     
@@ -1139,8 +1142,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
         
         if(filtering_type == _NONE_)
             init_csr();
+        else if(filtering_type == _SRCS_)
+            init_dcsr();
         else if(filtering_type == _SOME_)
            init_tcsr();
+        else
+        {
+            fprintf(stderr, "Invalid compression type\n");
+            Env::exit(1);
+        }
     }
     else if(compression_type == Compression_type::_CSC_)
     {
@@ -1148,8 +1158,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
             printf("Edge compression: CSC\n");
         if(filtering_type == _NONE_)
             init_csc();
+        else if(filtering_type == _SNKS_)
+            init_dcsc();
         else if(filtering_type == _SOME_)
-          init_tcsc();
+            init_tcsc();
+        else
+        {
+            fprintf(stderr, "Invalid compression type\n");
+            Env::exit(1);
+        }
     }
     else
     {
@@ -1776,6 +1793,153 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
                 
                 JA[j]++;
                 IA[i] = iv_data[pair1.row];
+                i++;
+            }
+
+            while((j + 1) < (c_nitems + 1))
+            {
+                j++;
+                JA[j] = JA[j - 1];
+            }
+        }
+        
+        xi++;
+        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
+        if(next_row)
+        {
+            xi = 0;
+            yi++;
+        }  
+    }    
+}
+
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsr()
+{
+    uint32_t yi = 0, xi = 0, next_row = 0;
+    struct Triple<Weight, Integer_Type> pair;
+
+    for(uint32_t t: local_tiles_row_order)
+    {   
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        auto &i_data = I[yi];
+        
+        auto &iv_data = IV[yi];
+        
+        //auto &j_data = J[xi];
+        
+        //auto &jv_data = JV[xi];
+
+        Integer_Type r_nitems = nnz_row_sizes_loc[yi];
+        
+        if(tile.allocated)
+        {
+            tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), r_nitems + 1);
+            uint32_t i = 0; // CSR Index
+            uint32_t j = 1; // Row index
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csr->A;
+            #endif
+            
+            Integer_Type *IA = (Integer_Type *) tile.csr->IA; // Rows
+            Integer_Type *JA = (Integer_Type *) tile.csr->JA; // Cols
+            IA[0] = 0;
+            for (auto &triple : *(tile.triples))
+            {
+                test(triple);
+                auto pair1 = rebase(triple);                
+                assert(i_data[pair1.row] != 0);
+                //assert(j_data[pair1.col] != 0);
+                while((j - 1) != iv_data[pair1.row])
+                {
+                    j++;
+                    IA[j] = IA[j - 1];
+                }  
+
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                A[i] = triple.weight;
+                #endif
+
+                IA[j]++;
+                JA[i] = pair1.col;    
+                i++;
+            }
+            while((j + 1) < (r_nitems + 1))
+            {
+                j++;
+                IA[j] = IA[j - 1];
+            }
+        }   
+        xi++;
+        next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
+        if(next_row)
+        {
+            xi = 0;
+            yi++;
+        }
+    }
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type>
+void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsc()
+{
+    struct Triple<Weight, Integer_Type> pair;
+    uint32_t yi = 0, xi = 0, next_row = 0;
+    for(uint32_t t: local_tiles_row_order)
+    {
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        
+        //auto &i_data = I[yi];
+        
+        //auto &iv_data = IV[yi];
+        
+        auto &j_data = J[xi];
+        
+        auto &jv_data = JV[xi];
+        
+        Integer_Type c_nitems = nnz_col_sizes_loc[xi];
+
+        if(tile.allocated)
+        {
+            tile.csc = new struct CSC<Weight, Integer_Type>(tile.triples->size(), c_nitems + 1);
+            uint32_t i = 0; // Row Index
+            uint32_t j = 1; // Col index
+            #ifdef HAS_WEIGHT
+            Weight *A = (Weight *) tile.csc->A;
+            #endif
+            
+            Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
+            Integer_Type *JA = (Integer_Type *) tile.csc->JA; // COL_PTR
+            JA[0] = 0;
+            for (auto& triple : *(tile.triples))
+            {
+                //printf(">>>>>>>>>%d %d \n", triple.row, triple.col);
+                test(triple);
+                auto pair1 = rebase(triple);
+                //if((!i_data[pair1.row]) or (!j_data[pair1.col]))
+                //    printf("Invalid triple[%d, %d] with i_data=%d j_data=%d \n", pair1.row, pair1.col, 
+                //                                              i_data[pair1.row], j_data[pair1.col]);
+                //assert(i_data[pair1.row] != 0);
+                assert(j_data[pair1.col] != 0);
+
+                while((j -1) != jv_data[pair1.col])
+                {
+                    j++;
+                    JA[j] = JA[j - 1];
+                }  
+                
+                // In case weights are there
+                #ifdef HAS_WEIGHT
+                A[i] = triple.weight;
+                #endif
+                
+                JA[j]++;
+                IA[i] = pair1.row;
                 i++;
             }
 
