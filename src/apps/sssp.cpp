@@ -27,7 +27,7 @@ int main(int argc, char **argv)
       
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
-    ip root = std::atoi(argv[3]);
+    ip root = (argc > 3) ? std::atoi(argv[3]) : 0;
     bool directed = true;
     bool transpose = false;
     bool self_loops = false;
