@@ -1422,6 +1422,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
             printf("...\n");
         else
             printf("\n");
+        double sum = std::accumulate(nnz_sizes_all.begin(), nnz_sizes_all.end(), 0.0);
+        double avg = sum / nrowgrps;
+        printf("Average number of enteris per group[%d]=%f\n", filtering_type_, avg);
+        
     }
 
     if(nnz_sizes_all[owned_segment])
