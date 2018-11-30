@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=16
+#SBATCH --ntasks=64
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
@@ -16,6 +16,7 @@
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
 ## strings graphtap.out | grep 'Execute'
+## /ihome/rmelhem/moh18/linux/tools/perf/./perf stat -B -e cache-references,cache-misses,cycles,instructions,faults,migrations
 
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
