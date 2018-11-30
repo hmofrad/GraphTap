@@ -226,6 +226,8 @@ class Vertex_Program
         
         std::vector<double> scatter_gather_time;
         std::vector<double> combine_time;
+        std::vector<double> combine_comp_time;
+        std::vector<double> combine_comm_time;
         std::vector<double> apply_time;
         
         
@@ -1741,7 +1743,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         
     t2 = Env::clock();
     elapsed_time = t2 - t1;
-    Env::print_time("Combine", elapsed_time);
+    combine_comm_time.push_back(elapsed_time - combine_comp_time.back());
+    Env::print_time("Combine comm", combine_comm_time.back());
+    Env::print_time("Combine all ", elapsed_time);
     combine_time.push_back(elapsed_time);
 }
 
@@ -1929,6 +1933,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_2d_stationary()
 {
+    double t1, t2, elapsed_time = 0;
+    t1 = Env::clock();
+    
     MPI_Request request;
     uint32_t tile_th, pair_idx;
     int32_t leader, follower, my_rank, accu;
@@ -1953,8 +1960,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         Integer_Type y_nitems = y_data.size();
         
         std::vector<Fractional_Type> &x_data = X[xi];
+        
+        t1 = Env::clock();
         spmv(tile, y_data, x_data);
-
+        t2 = Env::clock();
+        elapsed_time += (t2-t1);
+        
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
         if(communication)
@@ -1995,11 +2006,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
+    Env::print_time("Combine comp", elapsed_time);
+    combine_comp_time.push_back(elapsed_time);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_2d_nonstationary()
 {
+    double t1, t2, elapsed_time = 0;
     MPI_Request request;
     uint32_t tile_th, pair_idx;
     int32_t leader, follower, my_rank, accu;
@@ -2028,7 +2042,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         std::vector<Integer_Type> &xi_data = XI[xi];
         std::vector<char> &t_data = T[yi];
         
+        t1 = Env::clock();
         spmv(tile, y_data, x_data, xv_data, xi_data, t_data);
+        t2 = Env::clock();
+        elapsed_time += (t2 - t1);
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
@@ -2120,6 +2137,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
+    Env::print_time("Combine comp", elapsed_time);
+    combine_comp_time.push_back(elapsed_time);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -3105,11 +3124,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     if(!Env::rank)
     {
         stats_pair = stats(scatter_gather_time);
-        std::cout << "Scatter_gather time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Scatter_gather time  (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(combine_time);
-        std::cout << "Combine time        (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Combine all     time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        stats_pair = stats(combine_comp_time);
+        std::cout << "Combine compute time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        stats_pair = stats(combine_comm_time);
+        std::cout << "Combine communi time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(apply_time);
-        std::cout << "Apply time          (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Apply time           (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         
         for(uint32_t i = 0; i < count; i++)
         {
