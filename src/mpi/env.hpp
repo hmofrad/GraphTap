@@ -20,7 +20,7 @@
 #include <algorithm>
 
 #define NUM_SOCKETS 2
-#define NUM_CORES_PER_SOCKET 16
+#define NUM_CORES_PER_SOCKET 10
 #define NUM_CORES_PER_MACHINE (NUM_SOCKETS * NUM_CORES_PER_SOCKET)
 
 class Env
@@ -68,10 +68,13 @@ class Env
     static char core_name[]; // Core name = hostname
     static int core_id; // Core id
     static int nmachines; // Number of allocated machines
+    static int machine_ncores;
+    static int machine_nsocks;
     static std::vector<std::string> machines; // Number of machines
     static std::vector<int> machines_nranks; // Number of ranks per machine
     static std::vector<std::vector<int>> machines_ranks;
     static std::vector<std::vector<int>> machines_cores;
+    static std::vector<std::vector<int>> machines_socks;
     static std::vector<std::unordered_set<int>> machines_cores_uniq;
     static std::vector<int> machines_ncores; // Number of cores per machine
     static std::vector<int> machines_nsockets; // Number of sockets available per machine
@@ -107,10 +110,13 @@ double Env::finish = 0;
 char Env::core_name[MPI_MAX_PROCESSOR_NAME];
 int Env::core_id;
 int Env::nmachines;
+int Env::machine_ncores;
+int Env::machine_nsocks;
 std::vector<std::string> Env::machines;
 std::vector<int> Env::machines_nranks;
 std::vector<std::vector<int>> Env::machines_ranks;
 std::vector<std::vector<int>> Env::machines_cores;
+std::vector<std::vector<int>> Env::machines_socks;
 std::vector<std::unordered_set<int>> Env::machines_cores_uniq;
 std::vector<int> Env::machines_ncores;
 std::vector<int> Env::machines_nsockets;
@@ -287,6 +293,7 @@ void Env::affinity()
     machines_nranks.resize(nmachines, 0);
     machines_ranks.resize(nmachines);
     machines_cores.resize(nmachines);
+    machines_socks.resize(nmachines);
     std::vector<std::unordered_set<int>> machines_cores_uniq(nmachines);
   
     for (it=machines_all.begin(); it!=machines_all.end(); it++)
@@ -301,6 +308,7 @@ void Env::affinity()
         machines_ranks[idx].push_back(idx1);
         assert((core_ids[idx1] >= 0) and (core_ids[idx1] < NUM_CORES_PER_MACHINE));
         machines_cores[idx].push_back(core_ids[idx1]);
+        machines_socks[idx].push_back(core_ids[idx1] > NUM_CORES_PER_SOCKET ? 0 : 1);
         machines_cores_uniq[idx].insert(core_ids[idx1]);
     }  
     
@@ -323,6 +331,9 @@ void Env::affinity()
 		machines_nsockets[i] = std::accumulate(sockets_per_machine.begin(), sockets_per_machine.end(), 0);
     }
     
+    machine_ncores = machines_cores[0].size();
+    machine_nsocks = NUM_SOCKETS;
+    
     Env::barrier();
     if(is_master) 
     {
@@ -334,11 +345,11 @@ void Env::affinity()
             std::cout << "| machine_nranks=" << machines_nranks[i];
             std::cout << "| machine_ncores=" << machines_ncores[i];
             std::cout << "| machine_nsockets=" << machines_nsockets[i] << "\n";
-            std::cout << "Machine " << i << "=[rank,core]: " ;
+            std::cout << "Machine " << i << "=[rank,core,socket]: " ;
             int sz = machines_ranks[i].size();
             for(int j= 0; j < sz; j++) 
             {
-                std::cout << "[" << machines_ranks[i][j] <<  "," << machines_cores[i][j] << "]";
+                std::cout << "[" << machines_ranks[i][j] <<  "," << machines_cores[i][j] << "," << machines_socks[i][j] << "]";
             }
             std::cout << "\nMachine " << i << "=unique_core(s)[core]:";
             std::unordered_set<int>::iterator iter;
