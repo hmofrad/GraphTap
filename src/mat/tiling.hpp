@@ -15,7 +15,7 @@ enum Tiling_type
   _1D_ROW,
   _1D_COL,
   _2D_,
-  _NUMA_
+  _2DT_
 };
 
 class Tiling
@@ -81,7 +81,7 @@ Tiling::Tiling(uint32_t nranks_, uint32_t ntiles_,
         rank_ncolgrps = ncolgrps / rowgrp_nranks;        
         assert(rank_nrowgrps * rank_ncolgrps == rank_ntiles);
     }
-    else if (tiling_type == Tiling_type::_NUMA_)
+    else if (tiling_type == Tiling_type::_2DT_)
     {
         integer_factorize(nranks, rowgrp_nranks, colgrp_nranks);
         assert(rowgrp_nranks * colgrp_nranks == nranks);
