@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     bool self_loops = true;
     bool acyclic = false;
     bool parallel_edges = false;
-    Tiling_type TT = _2D_;
+    Tiling_type TT = _2DT_;
     // Only CSC is supported for nonstationary algorithms
     Compression_type CT = _CSC_;
     Filtering_type FT = _SOME_;
