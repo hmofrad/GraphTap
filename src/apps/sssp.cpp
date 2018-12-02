@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     bool self_loops = false;
     bool acyclic = false;
     bool parallel_edges = false;
-    Tiling_type TT = _2D_;
+    Tiling_type TT = _2DT_;
     Compression_type CT = _CSC_; // Only CSC is supported
     Filtering_type FT = _SOME_;
     Hashing_type HT = NONE;
