@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=64
+#SBATCH --ntasks=16
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=16
+#SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
@@ -16,7 +16,7 @@
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
 ## strings graphtap.out | grep 'Execute'
-## /ihome/rmelhem/moh18/linux/tools/perf/./perf stat -B -e cache-references,cache-misses,cycles,instructions,faults,migrations
+## 
 
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
@@ -34,15 +34,13 @@ export I_MPI_FABRICS=shm:ofa
 
 export SLURM_CPU_BIND="none"
 export I_MPI_FALLBACK=0
-#export I_MPI_DEBUG=2
 export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-
 
 NP=$SLURM_NTASKS
 MPI="mpirun -np"
 APPS_PERFIX="bin"
-APPS=("./pr" "/./cc" "./bfs" "./sssp_w")
+APPS=("./pr" "./bfs" "./sssp_w" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28_1.bin")
 GRAPHS_W=("rmat26_1_w.bin" "rmat27_1_w.bin" "rmat28_1_w.bin")
@@ -67,7 +65,9 @@ GRAPH=${GRAPHS[${I}]}
 GRAPH_V=${GRAPHS_V[${I}]}
 ITERS=20
 SRC=1554330
+PERF="/ihome/rmelhem/moh18/linux/tools/perf/./perf stat -B -e cycles,instructions,cs,faults,cache-references,cache-misses"
 NTIMES=("1");
+#NTIMES=("1" "2" "3");
 for A in "${APPS[@]}";
 do
     for N in "${NTIMES[@]}";
@@ -94,4 +94,4 @@ strings graphtap.out | grep 'Execute time'
 strings graphtap.out | grep 'Iterations'
 strings graphtap.out | grep 'Value checksum'
 strings graphtap.out | grep 'Reachable vertices'
-strings graphtap.out | grep 'avg'
+#strings graphtap.out | grep 'avg'
