@@ -141,7 +141,7 @@ void Env::init(bool comm_split_)
     MPI_WORLD = MPI_COMM_WORLD;
     
     // Affinity 
-    affinity();
+    //affinity();
 }
 
 bool Env::get_comm_split()
