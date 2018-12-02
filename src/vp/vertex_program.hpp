@@ -1108,7 +1108,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     
     MPI_Request request;
     uint32_t follower;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -1148,7 +1148,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
    // printf("GATHER:r=%d rank_ncolgrps=%d rank_nrowgrps=%d\n", Env::rank, rank_ncolgrps, rank_nrowgrps);
     int32_t leader, my_rank;
     MPI_Request request;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {    
@@ -1205,7 +1205,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 {
     MPI_Request request;
     int32_t leader;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW) 
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -1255,7 +1255,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     
     MPI_Request request;
     uint32_t follower;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -1322,7 +1322,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
     MPI_Request request;
     MPI_Status status;
     int nitems = 0;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW)
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {    
@@ -1405,7 +1405,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 {
     MPI_Request request;
     int32_t leader_cg;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         or (tiling_type == Tiling_type::_1D_ROW) 
         or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
     {
@@ -1697,7 +1697,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     
     if(stationary)
     {
-        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
             combine_2d_stationary();
         else if(tiling_type == Tiling_type::_1D_ROW)
         {  
@@ -1724,7 +1724,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     }
     else
     {    
-        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_NUMA_))
+        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         {
             if(tc_family)
                 combine_2d_for_tc();
