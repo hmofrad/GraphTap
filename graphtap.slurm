@@ -43,7 +43,7 @@ APPS_PERFIX="bin"
 APPS=("./pr" "./bfs" "./sssp_w" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28_1.bin")
-GRAPHS_W=("rmat26_1_w.bin" "rmat27_1_w.bin" "rmat28_1_w.bin")
+GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_1_w.bin0")
 GRAPHS_V=("67108864" "134217728" "268435456")
 
 if [ "${SLURM_NNODES}" = "4" ]
@@ -61,7 +61,7 @@ else
     echo "Invalid input graph"
     exit;     
 fi
-GRAPH=${GRAPHS[${I}]}    
+#GRAPH=${GRAPHS[${I}]}    
 GRAPH_V=${GRAPHS_V[${I}]}
 ITERS=20
 SRC=1554330
@@ -82,6 +82,8 @@ do
         if [ "${A}" = "./sssp_w" ]
         then
             GRAPH="${GRAPHS_W[${I}]}"    
+        else
+            GRAPH="${GRAPHS[${I}]}"
         fi    
         
         CMD="${MPI} ${NP} ${APPS_PERFIX}/${A} ${GRAPHS_PERFIX}/${GRAPH} ${GRAPH_V} ${ITER_OR_SRC}"
