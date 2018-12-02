@@ -379,7 +379,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_matrix()
                 tile.leader_rank_rg_rg = i;
                 tile.leader_rank_cg_cg = j;
             }
-            else if(tiling->tiling_type == Tiling_type::_NUMA_)
+            else if(tiling->tiling_type == Tiling_type::_2DT_)
             {
                 
                 tile.rank = (i % tiling->colgrp_nranks) * tiling->rowgrp_nranks
