@@ -2,16 +2,16 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=16
+#SBATCH --ntasks=112
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=28
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
-#SBATCH --time=00:10:00
+#SBATCH --time=01:00:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=ib
+#SBATCH --partition=opa
 
 ## while true; do crc-squeue.py; sleep 10; done
 ## grep 'Execution' la3.out
@@ -42,9 +42,9 @@ MPI="mpirun -np"
 APPS_PERFIX="bin"
 APPS=("./pr" "./bfs" "./sssp_w" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
-GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28_1.bin")
-GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_1_w.bin0")
-GRAPHS_V=("67108864" "134217728" "268435456")
+GRAPHS=("rmat26.bin" "rmat27.bin" "rmat28.bin" "rmat29.bin")
+GRAPHS_W=("rmat26_w.bin" "rmat27_w.bin" "rmat28_w.bin" "rmat28_w.bin")
+GRAPHS_V=("67108864" "134217728" "268435456" "536870912")
 
 if [ "${SLURM_NNODES}" = "4" ]
 then
@@ -52,11 +52,12 @@ then
 elif [ "$SLURM_NNODES" = "8" ]
 then
     I="1"
-    #GRAPH=${GRAPHS[1]}
 elif [ "$SLURM_NNODES" = "16" ]
 then
     I="2"
-    #GRAPH=${GRAPHS[2]}
+elif [ "$SLURM_NNODES" = "32" ]
+then
+    I="3"
 else
     echo "Invalid input graph"
     exit;     
