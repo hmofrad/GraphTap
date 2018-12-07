@@ -15,6 +15,7 @@
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
 #include "mat/hashers.hpp"
+#include "omp.h"
 
 struct State { State() {}; };
 
@@ -105,9 +106,9 @@ class Vertex_Program
         
         void spmv(struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
                 std::vector<Fractional_Type> &y_data, 
-                std::vector<Fractional_Type> &x_data); // Stationary spmv
+                std::vector<Fractional_Type> &x_data); // Stationary spmv/spmspv
                 
-        void spmv(struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile, // Stationary spmv 
+        void spmv(struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile, // Stationary spmv/spmspv 
                 std::vector<Fractional_Type> &y_data, 
                 std::vector<Fractional_Type> &x_data, 
                 std::vector<Fractional_Type> &xv_data, 
@@ -115,7 +116,7 @@ class Vertex_Program
                 std::vector<char> &t_data);
                 
         void spmv(std::vector<std::vector<Integer_Type>> &z_data, 
-                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile); // Triangle counting spmv
+                struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile); // Triangle counting spmv/spmspv
         
         
         
@@ -185,9 +186,9 @@ class Vertex_Program
         std::vector<Integer_Type> activity_statuses;
         /* Row/Col Filtering indices */
         std::vector<std::vector<char>> *I;
-        //std::vector<std::vector<Integer_Type>> *IV;
+        std::vector<std::vector<Integer_Type>> *IV;
         std::vector<std::vector<char>> *J;
-        //std::vector<std::vector<Integer_Type>> *JV;
+        std::vector<std::vector<Integer_Type>> *JV;
         std::vector<Integer_Type> *V2J;
         std::vector<Integer_Type> *J2V;
         std::vector<Integer_Type> *Y2V;
@@ -295,9 +296,9 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         nnz_row_sizes_all = A->nnz_row_sizes_all;
         nnz_col_sizes_all = A->nnz_col_sizes_all;
         I = &(Graph.A->I);
-        //IV= &(Graph.A->IV);
+        IV= &(Graph.A->IV);
         J = &(Graph.A->J);
-        //JV= &(Graph.A->JV);
+        JV= &(Graph.A->JV);
         V2J = &(Graph.A->V2J);
         J2V = &(Graph.A->J2V);
         Y2V = &(Graph.A->Y2V);
@@ -343,9 +344,9 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         nnz_row_sizes_all = A->nnz_col_sizes_all;
         nnz_col_sizes_all = A->nnz_row_sizes_all;
         I = &(Graph.A->J);
-        //IV= &(Graph.A->JV);
+        IV= &(Graph.A->JV);
         J = &(Graph.A->I);
-        //JV= &(Graph.A->IV);
+        JV= &(Graph.A->IV);
         V2J = &(Graph.A->J2V);
         J2V = &(Graph.A->V2J);
         Y2V = &(Graph.A->V2Y);
@@ -698,28 +699,47 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     uint32_t xo = accu_segment_col;
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
+    //#pragma omp parallel
+    //{
+        if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
-            Vertex_State &state = V[i];
-            x_data[i] = messenger(state);
-        }
-    }
-    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-    {
-        auto &j_data = (*J)[xo];
-        Integer_Type j = 0;
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            if(j_data[i])
+            #pragma omp parallel for schedule(static)
+            for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
-                x_data[j] = messenger(state);
-                j++;
+                x_data[i] = messenger(state);
             }
+
         }
-    }
+        else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
+        {
+            
+            auto &j_data = (*J)[xo];
+            auto &jv_data = (*JV)[xo];
+            #pragma omp parallel for schedule(static)
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                if(j_data[i])
+                {
+                    Vertex_State &state = V[i];
+                    x_data[jv_data[i]] = messenger(state);
+                }
+            }
+            /*
+            auto &j_data = (*J)[xo];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                if(j_data[i])
+                {
+                    Vertex_State &state = V[i];
+                    x_data[j] = messenger(state);
+                    j++;
+                }
+            }
+            */
+        }
+    //}
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -965,27 +985,31 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     uint32_t xo = accu_segment_col;    
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
+    //#pragma omp parallel
+    //{
+        if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
-            Vertex_State &state = V[i];
-            x_data[i] = messenger(state);
+            #pragma omp parallel for schedule(static)
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V[i];
+                x_data[i] = messenger(state);
+            }
         }
-    }
-    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-    {
-        
-        auto &v2j_data = (*V2J);
-        auto &j2v_data = (*J2V);
-        Integer_Type v2j_nitems = v2j_data.size();
-        for(uint32_t i = 0; i < v2j_nitems; i++)
+        else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
         {
-            Vertex_State &state = V[v2j_data[i]];
-            x_data[j2v_data[i]] = messenger(state);
+            
+            auto &v2j_data = (*V2J);
+            auto &j2v_data = (*J2V);
+            Integer_Type v2j_nitems = v2j_data.size();
+            #pragma omp parallel for schedule(static)
+            for(uint32_t i = 0; i < v2j_nitems; i++)
+            {
+                Vertex_State &state = V[v2j_data[i]];
+                x_data[j2v_data[i]] = messenger(state);
+            }
         }
-    }
+    //}
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2189,6 +2213,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 
         std::vector<Fractional_Type> &yj_data = Y[yi][accu];
         Integer_Type yj_nitems = yj_data.size();
+        #pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < yj_nitems; i++)
             combiner(y_data[i], yj_data[i]);
     }
@@ -2209,7 +2234,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     std::vector<MPI_Status> statuses(incounts);
     std::vector<int32_t> indices(incounts);
     int32_t received = 0;
-
     while(received < incount)
     {
         MPI_Waitsome(in_requests.size(), in_requests.data(), &outcount, indices.data(), statuses.data());
@@ -2224,6 +2248,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 accu = follower_rowgrp_ranks_accu_seg[j];
             std::vector<Fractional_Type> &yj_data = Y[yi][accu];
             Integer_Type yj_nitems = yj_data.size();
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < yj_nitems; i++)
                 combiner(y_data[i], yj_data[i]);            
         }
@@ -2587,6 +2612,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     Integer_Type v_nitems = V.size();
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
+        #pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             Vertex_State &state = V[i];
@@ -2597,6 +2623,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     {
         if(iteration == 0)
         {
+            auto &i_data = (*I)[yi];
+            auto &iv_data = (*IV)[yi];
+            #pragma omp parallel for schedule(static)
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V[i];
+                if(i_data[i])
+                {
+                    C[i] = applicator(state, y_data[iv_data[i]]);
+                }
+                else
+                    C[i] = applicator(state);
+            }
+           /*
             auto &i_data = (*I)[yi];
             Integer_Type j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
@@ -2610,12 +2650,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                 else
                     C[i] = applicator(state);
             }
+            */
         }
         else    
         {
             auto &y2v_data = (*Y2V);
             auto &v2y_data = (*V2Y);
             Integer_Type y2v_nitems = y2v_data.size();
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < y2v_nitems; i++)
             {
                 Vertex_State &state = V[v2y_data[i]];
@@ -2623,14 +2665,23 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             }
         }
     }
-
+//}
     wait_for_sends();
     
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < Y[i].size(); j++)
-            std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+        {
+            std::vector<Fractional_Type> &y_data = Y[i][j];
+            Integer_Type y_nitems = y_data.size();
+            #pragma omp parallel for schedule(static)
+            for(uint32_t k = 0; k < y_nitems; k++)
+                y_data[k] = 0;        
+          
+            //std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+        }
     }
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
