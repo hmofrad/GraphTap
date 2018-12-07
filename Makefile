@@ -6,7 +6,9 @@
 
 CXX = g++
 MPI_CXX = mpicxx
-CXX_FLAGS = -std=c++14 -fpermissive -Wall -Wextra -Wno-unused-parameter
+SKIPPED_CXX_WARNINGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized
+CXX_FLAGS = -std=c++14 -fpermissive $(SKIPPED_CXX_WARNINGS)
+
 MACROS=-DHAS_WEIGHT
 
 #export OMP_NUM_THREADS=2
@@ -15,12 +17,12 @@ MACROS=-DHAS_WEIGHT
 #DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 
 # Definitely Turn this on for faster binaries
-#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 
 .PHONY: all clean
 
-objs  = deg pr tc cc bfs sssp
+objs  = pr# deg pr tc cc bfs sssp
 
 all: $(objs)
 
