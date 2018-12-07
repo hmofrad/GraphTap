@@ -13,7 +13,7 @@
 #SBATCH --cluster=mpi
 #SBATCH --partition=opa
 
-## while true; do crc-squeue.py; sleep 10; done
+## while true; do free -g; sleep 10; done
 ## grep 'Execution' la3.out
 ## strings graphtap.out | grep 'Execute'
 ## 
@@ -43,8 +43,10 @@ APPS_PERFIX="bin"
 APPS=("./pr" "./bfs" "./sssp_w" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26.bin" "rmat27.bin" "rmat28.bin" "rmat29.bin")
-GRAPHS_W=("rmat26_w.bin" "rmat27_w.bin" "rmat28_w.bin" "rmat28_w.bin")
+GRAPHS_W=("rmat26_w.bin" "rmat27_w.bin" "rmat28_w.bin" "rmat29_w.bin")
 GRAPHS_V=("67108864" "134217728" "268435456" "536870912")
+SRC_V=("1554330" "1554330" "1" "1554332")
+
 
 if [ "${SLURM_NNODES}" = "4" ]
 then
@@ -64,8 +66,9 @@ else
 fi
 #GRAPH=${GRAPHS[${I}]}    
 GRAPH_V=${GRAPHS_V[${I}]}
+SRC=${SRC_V[${I}]}
 ITERS=20
-SRC=1554330
+
 PERF="/ihome/rmelhem/moh18/linux/tools/perf/./perf stat -B -e cycles,instructions,cs,faults,cache-references,cache-misses"
 NTIMES=("1");
 #NTIMES=("1" "2" "3");
