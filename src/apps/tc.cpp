@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     Env::init(comm_split);  
     double time1 = Env::clock();    
     
-    if(argc > 4)
+    if(argc != 3 and argc != 4)
     {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
