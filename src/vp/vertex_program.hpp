@@ -224,14 +224,13 @@ class Vertex_Program
         bool broadcast_communication = true;
         bool incremental_accumulation = true;
         
-        
+        #ifdef TIMING
         std::vector<double> scatter_gather_time;
         std::vector<double> combine_time;
         std::vector<double> combine_comp_time;
         std::vector<double> combine_comm_time;
         std::vector<double> apply_time;
-        
-        
+        #endif
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -472,7 +471,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
 {
     double t1, t2;
     t1 = Env::clock();
-
+    
     if(not already_initialized)
         initialize();
 
@@ -506,6 +505,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
             }
         }
     }
+    
     t2 = Env::clock();
     Env::print_time("Execute", t2 - t1);
 }
@@ -513,8 +513,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initialize()
 {
+    #ifdef TIMING
     double t1, t2;
     t1 = Env::clock();
+    #endif
     
     if(tc_family)
     {
@@ -534,9 +536,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
             init_nonstationary_postprocess();
         }
     }
-
+    #ifdef TIMING
     t2 = Env::clock();
     Env::print_time("Init", t2 - t1);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -544,8 +547,10 @@ template<typename Weight_, typename Integer_Type_, typename Fractional_Type_, ty
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initialize(
     const Vertex_Program<Weight_, Integer_Type_, Fractional_Type_, Vertex_State_> &VProgram)
 {
+    #ifdef TIMING
     double t1, t2;
     t1 = Env::clock();
+    #endif
     
     if(tc_family)
     {
@@ -577,6 +582,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         {
             init_stationary();
             Integer_Type v_nitems = V.size();
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i]; 
@@ -593,8 +599,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         }
     }
     already_initialized = true;
+    
+    #ifdef TIMING
     t2 = Env::clock();
     Env::print_time("Init", t2 - t1);
+    #endif
 }
 
 
@@ -925,8 +934,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather()
 {
+    #ifdef TIMING
     double t1, t2, elapsed_time;
     t1 = Env::clock();
+    #endif
 
     if(stationary)
     {
@@ -973,10 +984,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         }
     }
 
+    #ifdef TIMING
     t2 = Env::clock();
     elapsed_time = t2 - t1;
     Env::print_time("Scatter_gather", elapsed_time);
     scatter_gather_time.push_back(elapsed_time);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1716,8 +1729,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine()
 {
+    #ifdef TIMING
     double t1, t2, elapsed_time;
     t1 = Env::clock();
+    #endif
     
     if(stationary)
     {
@@ -1764,13 +1779,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             Env::exit(1);
         }
     }
-        
+
+    #ifdef TIMING    
     t2 = Env::clock();
     elapsed_time = t2 - t1;
     combine_comm_time.push_back(elapsed_time - combine_comp_time.back());
     Env::print_time("Combine comm", combine_comm_time.back());
     Env::print_time("Combine all ", elapsed_time);
     combine_time.push_back(elapsed_time);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1957,8 +1974,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_2d_stationary()
 {
+    #ifdef TIMING
     double t1, t2, elapsed_time = 0;
     t1 = Env::clock();
+    #endif
     
     MPI_Request request;
     uint32_t tile_th, pair_idx;
@@ -1985,10 +2004,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         
         std::vector<Fractional_Type> &x_data = X[xi];
         
+        #ifdef TIMING
         t1 = Env::clock();
+        #endif
         spmv(tile, y_data, x_data);
+        #ifdef TIMING
         t2 = Env::clock();
         elapsed_time += (t2-t1);
+        #endif
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
@@ -2030,14 +2053,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
+    
+    #ifdef TIMING
     Env::print_time("Combine comp", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_2d_nonstationary()
 {
+    #ifdef TIMING
     double t1, t2, elapsed_time = 0;
+    #endif
     MPI_Request request;
     uint32_t tile_th, pair_idx;
     int32_t leader, follower, my_rank, accu;
@@ -2066,10 +2094,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         std::vector<Integer_Type> &xi_data = XI[xi];
         std::vector<char> &t_data = T[yi];
         
+        #ifdef TIMING
         t1 = Env::clock();
+        #endif
         spmv(tile, y_data, x_data, xv_data, xi_data, t_data);
+        #ifdef TIMING
         t2 = Env::clock();
         elapsed_time += (t2 - t1);
+        #endif
         
         xi++;
         communication = (((tile_th + 1) % rank_ncolgrps) == 0);
@@ -2161,8 +2193,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             yi++;
         }
     }
+    #ifdef TIMING
     Env::print_time("Combine comp", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2280,6 +2314,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             {
                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                #pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
                 {
                     Integer_Type k = yij_data[i];
@@ -2291,6 +2326,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         {
             std::vector<Fractional_Type> &yj_data = Y[yi][accu];
             Integer_Type yj_nitems = yj_data.size();
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < yj_nitems; i++)
                 combiner(y_data[i], yj_data[i]);
         }
@@ -2353,6 +2389,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                #pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2387,6 +2424,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                #pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2409,6 +2447,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         
                         std::vector<Integer_Type> &yij_data = YI[yi][accu];
                         std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                        #pragma omp parallel for schedule(static)
                         for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
                         {
                             Integer_Type k = yij_data[i];
@@ -2468,7 +2507,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 accu = indices_accu[j];
 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
-                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];                                
+                                std::vector<Fractional_Type> &yvj_data = YV[yi][accu];  
+                                #pragma omp parallel for schedule(static)                                
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2498,6 +2538,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                                #pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2518,6 +2559,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         accu = indices_accu[j];
                         std::vector<Integer_Type> &yij_data = YI[yi][accu];
                         std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
+                        #pragma omp parallel for schedule(static)
                         for(Integer_Type i = 0; i < accus_activity_statuses[accu] - 1; i++)
                         {
                             Integer_Type k = yij_data[i];
@@ -2581,9 +2623,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::wait_f
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply()
 {
+    #ifdef TIMING
     double t1, t2, elapsed_time;
     t1 = Env::clock();
-
+    #endif
+    
     if(stationary)
     {
         apply_stationary();
@@ -2596,10 +2640,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply(
             apply_nonstationary();
     }
 
+    #ifdef TIMING
     t2 = Env::clock();
     elapsed_time = t2 - t1;
     Env::print_time("Apply", elapsed_time);
     apply_time.push_back(elapsed_time);
+    #endif
 }
 
 
@@ -2668,11 +2714,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
 //}
     wait_for_sends();
     
+    
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < Y[i].size(); j++)
         {
-            std::vector<Fractional_Type> &y_data = Y[i][j];
+            y_data = Y[i][j];
             Integer_Type y_nitems = y_data.size();
             #pragma omp parallel for schedule(static)
             for(uint32_t k = 0; k < y_nitems; k++)
@@ -2696,6 +2743,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     {
         if(apply_depends_on_iter)
         {
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -2704,6 +2752,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         }
         else
         {
+            #pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -2713,12 +2762,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     }
     else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
     {
-        auto &i_data = (*I)[yi];
-        Integer_Type j = 0;
         if(apply_depends_on_iter)
         {
             if(iteration == 0)
             {
+                auto &i_data = (*I)[yi];
+                auto &iv_data = (*IV)[yi];
+                #pragma omp parallel for schedule(static)
+                for(uint32_t i = 0; i < v_nitems; i++)
+                {
+                    Vertex_State &state = V[i];
+                    if(i_data[i])
+                    {
+                        C[i] = applicator(state, y_data[iv_data[i]], iteration);
+                    }
+                    else
+                    {
+                        C[i] = applicator(state);    
+                    }
+                } 
+                /*
+                auto &i_data = (*I)[yi];
+                Integer_Type j = 0;
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     Vertex_State &state = V[i];
@@ -2730,13 +2795,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     else
                         C[i] = applicator(state);    
                 }  
-               
+               */
             }
             else
             {
                 auto &y2v_data = (*Y2V);
                 auto &v2y_data = (*V2Y);
                 Integer_Type y2v_nitems = y2v_data.size();
+                #pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < y2v_nitems; i++)
                 {
                     Vertex_State &state = V[v2y_data[i]];
@@ -2749,6 +2815,23 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         {
             if(iteration == 0)
             {
+                auto &i_data = (*I)[yi];
+                auto &iv_data = (*IV)[yi];
+                #pragma omp parallel for schedule(static)
+                for(uint32_t i = 0; i < v_nitems; i++)
+                {
+                    Vertex_State &state = V[i];
+                    if(i_data[i])
+                    {
+                        C[i] = applicator(state, y_data[iv_data[i]]);
+                    }
+                    else
+                    {
+                        C[i] = applicator(state);
+                    }
+                }
+                /*
+                auto &i_data = (*I)[yi];
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     Vertex_State &state = V[i];
@@ -2760,27 +2843,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                     else
                         C[i] = applicator(state);
                 }
-               
+                */
             }
             else
             {
                 auto &y2v_data = (*Y2V);
                 auto &v2y_data = (*V2Y);
                 Integer_Type y2v_nitems = y2v_data.size();
+                #pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < y2v_nitems; i++)
                 {
                     Vertex_State &state = V[v2y_data[i]];
                     C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]]);
                 }
             }
-            /*
-            for(uint32_t i = 0; i < v_nitems; i++)
-                printf("%d ", i);
-            printf("\n");
-            for(uint32_t i = 0; i < v_nitems; i++)
-                printf("%d ", C[i]);
-            printf("\n");
-            */
         }
     }
     
@@ -2791,14 +2867,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
         {
             for(uint32_t j = 0; j < Y[i].size(); j++)
-                std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+            {
+                y_data = Y[i][j];
+                Integer_Type y_nitems = y_data.size();
+                #pragma omp parallel for schedule(static)
+                for(uint32_t k = 0; k < y_nitems; k++)
+                    y_data[k] = 0;      
+                
+                //std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+            }
         }
-    } 
+    }
 
     if(activity_filtering)
     {
         for(uint32_t i = 0; i < rank_nrowgrps; i++)
-            std::fill(T[i].begin(), T[i].end(), 0);
+        {
+            std::vector<char> &t_data = T[i];
+            Integer_Type t_nitems = t_data.size();
+            #pragma omp parallel for schedule(static)
+            for(uint32_t j = 0; j < t_nitems; j++)
+                    t_data[j] = 0;  
+                
+            //std::fill(T[i].begin(), T[i].end(), 0);
+        }
     }
 }
 
@@ -3174,6 +3266,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     Triple<Weight, double> stats_pair;
     if(!Env::rank)
     {
+        #ifdef TIMING
         stats_pair = stats(scatter_gather_time);
         std::cout << "Scatter_gather time  (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(combine_time);
@@ -3184,7 +3277,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
         std::cout << "Combine communi time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(apply_time);
         std::cout << "Apply time           (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
-        
+        #endif
         for(uint32_t i = 0; i < count; i++)
         {
             pair.row = i;
