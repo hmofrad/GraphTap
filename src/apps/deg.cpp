@@ -15,22 +15,6 @@ int main(int argc, char **argv)
 {
     bool comm_split = true;
     Env::init(comm_split);
-    /*
-    int nthreads;
-    int tid;
-    #pragma omp parallel private(nthreads, tid)
-    {
-     tid = omp_get_thread_num();
-    printf("Hello World from thread = %d, %d %d\n", Env::rank, tid, omp_get_max_threads() );
-
-     Only master thread does this 
-    if (tid == 0) 
-    {
-        nthreads = omp_get_num_threads();
-        printf("Number of threads = %d %d\n", Env::rank, nthreads);
-    }
-    }
-    */
     double time1 = Env::clock();
     if(argc != 3 and argc != 4)
     {
