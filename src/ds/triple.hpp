@@ -75,6 +75,7 @@ struct RowSort
         #else
         return((a.row == b.row) ? (a.col < b.col) : (a.row < b.row));
         #endif
+        return(false); // To suppress -Wreturn-type
     }
 };
 
@@ -96,6 +97,7 @@ struct ColSort
         #else
         return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
         #endif
+        return(false); // To suppress -Wreturn-type
     }
 };
 #endif
