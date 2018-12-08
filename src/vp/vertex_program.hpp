@@ -222,7 +222,7 @@ class Vertex_Program
         bool msgs_activity_filtering = false;
         
         bool broadcast_communication = true;
-        bool incremental_accumulation = true;
+        bool incremental_accumulation = false;
         
         #ifdef TIMING
         std::vector<double> scatter_gather_time;
@@ -1985,8 +1985,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     bool vec_owner, communication;
     uint32_t xi= 0, yi = 0, yo = 0;
     
+    //#pragma omp parallel for schedule(static, 1)
+    //for(uint32_t i = 0; i < local_tiles_row_order.size(); i++)
     for(uint32_t t: local_tiles_row_order)
     {
+        //uint32_t t = local_tiles_row_order[i];
         auto pair = A->tile_of_local_tile(t);
         auto &tile = A->tiles[pair.row][pair.col];
         auto pair1 = tile_info(tile, pair); 
