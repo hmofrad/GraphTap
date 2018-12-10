@@ -1980,80 +1980,136 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     #endif
     
     MPI_Request request;
-    uint32_t tile_th, pair_idx;
-    int32_t leader, follower, my_rank, accu;
-    bool vec_owner, communication;
+    //uint32_t tile_th, pair_idx;
+    //int32_t leader, follower, my_rank, accu;
+    bool vec_owner;//, communication;
     uint32_t xi= 0, yi = 0, yo = 0;
-    
-    //#pragma omp parallel for schedule(static, 1)
-    //for(uint32_t i = 0; i < local_tiles_row_order.size(); i++)
-    for(uint32_t t: local_tiles_row_order)
+    /*
+    if(!Env::rank)
     {
-        //uint32_t t = local_tiles_row_order[i];
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        auto pair1 = tile_info(tile, pair); 
-        tile_th = pair1.row;
-        pair_idx = pair1.col;
-        
-        vec_owner = leader_ranks[pair_idx] == Env::rank;
-        if(vec_owner)
-            yo = accu_segment_rg;
-        else
-            yo = 0;
-        
-        std::vector<Fractional_Type> &y_data = Y[yi][yo];
-        Integer_Type y_nitems = y_data.size();
-        
-        std::vector<Fractional_Type> &x_data = X[xi];
-        
-        #ifdef TIMING
-        t1 = Env::clock();
-        #endif
-        spmv(tile, y_data, x_data);
-        #ifdef TIMING
-        t2 = Env::clock();
-        elapsed_time += (t2-t1);
-        #endif
-        
-        xi++;
-        communication = (((tile_th + 1) % rank_ncolgrps) == 0);
-        if(communication)
+        for(uint32_t t: local_tiles_row_order)
         {
-            MPI_Comm communicator = communicator_info();
-            auto pair2 = leader_info(tile);
-            leader = pair2.row;
-            my_rank = pair2.col;
-            if(leader == my_rank)
-            {
-                for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-                {                        
-                    if(Env::comm_split)
-                    {   
-                        follower = follower_rowgrp_ranks_rg[j];
-                        accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                    }
-                    else
-                    {
-                        follower = follower_rowgrp_ranks[j];
-                        accu = follower_rowgrp_ranks_accu_seg[j];
-                    }
-                    std::vector<Fractional_Type> &yj_data = Y[yi][accu];
-                    Integer_Type yj_nitems = yj_data.size();
-                    
-                    MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
-                    in_requests.push_back(request);
-                }
-                
-            }
+            auto pair = A->tile_of_local_tile(t);
+            auto &tile = A->tiles[pair.row][pair.col];
+            auto pair1 = tile_info(tile, pair); 
+            pair_idx = pair1.col;
+            tile_th = pair1.row;
+            communication = (((tile_th + 1) % rank_ncolgrps) == 0);
+            printf("[tile=%d tile=%d comm=%d] ", t, tile_th, communication);
+        }
+        printf("\n");
+        
+        for(uint32_t i = 0; i < rank_nrowgrps; i++)
+        {
+            for(uint32_t j = 0; j < rank_ncolgrps; j++)
+                printf("[i=%d j=%d ij=%d t=%d]", i, j, ((i*rank_ncolgrps) + j), local_tiles_row_order[(i*rank_ncolgrps) + j]);
+            printf("\n");
+            
+        }
+        
+        //for(uint32_t i = 0; i < row)
+        //{
+            
+        //}
+    }
+    */
+    //for(uint32_t t: local_tiles_row_order)    
+    //printf("rank = %d\n", Env::rank);
+    //uint32_t i = 0;
+    #pragma omp parallel for schedule(static)
+    for(uint32_t i = 0; i < rank_nrowgrps; i++)
+    {
+        
+        //uint32_t j = 0;//, k = 0;
+        //bool communication = false;
+        for(uint32_t j = 0; j < rank_ncolgrps; j++)
+        {
+            
+            //if(!Env::rank)
+            //printf("[r=%d i=%d j=%d ij=%d t=%d]", Env::rank, i, j, ((i*rank_ncolgrps) + j), local_tiles_row_order[(i*rank_ncolgrps) + j]);
+            //uint32_t t = local_tiles_row_order[i];
+            uint32_t t = local_tiles_row_order[(i*rank_ncolgrps) + j];
+            auto pair = A->tile_of_local_tile(t);
+            auto &tile = A->tiles[pair.row][pair.col];
+            auto pair1 = tile_info(tile, pair); 
+            uint32_t tile_th = pair1.row;
+            uint32_t pair_idx = pair1.col;
+            
+            vec_owner = leader_ranks[pair_idx] == Env::rank;
+            if(vec_owner)
+                yo = accu_segment_rg;
             else
+                yo = 0;
+            
+            //std::vector<Fractional_Type> &y_data = Y[yi][yo];
+            std::vector<Fractional_Type> &y_data = Y[i][yo];
+            
+            Integer_Type y_nitems = y_data.size();
+            
+            //std::vector<Fractional_Type> &x_data = X[xi];
+            std::vector<Fractional_Type> &x_data = X[j];
+            
+            #ifdef TIMING
+            t1 = Env::clock();
+            #endif
+            spmv(tile, y_data, x_data);
+            #ifdef TIMING
+            t2 = Env::clock();
+            elapsed_time += (t2-t1);
+            #endif
+            
+            //xi++;
+            bool communication = (((tile_th + 1) % rank_ncolgrps) == 0);
+            if(!Env::rank)
+            printf("rank=%d, tid=%d, i=%d, j=%d com=%d tag=%d\n", Env::rank, omp_get_thread_num(), i, j, communication, pair_idx);
+            if(communication)
             {
-                MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
-                out_requests.push_back(request);
+                MPI_Comm communicator = communicator_info();
+                auto pair2 = leader_info(tile);
+                int32_t leader = pair2.row;
+                int32_t my_rank = pair2.col;
+                int32_t follower, accu;
+                if(leader == my_rank)
+                {
+                    //for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
+                    for(uint32_t k = 0; k < rowgrp_nranks - 1; k++)
+                    {                        
+                        if(Env::comm_split)
+                        {   
+                            //follower = follower_rowgrp_ranks_rg[j];
+                            //accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                            follower = follower_rowgrp_ranks_rg[k];
+                            accu = follower_rowgrp_ranks_accu_seg_rg[k];
+                        }
+                        else
+                        {
+                            //follower = follower_rowgrp_ranks[j];
+                            //accu = follower_rowgrp_ranks_accu_seg[j];
+                            follower = follower_rowgrp_ranks[k];
+                            accu = follower_rowgrp_ranks_accu_seg[k];
+                        }
+                        std::vector<Fractional_Type> &yj_data = Y[i][accu];
+                        //std::vector<Fractional_Type> &yj_data = Y[yi][accu];
+                        Integer_Type yj_nitems = yj_data.size();
+                        //if(!Env::rank)
+                        //printf("rank=%d, tid=%d, Leader=%d <--- Follower=%d tag=%d k=%d\n", Env::rank, omp_get_thread_num(), Env::rank, follower, pair_idx, k);
+                        MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
+                        in_requests.push_back(request);
+                    }
+                    
+                }
+                else
+                {
+                    //if(!Env::rank)
+                    //printf("rank=%d, tid=%d, Follower=%d ---> Leader=%d tag=%d\n", Env::rank, omp_get_thread_num(), Env::rank, leader, pair_idx);
+                    
+                    MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
+                    out_requests.push_back(request);
 
+                }
+                //xi = 0;
+                //yi++;
             }
-            xi = 0;
-            yi++;
         }
     }
     
