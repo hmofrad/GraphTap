@@ -4,8 +4,8 @@
 #SBATCH --error=graphtap.err
 #SBATCH --ntasks=112
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=28
+#SBATCH --ntasks-per-node=28
+#SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
@@ -42,8 +42,8 @@ MPI="mpirun -np"
 APPS_PERFIX="bin"
 APPS=("./pr" "./bfs" "./sssp_w" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
-GRAPHS=("rmat26.bin" "rmat27.bin" "rmat28.bin" "rmat29.bin")
-GRAPHS_W=("rmat26_w.bin" "rmat27_w.bin" "rmat28_w.bin" "rmat29_w.bin")
+GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin")
+GRAPHS_W=("rmat26_1_w.bin" "rmat27_1_w.bin" "rmat28_w.bin" "rmat29_w.bin")
 GRAPHS_V=("67108864" "134217728" "268435456" "536870912")
 SRC_V=("1554330" "1554330" "1" "1554332")
 
