@@ -140,6 +140,25 @@ void Env::init(bool comm_split_)
     
     MPI_WORLD = MPI_COMM_WORLD;
     
+    if(required != provided)
+    {
+        
+        omp_set_num_threads(1);
+        if(is_master)
+        {
+            printf("Filure to set MPI_THREAD_MULTIPLE\n");
+            printf("Disabling openmp multi-threading\n");
+        }
+    }
+    else
+    {
+        if(is_master)
+        {
+            printf("Multi-threading is on with MPI_THREAD_MULTIPLE\n");
+        }
+    }
+    
+    
     // Affinity 
     //affinity();
 }
