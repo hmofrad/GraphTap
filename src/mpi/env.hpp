@@ -140,7 +140,6 @@ void Env::init(bool comm_split_)
     
     MPI_WORLD = MPI_COMM_WORLD;
     
-    /*
     if(required != provided)
     {
         
@@ -158,7 +157,6 @@ void Env::init(bool comm_split_)
             printf("Multi-threading is on with MPI_THREAD_MULTIPLE\n");
         }
     }
-    */
     
     // Affinity 
     //affinity();
