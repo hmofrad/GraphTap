@@ -183,6 +183,7 @@ class Vertex_Program
         std::vector<std::vector<std::vector<Integer_Type>>> YI;    // Y Indices (Nonstationary)
         std::vector<std::vector<std::vector<Fractional_Type>>> YV; // Y Values (Nonstationary)
         std::vector<std::vector<char>> T;                          // Accumulators activity vectors
+        std::vector<std::vector<std::vector<Fractional_Type>>> O;  // Accumulators omp vectors
         std::vector<Integer_Type> msgs_activity_statuses;
         std::vector<Integer_Type> accus_activity_statuses;
         std::vector<Integer_Type> activity_statuses;
@@ -465,6 +466,20 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
                 YI[i].shrink_to_fit();
             }
         }
+        
+        if(omp_get_max_threads() > 1)
+        {
+            for(uint32_t i = 0; i < rank_nrowgrps; i++)
+            {
+                for(uint32_t j = 0; j < (uint32_t) omp_get_max_threads(); j++)
+                {
+                   O[i][j].clear();
+                   O[i][j].shrink_to_fit();
+                }
+                O[i].clear();
+                O[i].shrink_to_fit();
+            }
+        }        
     }   
 }
 
@@ -700,6 +715,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
         {
             Y[i].resize(1);
             Y[i][0].resize(y_sizes[i]);
+        }
+    }
+    
+    if(omp_get_max_threads() > 1)
+    {
+        O.resize(rank_nrowgrps);
+        for(uint32_t i = 0; i < rank_nrowgrps; i++)
+        {
+            O[i].resize(omp_get_max_threads());
+            for(uint32_t j = 0; j < (uint32_t) omp_get_max_threads(); j++)
+            {
+               O[i][j].resize(y_sizes[i]);
+            }
         }
     }
 }
@@ -1695,8 +1723,120 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
             Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
             Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
             Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
+            
+            uint32_t chunk = ncols_plus_one_minus_one / omp_get_max_threads();
+            uint32_t chunk1 = y_data.size() / omp_get_max_threads();
+            //uint32_t j;
+            
             if(ordering_type == _ROW_)
             {
+                #pragma omp parallel// private(j)
+                {
+                    /*
+                    int nthreads = omp_get_num_threads();
+                    int tid = omp_get_thread_num();
+                    uint32_t points_per_thread = ncols_plus_one_minus_one/nthreads;
+                    uint32_t start = tid*points_per_thread;
+                    uint32_t end = start + points_per_thread;
+                    start = (start > ncols_plus_one_minus_one)?(ncols_plus_one_minus_one):(start);
+                    end = (end > ncols_plus_one_minus_one)?(ncols_plus_one_minus_one):(end);
+                    end = (tid == nthreads-1)?(ncols_plus_one_minus_one):(end);
+                    std::vector<Fractional_Type> &o_data = O[tile.ith][tid];
+                      
+                    for(uint32_t j = start; j < end; j++)
+                    {
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            //#ifdef HAS_WEIGHT
+                            //combiner(o_data[IA[i]], x_data[j], A[i]);
+                            //#else
+                            combiner(o_data[IA[i]], x_data[j]);
+                            //#endif
+                        }
+                        
+                    }                        
+                    */
+                    //printf("R=%d i=%d tid=%d size=%d \n", Env::rank, tile.ith, omp_get_thread_num(), O.size());
+                    
+                    std::vector<Fractional_Type> &o_data = O[tile.ith][omp_get_thread_num()];
+
+                    //if(!Env::rank)
+                        
+                    //#pragma omp parallel for schedule(static) private(j)
+                    #pragma omp for schedule(static, chunk) 
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                    {
+                        //if(omp_get_thread_num() == 0)
+                            //printf("j=%d tid=%d %d\n", j, omp_get_thread_num(), chunk);
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            //#ifdef HAS_WEIGHT
+                            //combiner(y_data[IA[i]], x_data[j], A[i]);
+                            //#else
+                            //#pragma omp atomic
+                            //if(!Env::rank)
+                                
+                            #ifdef HAS_WEIGHT
+                            combiner(o_data[IA[i]], x_data[j], A[i]);
+                            #else
+                            combiner(o_data[IA[i]], x_data[j]);
+                            #endif
+                        }
+                    }
+                    
+                    #pragma omp for schedule(static, chunk1)
+                    for(uint32_t j = 0; j < y_data.size(); j++)
+                    {
+                        //if(omp_get_thread_num() == 0)
+                            //printf("j=%d tid=%d %d\n", j, omp_get_thread_num(), chunk1);
+                        for(uint32_t i = 0; i < (uint32_t) omp_get_max_threads(); i++)
+                        {
+                            combiner(y_data[j], O[tile.ith][i][j]);
+                            O[tile.ith][i][j] = 0;
+                        }
+                    }
+                    
+                    
+                }
+                
+                /*
+                if(!Env::rank)
+                {
+                    printf("1.sum=%d\n", std::accumulate(y_data.begin(), y_data.end(), 0));
+                }
+                */
+                
+                /*
+                for(uint32_t i = 0; i < (uint32_t) omp_get_max_threads(); i++)
+                {
+                    std::vector<Fractional_Type> &o_data = O[tile.ith][i];
+                    for(uint32_t j = 0; j < o_data.size(); j++)
+                    {
+                        combiner(y_data[j], o_data[j]);
+                        o_data[j] = 0;
+                    }
+                }
+                */
+                /*
+                #pragma omp for schedule(static, 1)
+                for(uint32_t i = 0; i < (uint32_t) omp_get_max_threads(); i++)
+                {
+                    std::vector<Integer_Type> &o_data = O[tile.ith][i];
+                    for(uint32_t j = 0; j < o_data.size(); j++)
+                        o_data[j] = 0;
+                    
+                }
+                */
+                
+                /*
+                if(!Env::rank)
+                {
+                    printf("2.sum=%d\n", std::accumulate(y_data.begin(), y_data.end(), 0));
+                }
+                */
+
+                
+                /*
                 for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                 {
                     for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
@@ -1708,9 +1848,45 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         #endif
                     }
                 }
+                */
             }
             else if(ordering_type == _COL_)
             {
+                #pragma omp parallel// private(j)
+                {
+                    //std::vector<Integer_Type> &o_data = O[tile.ith][omp_get_thread_num()];
+                    //if(!Env::rank)
+                      //  printf("R=%d i=%d tid=%d size=%lu %lu\n", Env::rank, tile.ith, omp_get_thread_num(), o_data.size(), y_data.size());
+                    //#pragma omp parallel for schedule(static) private(j)
+                    #pragma omp for schedule(static)//, chunk) 
+                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                    {
+                        //if(omp_get_thread_num() == 0)
+                            //printf("j=%d tid=%d %d\n", j, omp_get_thread_num(), chunk);
+                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
+                        {
+                            //#ifdef HAS_WEIGHT
+                            //combiner(y_data[IA[i]], x_data[j], A[i]);
+                            //#else
+                            //#pragma omp atomic
+                            //if(!Env::rank)
+                                
+                            #ifdef HAS_WEIGHT
+                            //combiner(y_data[j], x_data[IA[i]], A[i]);   
+                            combiner(y_data[j], x_data[j], A[i]);
+                            #else
+                            //combiner(y_data[j], x_data[IA[i]]);
+                            combiner(y_data[j], x_data[IA[i]]);
+                            #endif
+                        }
+                    }                
+                }
+                
+                
+                
+                
+                
+                /*
                 for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
                 {
                     for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
@@ -1722,6 +1898,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
                         #endif
                     }
                 }
+                */
             }
         }            
     }    
@@ -1740,10 +1917,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     {
         if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         {
+            combine_2d_stationary();
+            /*
             if(omp_get_max_threads() > 1)
                 combine_2d_stationary_omp();
             else
                 combine_2d_stationary();
+            */
         }
         else if(tiling_type == Tiling_type::_1D_ROW)
         {  
@@ -1776,10 +1956,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combine_2d_for_tc();
             else
             {
+                combine_2d_nonstationary();
+                
+                /*
                 if(omp_get_max_threads() > 1)
                     combine_2d_nonstationary_omp();
                 else
                     combine_2d_nonstationary();
+                */
                 combine_postprocess();
             }
         }
@@ -2076,7 +2260,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     MPI_Request request;
     
     uint32_t i;
-    #pragma omp parallel for schedule(static, 1) private(i)
+    //#pragma omp parallel for schedule(static, 1) private(i)
     for(i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
