@@ -2,16 +2,16 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=112
+#SBATCH --ntasks=28
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=28
+#SBATCH --ntasks-per-node=7
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
 ##SBATCH --ntasks-per-socket=8
 #SBATCH --time=01:00:00
 #SBATCH --cluster=mpi
-#SBATCH --partition=opa
+#SBATCH --partition=opa-high-mem
 
 ## while true; do free -g; sleep 10; done
 ## grep 'Execution' la3.out
