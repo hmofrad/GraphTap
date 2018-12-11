@@ -2332,8 +2332,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             auto pair = A->tile_of_local_tile(t);
             auto &tile = A->tiles[pair.row][pair.col];
             auto pair1 = tile_info(tile, pair); 
-            bool tile_th = pair1.row;
-            bool pair_idx = pair1.col;
+            uint32_t tile_th = pair1.row;
+            uint32_t pair_idx = pair1.col;
             
             bool vec_owner = leader_ranks[pair_idx] == Env::rank;
             uint32_t yo = 0;
