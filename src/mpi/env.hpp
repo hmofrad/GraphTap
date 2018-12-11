@@ -154,7 +154,7 @@ void Env::init(bool comm_split_)
     {
         if(is_master)
         {
-            printf("Multi-threading is on with MPI_THREAD_MULTIPLE (%d/%d)\n", omp_get_num_threads(), omp_get_max_threads());
+            printf("Multi-threading is enabled with MPI_THREAD_MULTIPLE (%d/%d)\n", omp_get_num_threads(), omp_get_max_threads());
         }
     }
     
