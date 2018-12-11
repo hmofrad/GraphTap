@@ -93,6 +93,7 @@ class Vertex_Program
         void combine_2d_stationary();
         void combine_2d_stationary_omp();
         void combine_2d_nonstationary();
+        void combine_2d_nonstationary_omp();
         void combine_postprocess();
         void combine_postprocess_stationary_for_all();
         void combine_postprocess_nonstationary_for_all();
@@ -1738,7 +1739,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     if(stationary)
     {
         if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-            combine_2d_stationary();
+        {
+            if(omp_get_max_threads() > 1)
+                combine_2d_stationary_omp();
+            else
+                combine_2d_stationary();
+        }
         else if(tiling_type == Tiling_type::_1D_ROW)
         {  
             if(ordering_type == _ROW_)
@@ -1770,7 +1776,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combine_2d_for_tc();
             else
             {
-                combine_2d_nonstationary();
+                if(omp_get_max_threads() > 1)
+                    combine_2d_nonstationary_omp();
+                else
+                    combine_2d_nonstationary();
                 combine_postprocess();
             }
         }
@@ -2065,54 +2074,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     #endif
     
     MPI_Request request;
-    //uint32_t tile_th, pair_idx;
-    //int32_t leader, follower, my_rank, accu;
-    bool vec_owner;//, communication;
-    uint32_t xi= 0, yi = 0, yo = 0;
-    /*
-    if(!Env::rank)
+    
+    uint32_t i;
+    #pragma omp parallel for schedule(static, 1) private(i)
+    for(i = 0; i < rank_nrowgrps; i++)
     {
-        for(uint32_t t: local_tiles_row_order)
-        {
-            auto pair = A->tile_of_local_tile(t);
-            auto &tile = A->tiles[pair.row][pair.col];
-            auto pair1 = tile_info(tile, pair); 
-            pair_idx = pair1.col;
-            tile_th = pair1.row;
-            communication = (((tile_th + 1) % rank_ncolgrps) == 0);
-            printf("[tile=%d tile=%d comm=%d] ", t, tile_th, communication);
-        }
-        printf("\n");
-        
-        for(uint32_t i = 0; i < rank_nrowgrps; i++)
-        {
-            for(uint32_t j = 0; j < rank_ncolgrps; j++)
-                printf("[i=%d j=%d ij=%d t=%d]", i, j, ((i*rank_ncolgrps) + j), local_tiles_row_order[(i*rank_ncolgrps) + j]);
-            printf("\n");
-            
-        }
-        
-        //for(uint32_t i = 0; i < row)
-        //{
-            
-        //}
-    }
-    */
-    //for(uint32_t t: local_tiles_row_order)    
-    //printf("rank = %d\n", Env::rank);
-    //uint32_t i = 0;
-    #pragma omp parallel for schedule(static)
-    for(uint32_t i = 0; i < rank_nrowgrps; i++)
-    {
-        
-        //uint32_t j = 0;//, k = 0;
-        //bool communication = false;
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
         {
-            
             //if(!Env::rank)
-            //printf("[r=%d i=%d j=%d ij=%d t=%d]", Env::rank, i, j, ((i*rank_ncolgrps) + j), local_tiles_row_order[(i*rank_ncolgrps) + j]);
-            //uint32_t t = local_tiles_row_order[i];
+            //    printf("tid=%d i=%d j=%d\n", omp_get_thread_num(), i, j);
             uint32_t t = local_tiles_row_order[(i*rank_ncolgrps) + j];
             auto pair = A->tile_of_local_tile(t);
             auto &tile = A->tiles[pair.row][pair.col];
@@ -2120,18 +2090,16 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             uint32_t tile_th = pair1.row;
             uint32_t pair_idx = pair1.col;
             
-            vec_owner = leader_ranks[pair_idx] == Env::rank;
+            bool vec_owner = leader_ranks[pair_idx] == Env::rank;
+            uint32_t yo;
             if(vec_owner)
                 yo = accu_segment_rg;
             else
                 yo = 0;
-            
-            //std::vector<Fractional_Type> &y_data = Y[yi][yo];
+
             std::vector<Fractional_Type> &y_data = Y[i][yo];
-            
             Integer_Type y_nitems = y_data.size();
             
-            //std::vector<Fractional_Type> &x_data = X[xi];
             std::vector<Fractional_Type> &x_data = X[j];
             
             #ifdef TIMING
@@ -2145,8 +2113,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             
             //xi++;
             bool communication = (((tile_th + 1) % rank_ncolgrps) == 0);
-            if(!Env::rank)
-            printf("rank=%d, tid=%d, i=%d, j=%d com=%d tag=%d\n", Env::rank, omp_get_thread_num(), i, j, communication, pair_idx);
+            //if(!Env::rank)
+            //printf("rank=%d, tid=%d, i=%d, j=%d com=%d tag=%d\n", Env::rank, omp_get_thread_num(), i, j, communication, pair_idx);
             if(communication)
             {
                 MPI_Comm communicator = communicator_info();
@@ -2156,30 +2124,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 int32_t follower, accu;
                 if(leader == my_rank)
                 {
-                    //for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
                     for(uint32_t k = 0; k < rowgrp_nranks - 1; k++)
                     {                        
                         if(Env::comm_split)
                         {   
-                            //follower = follower_rowgrp_ranks_rg[j];
-                            //accu = follower_rowgrp_ranks_accu_seg_rg[j];
                             follower = follower_rowgrp_ranks_rg[k];
                             accu = follower_rowgrp_ranks_accu_seg_rg[k];
                         }
                         else
                         {
-                            //follower = follower_rowgrp_ranks[j];
-                            //accu = follower_rowgrp_ranks_accu_seg[j];
                             follower = follower_rowgrp_ranks[k];
                             accu = follower_rowgrp_ranks_accu_seg[k];
                         }
                         std::vector<Fractional_Type> &yj_data = Y[i][accu];
-                        //std::vector<Fractional_Type> &yj_data = Y[yi][accu];
                         Integer_Type yj_nitems = yj_data.size();
-                        //if(!Env::rank)
-                        //printf("rank=%d, tid=%d, Leader=%d <--- Follower=%d tag=%d k=%d\n", Env::rank, omp_get_thread_num(), Env::rank, follower, pair_idx, k);
+                        //MPI_Request request;
                         MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
                         in_requests.push_back(request);
+                        //if(!Env::rank)
+                        //printf("rank=%d, tid=%d, Leader=%d <--- Follower=%d tag=%d k=%d\n", Env::rank, omp_get_thread_num(), Env::rank, follower, pair_idx, k);
                     }
                     
                 }
@@ -2187,7 +2150,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 {
                     //if(!Env::rank)
                     //printf("rank=%d, tid=%d, Follower=%d ---> Leader=%d tag=%d\n", Env::rank, omp_get_thread_num(), Env::rank, leader, pair_idx);
-                    
+                    //MPI_Request request;
                     MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
                     out_requests.push_back(request);
 
@@ -2335,6 +2298,157 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             }
             xi = 0;
             yi++;
+        }
+    }
+    #ifdef TIMING
+    Env::print_time("Combine comp", elapsed_time);
+    combine_comp_time.push_back(elapsed_time);
+    #endif
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_2d_nonstationary_omp()
+{
+    #ifdef TIMING
+    double t1, t2, elapsed_time = 0;
+    #endif
+    
+    MPI_Request request;
+    MPI_Status status;
+    
+    //int32_t leader, follower, my_rank, accu;
+
+    //uint32_t xi= 0, yi = 0, yo = 0;
+
+    uint32_t i;
+    #pragma omp parallel for schedule(static, 1) private(i)
+    for(i = 0; i < rank_nrowgrps; i++)
+    {
+        for(uint32_t j = 0; j < rank_ncolgrps; j++)
+        {
+            //if(!Env::rank)
+            //    printf("tid=%d i=%d j=%d\n", omp_get_thread_num(), i, j);
+            uint32_t t = local_tiles_row_order[(i*rank_ncolgrps) + j];
+            auto pair = A->tile_of_local_tile(t);
+            auto &tile = A->tiles[pair.row][pair.col];
+            auto pair1 = tile_info(tile, pair); 
+            bool tile_th = pair1.row;
+            bool pair_idx = pair1.col;
+            
+            bool vec_owner = leader_ranks[pair_idx] == Env::rank;
+            uint32_t yo = 0;
+            if(vec_owner)
+                yo = accu_segment_rg;
+            else
+                yo = 0;
+            
+            std::vector<Fractional_Type> &y_data = Y[i][yo];
+            Integer_Type y_nitems = y_data.size();
+
+            std::vector<Fractional_Type> &x_data = X[j];
+            std::vector<Fractional_Type> &xv_data = XV[j];
+            std::vector<Integer_Type> &xi_data = XI[j];
+            std::vector<char> &t_data = T[i];
+            
+            #ifdef TIMING
+            t1 = Env::clock();
+            #endif
+            spmv(tile, y_data, x_data, xv_data, xi_data, t_data);
+            #ifdef TIMING
+            t2 = Env::clock();
+            elapsed_time += (t2 - t1);
+            #endif
+            
+            //xi++;
+            bool communication = (((tile_th + 1) % rank_ncolgrps) == 0);
+            if(communication)
+            {
+                MPI_Comm communicator = communicator_info();
+                auto pair2 = leader_info(tile);
+                int32_t leader = pair2.row;
+                int32_t my_rank = pair2.col;
+                int32_t follower, accu;
+                if(leader == my_rank)
+                {
+                    for(uint32_t k = 0; k < rowgrp_nranks - 1; k++)
+                    {
+                        if(Env::comm_split)
+                        {   
+                            follower = follower_rowgrp_ranks_rg[k];
+                            accu = follower_rowgrp_ranks_accu_seg_rg[k];
+                        }
+                        else
+                        {
+                            follower = follower_rowgrp_ranks[k];
+                            accu = follower_rowgrp_ranks_accu_seg[k];
+                        }
+                        if(activity_filtering and activity_statuses[tile.rg])
+                        {
+                            // 0 all / 1 nothing / else nitems 
+                            int nitems = 0;
+                            //MPI_Status status;
+                            MPI_Recv(&nitems, 1, MPI_INT, follower, pair_idx, communicator, &status);
+                            accus_activity_statuses[accu] = nitems;
+                            
+                            if(accus_activity_statuses[accu] > 1)
+                            {
+                                std::vector<Integer_Type> &yij_data = YI[i][accu];
+                                std::vector<Fractional_Type> &yvj_data = YV[i][accu];
+                                MPI_Irecv(yij_data.data(), accus_activity_statuses[accu] - 1, TYPE_INT, follower, pair_idx, communicator, &request);
+                                in_requests.push_back(request);
+                                MPI_Irecv(yvj_data.data(), accus_activity_statuses[accu] - 1, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
+                                in_requests_.push_back(request);
+                            }
+                        }
+                        else
+                        {                                
+                            std::vector<Fractional_Type> &yj_data = Y[i][accu];
+                            Integer_Type yj_nitems = yj_data.size();
+                            MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
+                            in_requests.push_back(request);
+                        }       
+                        
+                    }   
+                }
+                else
+                {
+                    std::vector<Integer_Type> &yi_data = YI[i][yo];
+                    std::vector<Fractional_Type> &yv_data = YV[i][yo];
+                    int nitems = 0;
+                    
+                    if(activity_filtering and activity_statuses[tile.rg])
+                    {
+                        std::vector<char> &t_data = T[i];
+                        Integer_Type k = 0;
+                        for(uint32_t l = 0; l < y_nitems; l++)
+                        {
+                            if(t_data[l])
+                            {
+                                yi_data[k] = l;
+                                yv_data[k] = y_data[l];
+                                k++;
+                            }
+                        }
+                        nitems = k;
+                        nitems++;
+                        MPI_Send(&nitems, 1, TYPE_INT, leader, pair_idx, communicator);
+                        if(nitems > 1)
+                        {
+                            MPI_Isend(yi_data.data(), nitems - 1, TYPE_INT, leader, pair_idx, communicator, &request);
+                            out_requests.push_back(request);
+                            MPI_Isend(yv_data.data(), nitems - 1, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
+                            out_requests_.push_back(request);
+                        }
+                    }
+                    else
+                    {
+                        MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
+                        out_requests.push_back(request);
+                    }
+                }
+                //xi = 0;
+                //yi++;
+            }
         }
     }
     #ifdef TIMING
