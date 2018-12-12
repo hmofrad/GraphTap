@@ -17,7 +17,7 @@
 #include <vector>
 #include <algorithm>
 
-// Vertex filtering 
+
 uint32_t nnz_rows_;
 std::vector<char> rows_;
 std::vector<uint32_t> rows_val_;
@@ -98,7 +98,6 @@ void init_dcsc(uint32_t nnz_, uint32_t ncols)
         exit(1);
     }
     size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t)) + (nnz_cols_ * sizeof(uint32_t));
-    
 }
 
 void popu_dcsc()
