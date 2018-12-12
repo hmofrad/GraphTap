@@ -106,6 +106,11 @@ void spmv_csc()
             nOps++;
         }
     }
+    for(uint32_t i = 0; i < num_vertices; i++)
+    {
+        x[i] = y[i];
+        x[i] = 1;
+    }
 }
 
 void done_csc()
