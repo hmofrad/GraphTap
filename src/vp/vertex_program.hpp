@@ -584,7 +584,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
         {
             init_stationary();
             Integer_Type v_nitems = V.size();
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i]; 
@@ -710,11 +710,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     uint32_t xo = accu_segment_col;
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    //#pragma omp parallel
-    //{
         if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -727,7 +725,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
             
             auto &j_data = (*J)[xo];
             auto &jv_data = (*JV)[xo];
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 if(j_data[i])
@@ -1000,11 +998,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     uint32_t xo = accu_segment_col;    
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    //#pragma omp parallel
-    //{
         if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -1017,14 +1013,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             auto &v2j_data = (*V2J);
             auto &j2v_data = (*J2V);
             Integer_Type v2j_nitems = v2j_data.size();
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v2j_nitems; i++)
             {
                 Vertex_State &state = V[v2j_data[i]];
                 x_data[j2v_data[i]] = messenger(state);
             }
         }
-    //}
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -2507,7 +2502,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 
         std::vector<Fractional_Type> &yj_data = Y[yi][accu];
         Integer_Type yj_nitems = yj_data.size();
-        #pragma omp parallel for schedule(static)
+        //#pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < yj_nitems; i++)
             combiner(y_data[i], yj_data[i]);
     }
@@ -2542,7 +2537,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 accu = follower_rowgrp_ranks_accu_seg[j];
             std::vector<Fractional_Type> &yj_data = Y[yi][accu];
             Integer_Type yj_nitems = yj_data.size();
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < yj_nitems; i++)
                 combiner(y_data[i], yj_data[i]);            
         }
@@ -2574,7 +2569,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             {
                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                #pragma omp parallel for schedule(static)
+                //#pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
                 {
                     Integer_Type k = yij_data[i];
@@ -2586,7 +2581,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         {
             std::vector<Fractional_Type> &yj_data = Y[yi][accu];
             Integer_Type yj_nitems = yj_data.size();
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < yj_nitems; i++)
                 combiner(y_data[i], yj_data[i]);
         }
@@ -2649,7 +2644,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                                #pragma omp parallel for schedule(static)
+                                //#pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2684,7 +2679,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                                 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                                #pragma omp parallel for schedule(static)
+                                //#pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2707,7 +2702,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         
                         std::vector<Integer_Type> &yij_data = YI[yi][accu];
                         std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                        #pragma omp parallel for schedule(static)
+                        //#pragma omp parallel for schedule(static)
                         for(uint32_t i = 0; i < accus_activity_statuses[accu] - 1; i++)
                         {
                             Integer_Type k = yij_data[i];
@@ -2768,7 +2763,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];  
-                                #pragma omp parallel for schedule(static)                                
+                                //#pragma omp parallel for schedule(static)                                
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2798,7 +2793,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
 
                                 std::vector<Integer_Type> &yij_data = YI[yi][accu];
                                 std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                                #pragma omp parallel for schedule(static)
+                                //#pragma omp parallel for schedule(static)
                                 for(uint32_t k = 0; k < accus_activity_statuses[accu] - 1; k++)
                                 {
                                     Integer_Type l = yij_data[k];
@@ -2819,7 +2814,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                         accu = indices_accu[j];
                         std::vector<Integer_Type> &yij_data = YI[yi][accu];
                         std::vector<Fractional_Type> &yvj_data = YV[yi][accu];
-                        #pragma omp parallel for schedule(static)
+                        //#pragma omp parallel for schedule(static)
                         for(Integer_Type i = 0; i < accus_activity_statuses[accu] - 1; i++)
                         {
                             Integer_Type k = yij_data[i];
@@ -2918,7 +2913,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     Integer_Type v_nitems = V.size();
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
-        #pragma omp parallel for schedule(static)
+        //#pragma omp parallel for schedule(static)
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             Vertex_State &state = V[i];
@@ -2931,7 +2926,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         {
             auto &i_data = (*I)[yi];
             auto &iv_data = (*IV)[yi];
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -2963,7 +2958,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             auto &y2v_data = (*Y2V);
             auto &v2y_data = (*V2Y);
             Integer_Type y2v_nitems = y2v_data.size();
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < y2v_nitems; i++)
             {
                 Vertex_State &state = V[v2y_data[i]];
@@ -2981,11 +2976,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         {
             std::vector<Fractional_Type> &y_data = Y[i][j];
             Integer_Type y_nitems = y_data.size();
-            #pragma omp parallel for schedule(static)
-            for(uint32_t k = 0; k < y_nitems; k++)
-                y_data[k] = 0;        
+            //#pragma omp parallel for schedule(static)
+            //for(uint32_t k = 0; k < y_nitems; k++)
+            //    y_data[k] = 0;        
           
-            //std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+            std::fill(y_data.begin(), y_data.end(), 0);
         }
     }
     
@@ -3003,7 +2998,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     {
         if(apply_depends_on_iter)
         {
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -3012,7 +3007,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         }
         else
         {
-            #pragma omp parallel for schedule(static)
+            //#pragma omp parallel for schedule(static)
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
@@ -3028,7 +3023,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             {
                 auto &i_data = (*I)[yi];
                 auto &iv_data = (*IV)[yi];
-                #pragma omp parallel for schedule(static)
+                //#pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     Vertex_State &state = V[i];
@@ -3062,7 +3057,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                 auto &y2v_data = (*Y2V);
                 auto &v2y_data = (*V2Y);
                 Integer_Type y2v_nitems = y2v_data.size();
-                #pragma omp parallel for schedule(static)
+                //#pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < y2v_nitems; i++)
                 {
                     Vertex_State &state = V[v2y_data[i]];
@@ -3077,7 +3072,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             {
                 auto &i_data = (*I)[yi];
                 auto &iv_data = (*IV)[yi];
-                #pragma omp parallel for schedule(static)
+                //#pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < v_nitems; i++)
                 {
                     Vertex_State &state = V[i];
@@ -3110,7 +3105,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                 auto &y2v_data = (*Y2V);
                 auto &v2y_data = (*V2Y);
                 Integer_Type y2v_nitems = y2v_data.size();
-                #pragma omp parallel for schedule(static)
+                //#pragma omp parallel for schedule(static)
                 for(uint32_t i = 0; i < y2v_nitems; i++)
                 {
                     Vertex_State &state = V[v2y_data[i]];
@@ -3130,11 +3125,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             {
                 std::vector<Fractional_Type> &y_data = Y[i][j];
                 Integer_Type y_nitems = y_data.size();
-                #pragma omp parallel for schedule(static)
-                for(uint32_t k = 0; k < y_nitems; k++)
-                    y_data[k] = 0;      
+                //#pragma omp parallel for schedule(static)
+                //for(uint32_t k = 0; k < y_nitems; k++)
+                 //   y_data[k] = 0;      
                 
-                //std::fill(Y[i][j].begin(), Y[i][j].end(), 0);
+                std::fill(y_data.begin(), y_data.end(), 0);
             }
         }
     }
@@ -3145,11 +3140,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         {
             std::vector<char> &t_data = T[i];
             Integer_Type t_nitems = t_data.size();
-            #pragma omp parallel for schedule(static)
-            for(uint32_t j = 0; j < t_nitems; j++)
-                    t_data[j] = 0;  
+            //#pragma omp parallel for schedule(static)
+            //for(uint32_t j = 0; j < t_nitems; j++)
+            //        t_data[j] = 0;  
                 
-            //std::fill(T[i].begin(), T[i].end(), 0);
+            std::fill(t_data.begin(), t_data.end(), 0);
         }
     }
 }
