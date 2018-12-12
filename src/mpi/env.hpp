@@ -142,7 +142,6 @@ void Env::init(bool comm_split_)
     
     if(required != provided)
     {
-        
         omp_set_num_threads(1);
         if(is_master)
         {
