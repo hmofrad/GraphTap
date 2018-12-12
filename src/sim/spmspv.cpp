@@ -65,6 +65,7 @@ std::chrono::steady_clock::time_point end;
 #include "csc.cpp"
 #include "csc_d.cpp"
 #include "dcsc.cpp"
+#include "dcsc_d.cpp"
 #include "odcsc.cpp"
 #include "tcsc.cpp"
 
@@ -166,14 +167,14 @@ int main(int argc, char **argv)
     }
     else if(which == 3)
     {
-        filtering_dcsc(num_vertices);
-        run_dcsc();
-        //walk_dcsc();
+        filtering_dcsc_d(num_vertices);
+        run_dcsc_d();
+        //walk_dcsc_d();
         begin = std::chrono::steady_clock::now();
-            init_dcsc_vecs();
+            init_dcsc_d_vecs();
             for(iter = 0; iter < num_iter; iter++)
-                spmv_dcsc();
-            done_dcsc();
+                spmv_dcsc_d();
+            done_dcsc_d();
         end = std::chrono::steady_clock::now();
         std::cout << "DCSC SpMSpV ";
     }
@@ -195,7 +196,7 @@ int main(int argc, char **argv)
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
-        std::cout << "odcsc (LA3) SpMSpV ";
+        std::cout << "ODCSC (LA3) SpMSpV ";
     }
     else if(which == 5)
     {
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
     
     std::cout << "Stats:" << std::endl;
     std::cout << "    Utilized Memory: " << size / 1e9 << " G" << std::endl;
-    if(std::atoi(argv[1]) == 2)
+    if(std::atoi(argv[1]) == 4)
     std::cout << "    Extra    Memory: " << extra / 1e9 << " G (extra per iteration)" << std::endl;
     std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
     std::cout << "    Final value:     " << value <<std::endl;
