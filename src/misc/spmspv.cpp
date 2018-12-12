@@ -1,13 +1,13 @@
 /*
  * spmv.cpp: Unit test for SpMV Kernels
-                   Compressed Sparse Column (CSC)
-   Double          Compressed Sparse Column (DCSC)
-   Extended Double Compressed Sparse Column (EDCSC) (LA3)
-            Triple Compressed Sparse Column (TCSC) (GraphTap)
+                   Compressed Sparse Column (CSC)  for SpMV/SpMSpV
+   Double          Compressed Sparse Column (DCSC) for SpMV/SpMSpV
+   Optmized Double Compressed Sparse Column (ODCSC) (LA3) for SpMSpV
+            Triple Compressed Sparse Column (TCSC) (GraphTap) for SpMSpV
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
- * g++ -o spmv spmv.cpp -std=c++14
+ * g++ -o spmspv spmspv.cpp -std=c++14
  */
  
 #include <iostream>
@@ -63,8 +63,9 @@ std::chrono::steady_clock::time_point begin;
 std::chrono::steady_clock::time_point end;
 
 #include "csc.cpp"
+#include "csc_d.cpp"
 #include "dcsc.cpp"
-#include "edcsc.cpp"
+#include "odcsc.cpp"
 #include "tcsc.cpp"
 
 void read_binary(std::string filepath)
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
 { 
     if(argc != 5)
     {
-        std::cout << "\"Usage: " << argv[0] << " <GraphTap(0)|LA3(1)> <iterations> <file_path> <num_vertices>\"" << std::endl;
+        std::cout << "\"Usage: " << argv[0] << " <CSC|DCSC|ODCSC(LA3)|TCSC(GraphTap)> <iterations> <file_path> <num_vertices>\"" << std::endl;
         exit(1);
     }
     
@@ -135,9 +136,22 @@ int main(int argc, char **argv)
                 spmv_csc();
             done_csc();
         end = std::chrono::steady_clock::now();
-        std::cout << "CSC ";
+        std::cout << "CSC SpMV ";
     }
-    else if(which == 1)
+    if(which == 1)
+    {
+        filtering_csc_d(num_vertices);
+        run_csc_d();
+        //walk_csc_d();
+        begin = std::chrono::steady_clock::now();
+            init_csc_d_vecs();
+            for(iter = 0; iter < num_iter; iter++)
+                spmv_csc_d();
+            done_csc_d();
+        end = std::chrono::steady_clock::now();
+        std::cout << "CSC SpMSpV ";
+    }
+    else if(which == 2)
     {
         filtering_dcsc(num_vertices);
         run_dcsc();
@@ -148,29 +162,42 @@ int main(int argc, char **argv)
                 spmv_dcsc();
             done_dcsc();
         end = std::chrono::steady_clock::now();
-        std::cout << "DCSC ";
+        std::cout << "DCSC SpMV ";
     }
-    else if(which == 2)
+    else if(which == 3)
+    {
+        filtering_dcsc(num_vertices);
+        run_dcsc();
+        //walk_dcsc();
+        begin = std::chrono::steady_clock::now();
+            init_dcsc_vecs();
+            for(iter = 0; iter < num_iter; iter++)
+                spmv_dcsc();
+            done_dcsc();
+        end = std::chrono::steady_clock::now();
+        std::cout << "DCSC SpMSpV ";
+    }
+    else if(which == 4)
     {
         triples_regulars = new std::vector<struct Triple>;
         triples_sources = new std::vector<struct Triple>;
-        classification_edcsc(num_vertices);
-        run_edcsc();
-        //walk_edcsc_regulars();
-        //walk_edcsc_sources();
+        classification_odcsc(num_vertices);
+        run_odcsc();
+        //walk_odcsc_regulars();
+        //walk_odcsc_sources();
         begin = std::chrono::steady_clock::now();
-            init_edcsc_vecs();
+            init_odcsc_vecs();
             for(uint32_t i = 0; i < num_iter; i++)
-                spmv_edcsc();
-            done_edcsc();
+                spmv_odcsc();
+            done_odcsc();
         end = std::chrono::steady_clock::now();
         
         triples_regulars->clear();
         triples_sources->clear();
         extra = ((nentries_regulars * sizeof(Edge)) + (nentries_sources * sizeof(Edge)));
-        std::cout << "EDCSC (LA3)";
+        std::cout << "odcsc (LA3) SpMSpV ";
     }
-    else
+    else if(which == 5)
     {
         filtering(num_vertices);
         run_tcsc();
@@ -181,7 +208,7 @@ int main(int argc, char **argv)
                 spmv_tcsc();
             done_tcsc();
         end = std::chrono::steady_clock::now();
-        std::cout << "TCSC (GraphTap)";
+        std::cout << "TCSC (GraphTap) SpMSpV ";
     }
     triples->clear();
     
