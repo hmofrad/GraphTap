@@ -21,28 +21,52 @@ uint32_t nnz_rows__;
 std::vector<char> rows__;
 std::vector<uint32_t> rows_val__;
 std::vector<uint32_t> rows2vals__;
+uint32_t nnz_cols__;
+std::vector<char> cols__;
+std::vector<uint32_t> cols_val__;
+std::vector<int> rows2cols__;
+uint32_t nnz_rows2cols__;
+std::vector<int> cols2rows__;
+
 
 void filtering_csc_d(uint32_t num_vertices)
 {
     rows__.resize(num_vertices);
     rows_val__.resize(num_vertices);
+    cols__.resize(num_vertices);
+    cols_val__.resize(num_vertices);
     
     for(auto &triple: *triples)
     {
         rows__[triple.row] = 1;
+        cols__[triple.col] = 1;
     }
     
     uint32_t i = 0, j = 0;
     for(uint32_t k = 0; k < num_vertices; k++)
     {
+        if(rows__[k] and cols__[k])
+        {
+            rows2cols__.push_back(i);
+            cols2rows__.push_back(j);
+        }
+        
         if(rows__[k])
         {
             rows2vals__.push_back(k);
             rows_val__[k] = i;
             i++;
         }
+        if(cols__[k])
+        {
+            cols_val__[k] = j;
+            j++;
+        }
+        //printf("%d %d %d\n", k, rows[k], cols[k]);
     }
     nnz_rows__ = i;
+    nnz_cols__ = j;
+    nnz_rows2cols__ = rows2cols__.size();
     printf("[x]Filtering is done\n");
 }
 
@@ -73,7 +97,7 @@ void init_csc_d(uint32_t nnz_, uint32_t ncols)
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
-    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t)) + + (nnz_rows__ * sizeof(uint32_t));
+    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t)) + (nnz_rows__ * sizeof(uint32_t));
 }
 
 void popu_csc_d()
@@ -102,8 +126,8 @@ void popu_csc_d()
 
 void run_csc_d()
 {
-    init_csc(triples->size(), num_vertices);
-    popu_csc();
+    init_csc_d(triples->size(), num_vertices);
+    popu_csc_d();
     printf("[x]Compression is done\n");
 }
 
@@ -123,7 +147,7 @@ void init_csc_d_vecs()
 {
     values.resize(num_vertices);
     y.resize(nnz_rows__);
-    x.resize(num_vertices, 1);
+    x.resize(nnz_cols__, 1);
 }
 
 void spmv_csc_d()
@@ -132,9 +156,15 @@ void spmv_csc_d()
     {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
         {
-            y[rows_val__[IA[i]]] += A[i] * x[j]; 
+            y[rows_val__[IA[i]]] += A[i] * x[cols_val__[j]]; 
             nOps++;
         }
+    }
+    
+    for(uint32_t i = 0; i < nnz_rows2cols__; i++)
+    {
+        x[cols2rows__[i]] = y[rows2cols__[i]];
+        x[cols2rows__[i]] = 1;
     }
 }
 
