@@ -104,7 +104,6 @@ void spmv_csc()
         {
             y[IA[i]] += A[i] * x[j]; 
             nOps++;
-            
         }
     }
 }
