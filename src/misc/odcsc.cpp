@@ -1,5 +1,5 @@
 /*
- * edcsc.cpp: EDCSC SpMV implementation (LA3)
+ * odcsc.cpp: ODCSC SpMV implementation (LA3)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
@@ -122,7 +122,7 @@ uint32_t* colptrs_sources;
 uint32_t* colidxs_sources;
 CSCEntry* entries_sources;
 
-void classification_edcsc(uint32_t num_vertices)
+void classification_odcsc(uint32_t num_vertices)
 {
     outgoings.resize(num_vertices);
     outgoings_val.resize(num_vertices);
@@ -292,7 +292,7 @@ void classification_edcsc(uint32_t num_vertices)
 }
 
 
-void init_edcsc_regulars(uint32_t nnz_, uint32_t ncols_)
+void init_odcsc_regulars(uint32_t nnz_, uint32_t ncols_)
 {
     nentries_regulars = nnz_;
     ncols_regulars = ncols_ + 1;
@@ -313,7 +313,7 @@ void init_edcsc_regulars(uint32_t nnz_, uint32_t ncols_)
     size = (ncols_regulars * (sizeof(uint32_t) +  sizeof(uint32_t))) + (nentries_regulars * sizeof(CSCEntry));
 }
 
-void popu_edcsc_regulars()
+void popu_odcsc_regulars()
 {
     uint32_t i = 0;
     uint32_t j = 1;
@@ -340,7 +340,7 @@ void popu_edcsc_regulars()
     }
 }
 
-void walk_edcsc_regulars()
+void walk_odcsc_regulars()
 {
     for(uint32_t j = 0; j < ncols_regulars - 1; j++)
     {
@@ -354,7 +354,7 @@ void walk_edcsc_regulars()
     }
 }
 
-void spmv_edcsc_regulars(uint32_t offset)
+void spmv_odcsc_regulars(uint32_t offset)
 {
     uint32_t ncols = 0;
     if(offset)
@@ -374,7 +374,7 @@ void spmv_edcsc_regulars(uint32_t offset)
 }
 
 
-void init_edcsc_sources(uint32_t nnz_, uint32_t ncols_)
+void init_odcsc_sources(uint32_t nnz_, uint32_t ncols_)
 {
     nentries_sources = nnz_;
     ncols_sources = ncols_ + 1;
@@ -395,7 +395,7 @@ void init_edcsc_sources(uint32_t nnz_, uint32_t ncols_)
     size += (ncols_sources * (sizeof(uint32_t) +  sizeof(uint32_t))) + (nentries_sources * sizeof(CSCEntry));
 }
 
-void popu_edcsc_sources()
+void popu_odcsc_sources()
 {
     uint32_t i = 0;
     uint32_t j = 1;
@@ -421,7 +421,7 @@ void popu_edcsc_sources()
     }
 }
 
-void walk_edcsc_sources()
+void walk_odcsc_sources()
 {
     for(uint32_t j = 0; j < ncols_sources - 1; j++)
     {
@@ -435,17 +435,17 @@ void walk_edcsc_sources()
     }
 }
 
-void run_edcsc()
+void run_odcsc()
 {
     
-    init_edcsc_regulars(triples_regulars->size(), nnz_ingoings);
-    popu_edcsc_regulars();
-    init_edcsc_sources(triples_sources->size(), nnz_outgoings);
-    popu_edcsc_sources();    
+    init_odcsc_regulars(triples_regulars->size(), nnz_ingoings);
+    popu_odcsc_regulars();
+    init_odcsc_sources(triples_sources->size(), nnz_outgoings);
+    popu_odcsc_sources();    
     printf("[x]Compression is done\n");
 }
 
-void spmv_edcsc_sources(uint32_t offset)
+void spmv_odcsc_sources(uint32_t offset)
 {
     uint32_t ncols = 0;
     if(offset)
@@ -465,7 +465,7 @@ void spmv_edcsc_sources(uint32_t offset)
     }
 }
 
-void init_edcsc_vecs()
+void init_odcsc_vecs()
 {
     values.resize(num_vertices);
     
@@ -476,13 +476,13 @@ void init_edcsc_vecs()
     x_sources.resize(ncols_sources, 1);
 }
 
-void spmv_edcsc()
+void spmv_odcsc()
 {
-    spmv_edcsc_regulars(0);
-    spmv_edcsc_regulars(regulars_sinks_offset);
+    spmv_odcsc_regulars(0);
+    spmv_odcsc_regulars(regulars_sinks_offset);
 
-    spmv_edcsc_sources(0);
-    spmv_edcsc_sources(sources_sinks_offset);
+    spmv_odcsc_sources(0);
+    spmv_odcsc_sources(sources_sinks_offset);
 
     for(uint32_t i = 0; i < nnz_regulars2ingoings; i++)
     {
@@ -510,7 +510,7 @@ void spmv_edcsc()
    
 }
 
-void done_edcsc()
+void done_odcsc()
 {
     
     for(uint32_t i = 0; i < nnz_regulars; i++)
