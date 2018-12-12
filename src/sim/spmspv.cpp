@@ -212,7 +212,6 @@ int main(int argc, char **argv)
     }
     triples->clear();
     
-    
     std::cout << "Stats:" << std::endl;
     std::cout << "    Utilized Memory: " << size / 1e9 << " G" << std::endl;
     if(std::atoi(argv[1]) == 2)
@@ -220,5 +219,5 @@ int main(int argc, char **argv)
     std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
     std::cout << "    Final value:     " << value <<std::endl;
     std::cout << "    Num SpMV Ops:    " << nOps <<std::endl;
-	return(0);
+    return(0);
 }
