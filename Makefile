@@ -22,14 +22,14 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 .PHONY: all clean
 
-objs  = deg # deg pr tc cc bfs sssp
+objs  = deg pr tc cc bfs sssp
 
 all: $(objs)
 
 $(objs): %: src/apps/%.cpp
 	@mkdir -p bin
 	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING)           -o bin/$@   -I src $<
-	#$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING) $(MACROS) -o bin/$@_w -I src $<
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING) $(MACROS) -o bin/$@_w -I src $<
 
 clean:
 	rm -rf bin
