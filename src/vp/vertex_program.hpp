@@ -1741,11 +1741,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     {
         if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
         {
-            //if(omp_get_max_threads() > 1)
-            //    combine_2d_stationary_omp();
-            //else
-            //    combine_2d_stationary();
-            combine_2d_stationary();
+            if(omp_get_max_threads() > 1)
+                combine_2d_stationary_omp();
+            else
+                combine_2d_stationary();
         }
         else if(tiling_type == Tiling_type::_1D_ROW)
         {  
@@ -1778,11 +1777,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combine_2d_for_tc();
             else
             {
-                //if(omp_get_max_threads() > 1)
-                  //  combine_2d_nonstationary_omp();
-                //else
-                    //combine_2d_nonstationary();
-                combine_2d_nonstationary();
+                if(omp_get_max_threads() > 1)
+                    combine_2d_nonstationary_omp();
+                else
+                    combine_2d_nonstationary();
+                
                 combine_postprocess();
             }
         }
@@ -2079,7 +2078,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     MPI_Request request;
     
     uint32_t i;
-    #pragma omp parallel for schedule(static, 1) private(i)
+    #pragma omp parallel for schedule(static, 1) private(i, request)
     for(i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
@@ -2324,7 +2323,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     //uint32_t xi= 0, yi = 0, yo = 0;
 
     uint32_t i;
-    #pragma omp parallel for schedule(static, 1) private(i)
+    #pragma omp parallel for schedule(static, 1) private(i, request, status)
     for(i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
