@@ -139,7 +139,7 @@ void Env::init(bool comm_split_)
     is_master = rank == 0;
     
     MPI_WORLD = MPI_COMM_WORLD;
-    
+    /*
     if(required != provided)
     {
         omp_set_num_threads(1);
@@ -156,7 +156,7 @@ void Env::init(bool comm_split_)
             printf("Multi-threading is enabled with MPI_THREAD_MULTIPLE (%d/%d)\n", omp_get_num_threads(), omp_get_max_threads());
         }
     }
-    
+    */
     // Affinity 
     //affinity();
 }
