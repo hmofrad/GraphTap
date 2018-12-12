@@ -15,7 +15,7 @@
 #include "mpi/types.hpp" 
 #include "mpi/comm.hpp" 
 #include "mat/hashers.hpp"
-#include "omp.h"
+//#include "omp.h"
 
 struct State { State() {}; };
 
@@ -1774,7 +1774,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
                 combine_2d_for_tc();
             else
             {
-                combine_2d_nonstationary
+                combine_2d_nonstationary();
                 //if(omp_get_max_threads() > 1)
                 //    combine_2d_nonstationary_omp();
                 //else
@@ -2076,7 +2076,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     MPI_Request request;
     
     uint32_t i;
-    #pragma omp parallel for schedule(static, 1) private(i, request)
+    //#pragma omp parallel for schedule(static, 1) private(i, request)
     for(i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
@@ -2321,7 +2321,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     //uint32_t xi= 0, yi = 0, yo = 0;
 
     uint32_t i;
-    #pragma omp parallel for schedule(static, 1) private(i, request, status)
+    //#pragma omp parallel for schedule(static, 1) private(i, request, status)
     for(i = 0; i < rank_nrowgrps; i++)
     {
         for(uint32_t j = 0; j < rank_ncolgrps; j++)
