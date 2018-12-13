@@ -17,6 +17,15 @@
 #include <vector>
 #include <algorithm>
 
+struct Edge__
+{
+  const uint32_t dst;
+
+  Edge__() : dst(0) {}
+
+  Edge__(const uint32_t dst)
+      : dst(dst) {}
+};
 
 uint32_t nnz_rows___;
 std::vector<char> rows___;
@@ -25,6 +34,7 @@ std::vector<uint32_t> rows2vals___;
 uint32_t nnz_cols___;
 std::vector<char> cols___;
 std::vector<uint32_t> cols_val___;
+std::vector<uint32_t> cols2vals___;
 std::vector<int> rows2cols___;
 uint32_t nnz_rows2cols___;
 std::vector<int> cols2rows___;
@@ -60,6 +70,7 @@ void filtering_dcsc_d(uint32_t num_vertices)
         }
         if(cols___[k])
         {
+            cols2vals___.push_back(j);
             cols_val___[k] = j;
             j++;
         }
@@ -152,9 +163,9 @@ void spmv_dcsc_d()
     {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
         {
+            auto edge = Edge_(cols2vals___[j]);
             y[rows_val___[IA[i]]] += A[i] * x[j]; 
             nOps++;
-            
         }
     }
     
