@@ -215,8 +215,8 @@ int main(int argc, char **argv)
     
     std::cout << "Stats:" << std::endl;
     std::cout << "    Utilized Memory: " << size / 1e9 << " G" << std::endl;
-    if(std::atoi(argv[1]) == 4)
-    std::cout << "    Extra    Memory: " << extra / 1e9 << " G (extra per iteration)" << std::endl;
+    //if(std::atoi(argv[1]) == 4)
+    //std::cout << "    Extra    Memory: " << extra / 1e9 << " G (extra per iteration)" << std::endl;
     std::cout << "    Elapsed time:    " << (std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) / 1e6 << " sec" << std::endl;
     std::cout << "    Final value:     " << value <<std::endl;
     std::cout << "    Num SpMV Ops:    " << nOps <<std::endl;
