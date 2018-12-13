@@ -105,6 +105,7 @@ class Vertex_Program
         void apply_nonstationary();
         void apply_tc();
         struct Triple<Weight, double> stats(std::vector<double> &vec);
+        void stats(std::vector<double> &vec, double &sum, double &mean, double &std_dev);
         
         void spmv(struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
                 std::vector<Fractional_Type> &y_data, 
@@ -227,11 +228,13 @@ class Vertex_Program
         bool incremental_accumulation = false;
         
         #ifdef TIMING
+        std::vector<double> init_time;
         std::vector<double> scatter_gather_time;
         std::vector<double> combine_time;
         std::vector<double> combine_comp_time;
         std::vector<double> combine_comm_time;
         std::vector<double> apply_time;
+        std::vector<double> execute_time;
         #endif
 };
 
@@ -471,7 +474,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execute(Integer_Type num_iterations)
 {
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
     
     if(not already_initialized)
@@ -509,14 +512,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
     }
     
     t2 = Env::clock();
-    Env::print_time("Execute", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Execute", elapsed_time);
+    #ifdef TIMING
+    execute_time.push_back(elapsed_time);
+    #endif
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initialize()
 {
     #ifdef TIMING
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
     #endif
     
@@ -540,7 +547,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     }
     #ifdef TIMING
     t2 = Env::clock();
-    Env::print_time("Init", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Init", elapsed_time);
+    init_time.push_back(elapsed_time);
     #endif
 }
 
@@ -550,7 +559,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     const Vertex_Program<Weight_, Integer_Type_, Fractional_Type_, Vertex_State_> &VProgram)
 {
     #ifdef TIMING
-    double t1, t2;
+    double t1, t2, elapsed_time;
     t1 = Env::clock();
     #endif
     
@@ -604,7 +613,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::initia
     
     #ifdef TIMING
     t2 = Env::clock();
-    Env::print_time("Init", t2 - t1);
+    elapsed_time = t2 - t1;
+    Env::print_time("Init", elapsed_time);
+    init_time.push_back(elapsed_time);
     #endif
 }
 
@@ -1794,8 +1805,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     t2 = Env::clock();
     elapsed_time = t2 - t1;
     combine_comm_time.push_back(elapsed_time - combine_comp_time.back());
-    Env::print_time("Combine comm", combine_comm_time.back());
-    Env::print_time("Combine all ", elapsed_time);
+    Env::print_time("Combine communication", combine_comm_time.back());
+    Env::print_time("Combine all", elapsed_time);
     combine_time.push_back(elapsed_time);
     #endif
 }
@@ -2059,7 +2070,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     }
     
     #ifdef TIMING
-    Env::print_time("Combine comp", elapsed_time);
+    Env::print_time("Combine computation", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
     #endif
 }
@@ -2162,7 +2173,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     }
     
     #ifdef TIMING
-    Env::print_time("Combine comp", elapsed_time);
+    Env::print_time("Combine computation", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
     #endif
 }
@@ -2301,7 +2312,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         }
     }
     #ifdef TIMING
-    Env::print_time("Combine comp", elapsed_time);
+    Env::print_time("Combine computation", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
     #endif
 }
@@ -2452,7 +2463,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         }
     }
     #ifdef TIMING
-    Env::print_time("Combine comp", elapsed_time);
+    Env::print_time("Combine computation", elapsed_time);
     combine_comp_time.push_back(elapsed_time);
     #endif
 }
@@ -3520,22 +3531,47 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
     Integer_Type v_nitems = V.size();
     count = (v_nitems < count) ? v_nitems : count;
     Env::barrier();
-    Triple<Weight, Integer_Type> pair, pair1;
+    
     Triple<Weight, double> stats_pair;
     if(!Env::rank)
     {
+        
         #ifdef TIMING
+        double sum = 0.0, mean = 0.0, std_dev = 0.0;
+        std::cout << "Init           time: " << init_time[0] * 1e3 << " ms" << std::endl;
+        stats(scatter_gather_time, sum, mean, std_dev);
+        std::cout << "Scatter_gather time (sum: avg +/- std_dev): " << sum * 1e3 << ": " << mean * 1e3  << " +/- " << std_dev * 1e3 << " ms" << std::endl;
+        stats(combine_time, sum, mean, std_dev);
+        std::cout << "Combine        time (sum: avg +/- std_dev): " << sum * 1e3 << ": " << mean * 1e3  << " +/- " << std_dev * 1e3 << " ms" << std::endl;
+        stats(apply_time, sum, mean, std_dev);
+        std::cout << "Apply          time (sum: avg +/- std_dev): " << sum * 1e3 << ": " << mean * 1e3  << " +/- " << std_dev * 1e3 << " ms" << std::endl;
+        std::cout << "Execute        time: " << execute_time[0] * 1e3 << " ms" << std::endl;
+        
+        std::cout << "TIMING " << init_time[0] * 1e3;
+        stats(scatter_gather_time, sum, mean, std_dev);
+        std::cout << " " << sum * 1e3 << " " << mean * 1e3 << " " << std_dev * 1e3;
+        stats(combine_time, sum, mean, std_dev);
+        std::cout << " " << sum * 1e3 << " " << mean * 1e3 << " " << std_dev * 1e3;
+        stats(apply_time, sum, mean, std_dev);
+        std::cout << " " << sum * 1e3 << " " << mean * 1e3 << " " << std_dev * 1e3;
+        std::cout << " " << execute_time[0] * 1e3 << std::endl;
+        
+        /*
         stats_pair = stats(scatter_gather_time);
-        std::cout << "Scatter_gather time  (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Scatter_gather time  (sum: avg +/- std_dev): " <<  stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(combine_time);
-        std::cout << "Combine all     time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Combine all     time (sum: avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(combine_comp_time);
-        std::cout << "Combine compute time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Combine compute time (sum: avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(combine_comm_time);
-        std::cout << "Combine communi time (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Combine communi time (sum: avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
         stats_pair = stats(apply_time);
-        std::cout << "Apply time           (avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        std::cout << "Apply time           (sum: avg +/- std_dev): " << stats_pair.row * 1e3  << " ms +/- " << stats_pair.col * 1e3 << " ms" << std::endl;
+        */
         #endif
+        
+        
+        Triple<Weight, Integer_Type> pair, pair1;
         for(uint32_t i = 0; i < count; i++)
         {
             pair.row = i;
@@ -3547,6 +3583,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::displa
         }
     }
     Env::barrier();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::stats(std::vector<double> &vec, double &sum, double &mean, double &std_dev)
+{
+    sum = std::accumulate(vec.begin(), vec.end(), 0.0);
+    mean = sum / vec.size();
+    double sq_sum = std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0);
+    std_dev = std::sqrt(sq_sum / vec.size() - mean * mean);
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
