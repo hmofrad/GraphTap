@@ -9,7 +9,7 @@
 
 #include <fstream>
 
-void read_binary(std::string file_path, bool transpose = false)
+uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pairs, bool transpose = false)
 {
     // Open graph file.
     std::ifstream fin(file_path.c_str(), std::ios_base::binary);
@@ -54,6 +54,7 @@ void read_binary(std::string file_path, bool transpose = false)
         printf("[x]I/O for transpose %s is done: Read %lu edges\n", file_path.c_str(), nedges);
     else
         printf("[x]I/O for original  %s is done: Read %lu edges\n", file_path.c_str(), nedges);
+    return(nedges);
 }
 
 #endif
