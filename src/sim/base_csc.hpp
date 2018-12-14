@@ -10,10 +10,10 @@
 #include <sys/mman.h>
 #include <cstring> 
 
-struct CSC
+struct Base
 {
-    CSC(uint64_t nnz_, uint32_t ncols_plus_one_);
-    ~CSC();
+    Base(uint64_t nnz_, uint32_t ncols_plus_one_);
+    ~Base();
     uint64_t nnz;
     uint32_t ncols_plus_one;
     uint64_t size;
@@ -23,7 +23,7 @@ struct CSC
     void *JA; //COL_PTR
 };
 
-CSC::CSC(uint64_t nnz_, uint32_t ncols_plus_one_)
+Base::Base(uint64_t nnz_, uint32_t ncols_plus_one_)
 {
     nnz = nnz_;
     ncols_plus_one = ncols_plus_one_;
@@ -54,7 +54,7 @@ CSC::CSC(uint64_t nnz_, uint32_t ncols_plus_one_)
     size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t));
 }
 
-CSC::~CSC()
+Base::~Base()
 {
     if(munmap(A, nnz * sizeof(uint32_t)) == -1)
     {
