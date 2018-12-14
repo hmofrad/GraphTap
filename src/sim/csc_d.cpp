@@ -2,8 +2,6 @@
  * csc_d.cpp: CSC SpMSpV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
- * Standalone compile commnad:
- * g++ -o spmv spmv.cpp -std=c++14
  */
  
 #include <iostream>
