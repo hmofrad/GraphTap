@@ -4,8 +4,8 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef BASE
-#define BASE
+#ifndef BASE_CSC_HPP
+#define BASE_CSC_HPP
 
 #include <sys/mman.h>
 #include <cstring> 
