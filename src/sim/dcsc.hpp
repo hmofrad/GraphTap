@@ -2,188 +2,176 @@
  * dcsc.cpp: DCSC SpMV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
- * Standalone compile commnad:
- * g++ -o spmv spmv.cpp -std=c++14
  */
+
+#ifndef DCSC_HPP
+#define DCSC_HPP 
  
-#include <iostream>
-#include <cstdlib> 
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <cassert>
-#include <sys/mman.h>
-#include <cstring> 
-#include <vector>
-#include <algorithm>
-
-struct Edge_
-{
-  const uint32_t dst;
-
-  Edge_() : dst(0) {}
-
-  Edge_(const uint32_t dst)
-      : dst(dst) {}
+#include <chrono> 
+ 
+#include "pair.hpp" 
+#include "io.cpp" 
+#include "base_csc.hpp" 
+#include "csc.hpp"
+ 
+class DCSC : protected CSC{
+    using CSC::CSC;    
+    public:
+        virtual void run_pagerank();
+    protected:
+        virtual void populate();
+        virtual void message();
+        virtual uint64_t spmv();
+        virtual void update();
+        virtual void space();
+        
+        void filter();
+        void destroy_filter();
+        void destroy_vectors();
+        
+        std::vector<char> cols;
+        std::vector<uint32_t> cols_vals_nnz;
+        std::vector<uint32_t> cols_vals_all;        
+        uint32_t nnz_cols;
 };
 
+void DCSC::run_pagerank() {
+    // Degree program
+    num_rows = num_vertices;
+    pairs = new std::vector<struct Pair>;
+    num_edges = read_binary(file_path, pairs);
+    column_sort(pairs);
+    filter();
+    csc = new struct Base(num_edges, nnz_cols);
+    populate();
+    pairs->clear();
+    pairs->shrink_to_fit();
+    pairs = nullptr;  
+    //walk();
+    v.resize(num_rows);
+    x.resize(nnz_cols, 1);
+    y.resize(num_rows);
+    (void)spmv();
+    v = y;
+    //(void)checksum();
+    //display();
+    delete csc;
+    csc = nullptr;
+    destroy_filter();
 
-uint32_t nnz_rows_;
-std::vector<char> rows_;
-std::vector<uint32_t> rows_val_;
-std::vector<uint32_t> rows2vals_;
-uint32_t nnz_cols_;
-std::vector<char> cols_;
-std::vector<uint32_t> cols_val_;
-std::vector<uint32_t> cols2vals_;
-std::vector<int> rows2cols_;
-uint32_t nnz_rows2cols_;
-std::vector<int> cols2rows_;
-
-
-void filtering_dcsc(uint32_t num_vertices)
-{
-    rows_.resize(num_vertices);
-    rows_val_.resize(num_vertices);
-    cols_.resize(num_vertices);
-    cols_val_.resize(num_vertices);
-    
-    for(auto &triple: *triples)
+    // PageRank program
+    pairs = new std::vector<struct Pair>;
+    num_edges = read_binary(file_path, pairs, true);
+    column_sort(pairs);
+    filter();
+    csc = new struct Base(num_edges, nnz_cols);
+    populate();
+    space();
+    pairs->clear();
+    pairs->shrink_to_fit();
+    pairs = nullptr;
+    destroy_vectors();
+    x.resize(nnz_cols);
+    d.resize(num_rows);
+    d = v;
+    std::fill(v.begin(), v.end(), alpha);
+    std::chrono::steady_clock::time_point t1, t2;
+    t1 = std::chrono::steady_clock::now();
+    for(uint32_t i = 0; i < num_iterations; i++)
     {
-        rows_[triple.row] = 1;
-        cols_[triple.col] = 1;
+        std::fill(x.begin(), x.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message();
+        num_operations += spmv();
+        update();
     }
-    
-    uint32_t i = 0, j = 0;
-    for(uint32_t k = 0; k < num_vertices; k++)
-    {
-        if(rows_[k] and cols_[k])
-        {
-            rows2cols_.push_back(i);
-            cols2rows_.push_back(j);
-        }
-        
-        if(rows_[k])
-        {
-            rows2vals_.push_back(k);
-            rows_val_[k] = i;
-            i++;
-        }
-        if(cols_[k])
-        {
-            cols2vals_.push_back(j);
-            cols_val_[k] = j;
-            j++;
-        }
-        //printf("%d %d %d\n", k, rows[k], cols[k]);
-    }
-    nnz_rows_ = i;
-    nnz_cols_ = j;
-    nnz_rows2cols_ = rows2cols_.size();
-    printf("[x]Filtering is done\n");
+    t2 = std::chrono::steady_clock::now();
+    auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
+    stats(t, "DCSC SpMV");
+    display();
+    delete csc;
+    csc = nullptr;
 }
 
-void init_dcsc(uint32_t nnz_, uint32_t ncols)
-{
-    nnz = nnz_;
-    ncols_plus_one = ncols + 1;
-    if((A = (uint32_t *) mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
-                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
+void DCSC::filter() {
+    cols.resize(num_vertices);
+    for(auto &pair: *pairs)
+        cols[pair.col] = 1;
+    cols_vals_all.resize(num_vertices);
+    for(uint32_t i = 0; i < num_vertices; i++)
+    {
+        if(cols[i] == 1)
+        {
+            cols_vals_nnz.push_back(i);
+            cols_vals_all[i] = cols_vals_nnz.size() - 1;
+        }
     }
-    memset(A, 0, nnz * sizeof(uint32_t));
-    
-    if((IA = (uint32_t *) mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
-                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(IA, 0, nnz * sizeof(uint32_t));
-
-    if((JA = (uint32_t *) mmap(nullptr, ncols_plus_one * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
-                                               | MAP_PRIVATE, -1, 0)) == (void*) -1)
-    {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    size =  nnz * (sizeof(uint32_t) + sizeof(uint32_t)) + (ncols_plus_one * sizeof(uint32_t)) + (nnz_cols_ * sizeof(uint32_t));
+    nnz_cols = cols_vals_nnz.size();
 }
 
-void popu_dcsc()
-{
+void DCSC::destroy_filter() {
+    cols.clear();
+    cols.shrink_to_fit();
+    cols_vals_nnz.clear();
+    cols_vals_nnz.shrink_to_fit();
+    cols_vals_all.clear();
+    cols_vals_all.shrink_to_fit();
+    nnz_cols = 0;
+}
+
+void DCSC::destroy_vectors() {
+    x.clear();
+    x.shrink_to_fit();
+}
+
+void DCSC::populate() {
+    uint32_t *A  = (uint32_t *) csc->A;  // Weight      
+    uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
+    uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
+    uint32_t ncols = csc->  ncols_plus_one - 1;
+    
     uint32_t i = 0;
     uint32_t j = 1;
     JA[0] = 0;
-    for(auto &triple: *triples)
-    {
-        while((j - 1) != cols_val_[triple.col])
-        {
+    for(auto &pair: *pairs) {
+        if((j - 1) != cols_vals_all[pair.col]) {
             j++;
             JA[j] = JA[j - 1];
         }                  
         A[i] = 1;
         JA[j]++;
-        IA[i] = rows_val_[triple.row];
+        IA[i] = pair.row;
         i++;
     }
 }
 
-void run_dcsc()
-{
-    init_dcsc(triples->size(), nnz_cols_);
-    popu_dcsc();
-    printf("[x]Compression is done\n");
+void DCSC::message() {
+    for(uint32_t i = 0; i < nnz_cols; i++)
+        x[i] = d[cols_vals_nnz[i]] ? (v[cols_vals_nnz[i]]/d[cols_vals_nnz[i]]) : 0;   
 }
 
-void walk_dcsc()
-{
-    for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
-    {
-        printf("j=%d\n", j);
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-        {
-            printf("   i=%d j=%d\n", IA[i], j);
+uint64_t DCSC::spmv() {
+    uint64_t num_operations = 0;
+    uint32_t *A  = (uint32_t *) csc->A;
+    uint32_t *IA = (uint32_t *) csc->IA;
+    uint32_t *JA = (uint32_t *) csc->JA;
+    uint32_t num_cols = csc->ncols_plus_one - 1;
+    for(uint32_t j = 0; j < num_cols; j++) {
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            y[IA[i]] += (A[i] * x[j]);
+            num_operations++;
         }
     }
+    return(num_operations);
 }
 
-void init_dcsc_vecs()
-{
-    values.resize(num_vertices);
-    y.resize(num_vertices);
-    x.resize(nnz_cols_, 1);
+void DCSC::update() {
+    for(uint32_t i = 0; i < num_rows; i++)
+        v[i] = alpha + (1.0 - alpha) * y[i];
 }
 
-void spmv_dcsc()
-{
-    for(uint32_t j = 0; j < ncols_plus_one - 1; j++)
-    {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-        {
-            auto edge = Edge_(cols2vals_[j]);
-            y[IA[i]] += A[i] * x[j]; 
-            nOps++;
-            
-        }
-    }
-    for(uint32_t i = 0; i < nnz_rows2cols_; i++)
-    {
-        x[cols2rows_[i]] = y[rows2cols_[i]];
-        x[cols2rows_[i]] = 1;
-    }
+void DCSC::space() {
+    total_size += csc->size;
+    total_size += (sizeof(uint32_t) * cols_vals_all.size()) + (sizeof(uint32_t) * cols_vals_nnz.size());
 }
-
-void done_dcsc()
-{
-    
-    for(uint32_t i = 0; i < num_vertices; i++)
-            values[i] = y[i];
-    
-    for(uint32_t i = 0; i < num_vertices; i++)
-        value += values[i];
-    
-    
-}
+#endif
