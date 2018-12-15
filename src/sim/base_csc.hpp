@@ -12,7 +12,7 @@
 
 struct Base
 {
-    Base(uint64_t nnz_, uint32_t ncols_plus_one_);
+    Base(uint64_t nnz_, uint32_t ncols_);
     ~Base();
     uint64_t nnz;
     uint32_t ncols_plus_one;
@@ -23,10 +23,10 @@ struct Base
     void *JA; //COL_PTR
 };
 
-Base::Base(uint64_t nnz_, uint32_t ncols_plus_one_)
+Base::Base(uint64_t nnz_, uint32_t ncols_)
 {
     nnz = nnz_;
-    ncols_plus_one = ncols_plus_one_;
+    ncols_plus_one = ncols_ + 1;
     if((A = mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS
                                                | MAP_PRIVATE, -1, 0)) == (void*) -1)
     {    
