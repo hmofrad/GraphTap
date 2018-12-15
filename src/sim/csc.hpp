@@ -80,7 +80,7 @@ void CSC::run_pagerank() {
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
-    d.resize(num_vertices);
+    d.resize(num_rows);
     d = v;
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
