@@ -1,5 +1,5 @@
 /*
- * io.hpp: I/O implementation
+ * io.cpp: I/O implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
