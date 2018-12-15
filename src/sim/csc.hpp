@@ -1,11 +1,13 @@
 /*
- * csc.cpp: CSC SpMV implementation
+ * csc.hpp: CSC SpMV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#include <chrono> 
-#include <fstream>
+#ifndef CSC_HPP
+#define CSC_HPP
+
+#include <chrono>
 
 #include "pair.hpp" 
 #include "io.cpp" 
@@ -17,8 +19,8 @@ class CSC {
         CSC(const std::string file_path_, const uint32_t num_vertices_, const uint32_t num_iterations_) 
             : file_path(file_path_), num_vertices(num_vertices_), num_iterations(num_iterations_) {}
         ~CSC() {};
-        void run_pagerank();
-    private:
+        virtual void run_pagerank();
+    protected:
         std::string file_path = "\0";
         uint32_t num_vertices = 0;
         uint32_t num_iterations = 0;
@@ -34,14 +36,16 @@ class CSC {
         uint64_t num_operations = 0;
         uint64_t total_size = 0;
 
-        void populate();
+        virtual void populate();
+        virtual void message();        
+        virtual uint64_t spmv();
+        virtual void update();
+        virtual void space();
+        
         void walk();
-        void message();        
-        uint64_t spmv();
-        void update();
         void display(uint64_t nums = 10);
         double checksum();
-        void stats(double elapsed_time);
+        void stats(double elapsed_time, std::string type);
 };
 
 void CSC::run_pagerank() {
@@ -56,9 +60,9 @@ void CSC::run_pagerank() {
     pairs->shrink_to_fit();
     pairs = nullptr;  
     //walk();
-    v.resize(num_vertices);
-    x.resize(num_vertices, 1);
-    y.resize(num_vertices);
+    v.resize(num_rows);
+    x.resize(num_rows, 1);
+    y.resize(num_rows);
     (void)spmv();
     v = y;
     //(void)checksum();
@@ -81,7 +85,7 @@ void CSC::run_pagerank() {
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    for(int i = 0; i < num_iterations; i++)
+    for(uint32_t i = 0; i < num_iterations; i++)
     {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
@@ -91,8 +95,8 @@ void CSC::run_pagerank() {
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t);
-    //display();
+    stats(t, "CSC SpMV");
+    display();
     delete csc;
     csc = nullptr;
 }
@@ -161,6 +165,10 @@ void CSC::update() {
         v[i] = alpha + (1.0 - alpha) * y[i];
 }
 
+void CSC::space() {
+    total_size += csc->size;
+}
+
 double CSC::checksum() {
     double value = 0.0;
     for(uint32_t i = 0; i < num_rows; i++)
@@ -173,11 +181,13 @@ void CSC::display(uint64_t nums) {
         std::cout << "V[" << i << "]=" << v[i] << std::endl;
 }
 
-void CSC::stats(double time)
+void CSC::stats(double time, std::string type)
 {
-    std::cout << "CSC SpMV kernel unit test stats:" << std::endl;
+    std::cout << type << " kernel unit test stats:" << std::endl;
     std::cout << "Utilized Memory: " << total_size / 1e9 << " GB" << std::endl;
-    std::cout << "Elapsed time:    " << time / 1e6 << " Sec" << std::endl;
-    std::cout << "Num SpMV Ops:    " << num_operations <<std::endl;
-    std::cout << "Final value:     " << checksum() <<std::endl;
+    std::cout << "Elapsed time   : " << time / 1e6 << " Sec" << std::endl;
+    std::cout << "Num Operations : " << num_operations <<std::endl;
+    std::cout << "Final value    : " << checksum() <<std::endl;
 }
+
+#endif
