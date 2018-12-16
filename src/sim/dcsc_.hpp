@@ -11,14 +11,15 @@
  
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_csc.hpp" 
+#include "base_dcsc.hpp" 
 #include "csc.hpp"
  
-class DCSC_ : protected CSC{
+class DCSC_ : protected CSC {
     using CSC::CSC;    
     public:
         virtual void run_pagerank();
     protected:
+        struct Base_dcsc *dcsc = nullptr;
         virtual void populate();
         virtual void message();
         virtual uint64_t spmv();
@@ -46,7 +47,7 @@ void DCSC_::run_pagerank() {
     num_edges = read_binary(file_path, pairs);
     column_sort(pairs);
     filter();
-    csc = new struct Base(num_edges, nnz_cols);
+    dcsc = new struct Base_dcsc(num_edges, nnz_cols);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -60,17 +61,16 @@ void DCSC_::run_pagerank() {
         v[rows_vals_nnz[i]] =  y[i];
     //(void)checksum();
     //display();
-    delete csc;
-    csc = nullptr;
+    delete dcsc;
+    dcsc = nullptr;
     destroy_filter();
-    printf("%f\n", checksum());
     
     // PageRank program
     pairs = new std::vector<struct Pair>;
     num_edges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     filter();
-    csc = new struct Base(num_edges, nnz_cols);
+    dcsc = new struct Base_dcsc(num_edges, nnz_cols);
     populate();
     space();
     pairs->clear();
@@ -85,8 +85,7 @@ void DCSC_::run_pagerank() {
     
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    for(uint32_t i = 0; i < num_iterations; i++)
-    {
+    for(uint32_t i = 0; i < num_iterations; i++) {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
         message();
@@ -97,37 +96,32 @@ void DCSC_::run_pagerank() {
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "DCSC SpMSpV");
     display();
-    delete csc;
-    csc = nullptr;
+    delete dcsc;
+    dcsc = nullptr;
 }
 
 
 void DCSC_::filter() {
     rows.resize(num_vertices);
     cols.resize(num_vertices);
-    for(auto &pair: *pairs)
-    {
+    for(auto &pair: *pairs) {
         rows[pair.row] = 1;
         cols[pair.col] = 1;
     }
     rows_vals_all.resize(num_vertices);
     cols_vals_all.resize(num_vertices);
-    for(uint32_t i = 0; i < num_vertices; i++)
-    {
-        if(rows[i] == 1)
-        {
+    for(uint32_t i = 0; i < num_vertices; i++) {
+        if(rows[i] == 1) {
             rows_vals_nnz.push_back(i);
             rows_vals_all[i] = rows_vals_nnz.size() - 1;
         }
-        if(cols[i] == 1)
-        {
+        if(cols[i] == 1) {
             cols_vals_nnz.push_back(i);
             cols_vals_all[i] = cols_vals_nnz.size() - 1;
         }
     }
     nnz_rows = rows_vals_nnz.size();
     nnz_cols = cols_vals_nnz.size();
-    printf("%d %d\n", nnz_rows, nnz_cols );
 }
 
 void DCSC_::destroy_filter() {
@@ -155,10 +149,10 @@ void DCSC_::destroy_vectors() {
 }
 
 void DCSC_::populate() {
-    uint32_t *A  = (uint32_t *) csc->A;  // Weight      
-    uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
-    uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
-    uint32_t ncols = csc->  ncols_plus_one - 1;
+    uint32_t *A  = (uint32_t *) dcsc->A;  // Weight      
+    uint32_t *IA = (uint32_t *) dcsc->IA; // ROW_INDEX
+    uint32_t *JA = (uint32_t *) dcsc->JA; // COL_PTR
+    uint32_t ncols = dcsc->nnzcols_plus_one - 1;
     
     uint32_t i = 0;
     uint32_t j = 1;
@@ -182,10 +176,10 @@ void DCSC_::message() {
 
 uint64_t DCSC_::spmv() {
     uint64_t num_operations = 0;
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
+    uint32_t *A  = (uint32_t *) dcsc->A;
+    uint32_t *IA = (uint32_t *) dcsc->IA;
+    uint32_t *JA = (uint32_t *) dcsc->JA;
+    uint32_t num_cols = dcsc->nnzcols_plus_one - 1;
     for(uint32_t j = 0; j < num_cols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             y[rows_vals_all[IA[i]]] += (A[i] * x[j]);
@@ -201,7 +195,7 @@ void DCSC_::update() {
 }
 
 void DCSC_::space() {
-    total_size += csc->size;
+    total_size += dcsc->size;
     total_size += (sizeof(uint32_t) * rows_vals_all.size()) + (sizeof(uint32_t) * rows_vals_nnz.size());
     total_size += (sizeof(uint32_t) * cols_vals_all.size()) + (sizeof(uint32_t) * cols_vals_nnz.size());
 }
