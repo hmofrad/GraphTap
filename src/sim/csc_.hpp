@@ -24,50 +24,48 @@ class CSC_ : protected CSC {
         virtual void update();
         virtual void space();
         
-        void filter();
-        void destroy_filter();
+        void construct_filter();
+        void destruct_filter();
         void destroy_vectors();
         std::vector<char> rows;
-        std::vector<uint32_t> rows_vals_nnz;
-        std::vector<uint32_t> rows_vals_all;
+        std::vector<uint32_t> rows_nnz;
+        std::vector<uint32_t> rows_all;
         uint32_t nnz_rows;
         std::vector<char> cols;
-        std::vector<uint32_t> cols_vals_nnz;
-        std::vector<uint32_t> cols_vals_all;        
+        std::vector<uint32_t> cols_nnz;
+        std::vector<uint32_t> cols_all;        
         uint32_t nnz_cols;
 };
 
 void CSC_::run_pagerank() {    
     // Degree program
-    num_rows = num_vertices;
+    nrows = nvertices;
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs);
+    nedges = read_binary(file_path, pairs);
     column_sort(pairs);
-    filter();
-    csc = new struct Base(num_edges, num_vertices);
+    construct_filter();
+    csc = new struct Base_csc(nedges, nvertices);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;  
     //walk();
-    v.resize(num_rows);
-    x.resize(nnz_cols, 1);
-    y.resize(nnz_rows);
+    construct_vectors();
     (void)spmv();
     for(uint32_t i = 0; i < nnz_rows; i++)
-        v[rows_vals_nnz[i]] =  y[i];
+        v[rows_nnz[i]] =  y[i];
     //(void)checksum();
     //display();
     delete csc;
     csc = nullptr;
-    destroy_filter();
+    destruct_filter();
     
     // PageRank program
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs, true);
+    nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
-    filter();
-    csc = new struct Base(num_edges, num_vertices);
+    construct_filter();
+    csc = new struct Base_csc(nedges, nvertices);
     populate();
     space();
     pairs->clear();
@@ -76,18 +74,17 @@ void CSC_::run_pagerank() {
     destroy_vectors();
     x.resize(nnz_cols);
     y.resize(nnz_rows);
-    d.resize(num_rows);
+    d.resize(nrows);
     d = v;
     std::fill(v.begin(), v.end(), alpha);
-    
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    for(uint32_t i = 0; i < num_iterations; i++)
+    for(uint32_t i = 0; i < niters; i++)
     {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
         message();
-        num_operations += spmv();
+        noperations += spmv();
         update();
     }
     t2 = std::chrono::steady_clock::now();
@@ -96,49 +93,46 @@ void CSC_::run_pagerank() {
     display();
     delete csc;
     csc = nullptr;
+    destruct_vectors();
 }
 
-void CSC_::filter() {
-    rows.resize(num_vertices);
-    cols.resize(num_vertices);
-    for(auto &pair: *pairs)
-    {
+void CSC_::construct_filter() {
+    rows.resize(nvertices);
+    cols.resize(nvertices);
+    for(auto &pair: *pairs) {
         rows[pair.row] = 1;
         cols[pair.col] = 1;
     }
-    rows_vals_all.resize(num_vertices);
-    cols_vals_all.resize(num_vertices);
-    for(uint32_t i = 0; i < num_vertices; i++)
-    {
-        if(rows[i] == 1)
-        {
-            rows_vals_nnz.push_back(i);
-            rows_vals_all[i] = rows_vals_nnz.size() - 1;
+    rows_all.resize(nvertices);
+    cols_all.resize(nvertices);
+    for(uint32_t i = 0; i < nvertices; i++) {
+        if(rows[i] == 1) {
+            rows_nnz.push_back(i);
+            rows_all[i] = rows_nnz.size() - 1;
         }
-        if(cols[i] == 1)
-        {
-            cols_vals_nnz.push_back(i);
-            cols_vals_all[i] = cols_vals_nnz.size() - 1;
+        if(cols[i] == 1) {
+            cols_nnz.push_back(i);
+            cols_all[i] = cols_nnz.size() - 1;
         }
     }
-    nnz_rows = rows_vals_nnz.size();
-    nnz_cols = cols_vals_nnz.size();
+    nnz_rows = rows_nnz.size();
+    nnz_cols = cols_nnz.size();
 }
 
-void CSC_::destroy_filter() {
+void CSC_::destruct_filter() {
     rows.clear();
     rows.shrink_to_fit();
-    rows_vals_nnz.clear();
-    rows_vals_nnz.shrink_to_fit();
-    rows_vals_all.clear();
-    rows_vals_all.shrink_to_fit();
+    rows_nnz.clear();
+    rows_nnz.shrink_to_fit();
+    rows_all.clear();
+    rows_all.shrink_to_fit();
     nnz_rows = 0;
     cols.clear();
     cols.shrink_to_fit();
-    cols_vals_nnz.clear();
-    cols_vals_nnz.shrink_to_fit();
-    cols_vals_all.clear();
-    cols_vals_all.shrink_to_fit();
+    cols_nnz.clear();
+    cols_nnz.shrink_to_fit();
+    cols_all.clear();
+    cols_all.shrink_to_fit();
     nnz_cols = 0;
 }
 
@@ -151,7 +145,7 @@ void CSC_::destroy_vectors() {
 
 void CSC_::message() {
     for(uint32_t i = 0; i < nnz_cols; i++)
-        x[i] = d[cols_vals_nnz[i]] ? (v[cols_vals_nnz[i]]/d[cols_vals_nnz[i]]) : 0;   
+        x[i] = d[cols_nnz[i]] ? (v[cols_nnz[i]]/d[cols_nnz[i]]) : 0;   
 }
 
 uint64_t CSC_::spmv() {
@@ -159,10 +153,10 @@ uint64_t CSC_::spmv() {
     uint32_t *A  = (uint32_t *) csc->A;
     uint32_t *IA = (uint32_t *) csc->IA;
     uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
-    for(uint32_t j = 0; j < num_cols; j++) {
+    uint32_t ncols = csc->ncols_plus_one - 1;
+    for(uint32_t j = 0; j < ncols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-            y[rows_vals_all[IA[i]]] += (A[i] * x[cols_vals_all[j]]);
+            y[rows_all[IA[i]]] += (A[i] * x[cols_all[j]]);
             num_operations++;
         }
     }
@@ -171,12 +165,12 @@ uint64_t CSC_::spmv() {
 
 void CSC_::update() {
     for(uint32_t i = 0; i < nnz_rows; i++)
-        v[rows_vals_nnz[i]] = alpha + (1.0 - alpha) * y[i];
+        v[rows_nnz[i]] = alpha + (1.0 - alpha) * y[i];
 }
 
 void CSC_::space() {
     total_size += csc->size;
-    total_size += (sizeof(uint32_t) * rows_vals_all.size()) + (sizeof(uint32_t) * rows_vals_nnz.size());
-    total_size += (sizeof(uint32_t) * cols_vals_all.size()) + (sizeof(uint32_t) * cols_vals_nnz.size());
+    total_size += (sizeof(uint32_t) * rows_all.size()) + (sizeof(uint32_t) * rows_nnz.size());
+    total_size += (sizeof(uint32_t) * cols_all.size()) + (sizeof(uint32_t) * cols_nnz.size());
 }
 #endif
