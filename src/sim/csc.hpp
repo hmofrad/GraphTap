@@ -16,33 +16,34 @@
 class CSC {
     public:
         CSC() {};
-        CSC(const std::string file_path_, const uint32_t num_vertices_, const uint32_t num_iterations_) 
-            : file_path(file_path_), num_vertices(num_vertices_), num_iterations(num_iterations_) {}
+        CSC(const std::string file_path_, const uint32_t nvertices_, const uint32_t niters_) 
+            : file_path(file_path_), nvertices(nvertices_), niters(niters_) {}
         ~CSC() {};
         virtual void run_pagerank();
     protected:
         std::string file_path = "\0";
-        uint32_t num_vertices = 0;
-        uint32_t num_iterations = 0;
-        uint64_t num_edges = 0;
-        uint32_t num_rows = 0;
+        uint32_t nvertices = 0;
+        uint32_t niters = 0;
+        uint64_t nedges = 0;
+        uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
-        struct Base *csc = nullptr;
+        struct Base_csc *csc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
         std::vector<double> y;
         double alpha = 0.15;
-        uint64_t num_operations = 0;
+        uint64_t noperations = 0;
         uint64_t total_size = 0;
 
-        virtual void populate();
+        void populate();
+        void walk();
+        void construct_vectors();
+        void destruct_vectors();
         virtual void message();        
         virtual uint64_t spmv();
         virtual void update();
         virtual void space();
-        
-        void walk();
         void display(uint64_t nums = 10);
         double checksum();
         void stats(double elapsed_time, std::string type);
@@ -50,19 +51,17 @@ class CSC {
 
 void CSC::run_pagerank() {
     // Degree program
-    num_rows = num_vertices;
+    nrows = nvertices;
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs);
+    nedges = read_binary(file_path, pairs);
     column_sort(pairs);
-    csc = new struct Base(num_edges, num_vertices);
+    csc = new struct Base_csc(nedges, nvertices);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;  
     //walk();
-    v.resize(num_rows);
-    x.resize(num_rows, 1);
-    y.resize(num_rows);
+    construct_vectors();
     (void)spmv();
     v = y;
     //(void)checksum();
@@ -72,25 +71,24 @@ void CSC::run_pagerank() {
     
     // PageRank program
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs, true);
+    nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
-    csc = new struct Base(num_edges, num_vertices);
+    csc = new struct Base_csc(nedges, nvertices);
     populate();
     total_size += csc->size;
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
-    d.resize(num_rows);
     d = v;
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    for(uint32_t i = 0; i < num_iterations; i++)
+    for(uint32_t i = 0; i < niters; i++)
     {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
         message();
-        num_operations += spmv();
+        noperations += spmv();
         update();
     }
     t2 = std::chrono::steady_clock::now();
@@ -99,14 +97,14 @@ void CSC::run_pagerank() {
     display();
     delete csc;
     csc = nullptr;
+    destruct_vectors();
 }
 
 void CSC::populate() {
     uint32_t *A  = (uint32_t *) csc->A;  // Weight      
     uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
     uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
-    uint32_t ncols = csc->  ncols_plus_one - 1;
-    
+    uint32_t ncols = csc-> ncols_plus_one - 1;
     uint32_t i = 0;
     uint32_t j = 1;
     JA[0] = 0;
@@ -130,9 +128,8 @@ void CSC::walk() {
     uint32_t *A  = (uint32_t *) csc->A;
     uint32_t *IA = (uint32_t *) csc->IA;
     uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
-    
-    for(uint32_t j = 0; j < num_cols; j++) {
+    uint32_t ncols = csc->ncols_plus_one - 1;
+    for(uint32_t j = 0; j < ncols; j++) {
         printf("j=%d\n", j);
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             printf("    i=%d, j=%d, value=%d\n", IA[i], j, A[i]);
@@ -140,28 +137,46 @@ void CSC::walk() {
     }
 }
 
+void CSC::construct_vectors() {
+    v.resize(nrows);
+    x.resize(nrows, 1);
+    y.resize(nrows);
+    d.resize(nrows);
+}
+
+void CSC::destruct_vectors() {
+    v.clear();
+    v.shrink_to_fit();
+    x.clear();
+    x.shrink_to_fit();
+    y.clear();
+    y.shrink_to_fit();
+    d.clear();
+    d.shrink_to_fit();
+}
+
 void CSC::message() {
-    for(uint32_t i = 0; i < num_rows; i++)
+    for(uint32_t i = 0; i < nrows; i++)
         x[i] = d[i] ? (v[i]/d[i]) : 0;   
 }
 
 uint64_t CSC::spmv() {
-    uint64_t num_operations = 0;
+    uint64_t noperations = 0;
     uint32_t *A  = (uint32_t *) csc->A;
     uint32_t *IA = (uint32_t *) csc->IA;
     uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
-    for(uint32_t j = 0; j < num_cols; j++) {
+    uint32_t ncols = csc->ncols_plus_one - 1;
+    for(uint32_t j = 0; j < ncols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             y[IA[i]] += (A[i] * x[j]);
-            num_operations++;
+            noperations++;
         }
     }
-    return(num_operations);
+    return(noperations);
 }
 
 void CSC::update() {
-    for(uint32_t i = 0; i < num_rows; i++)
+    for(uint32_t i = 0; i < nrows; i++)
         v[i] = alpha + (1.0 - alpha) * y[i];
 }
 
@@ -171,7 +186,7 @@ void CSC::space() {
 
 double CSC::checksum() {
     double value = 0.0;
-    for(uint32_t i = 0; i < num_rows; i++)
+    for(uint32_t i = 0; i < nrows; i++)
         value += v[i];
     return(value);
 }
@@ -181,12 +196,11 @@ void CSC::display(uint64_t nums) {
         std::cout << "V[" << i << "]=" << v[i] << std::endl;
 }
 
-void CSC::stats(double time, std::string type)
-{
+void CSC::stats(double time, std::string type) {
     std::cout << type << " kernel unit test stats:" << std::endl;
     std::cout << "Utilized Memory: " << total_size / 1e9 << " GB" << std::endl;
     std::cout << "Elapsed time   : " << time / 1e6 << " Sec" << std::endl;
-    std::cout << "Num Operations : " << num_operations <<std::endl;
+    std::cout << "Num Operations : " << noperations <<std::endl;
     std::cout << "Final value    : " << checksum() <<std::endl;
 }
 
