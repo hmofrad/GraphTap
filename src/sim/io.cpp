@@ -4,8 +4,8 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
  
-#ifndef IO
-#define IO
+#ifndef IO_CPP
+#define IO_CPP
 
 #include <fstream>
 
