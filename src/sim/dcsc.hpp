@@ -11,130 +11,130 @@
  
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_csc.hpp" 
-#include "csc.hpp"
+#include "base_dcsc.hpp" 
  
-class DCSC : protected CSC{
-    using CSC::CSC;    
+class DCSC {  
     public:
-        virtual void run_pagerank();
+        DCSC() {};
+        DCSC(const std::string file_path_, const uint32_t nvertices_, const uint32_t niters_) 
+            : file_path(file_path_), nvertices(nvertices_), niters(niters_) {}
+        ~DCSC() {};
+        void run_pagerank();
     protected:
-        virtual void populate();
-        virtual void message();
+        std::string file_path = "\0";
+        uint32_t nvertices = 0;
+        uint32_t niters = 0;
+        uint64_t nedges = 0;
+        uint32_t nrows = 0;
+        std::vector<struct Pair> *pairs = nullptr;
+        struct Base_dcsc *dcsc = nullptr;
+        std::vector<double> v;
+        std::vector<double> d;
+        std::vector<double> x;
+        std::vector<double> y;
+        double alpha = 0.15;
+        uint64_t noperations = 0;
+        uint64_t total_size = 0;
+        uint32_t nnzcols_ = 0;
+        
+        void construct_filter();
+        void destruct_filter();
+        void populate();
+        void walk();
+        void construct_vectors_degree();
+        void destruct_vectors_degree();
+        void construct_vectors_pagerank();
+        void destruct_vectors_pagerank();
+        virtual void message();        
         virtual uint64_t spmv();
         virtual void update();
         virtual void space();
+        void display(uint64_t nums = 10);
+        double checksum();
+        void stats(double elapsed_time, std::string type);
         
-        void filter();
-        void destroy_filter();
-        void destroy_vectors();
+        
+        //void construct_filter();
+        //void destroy_filter();
+        //void destroy_vectors();
         
         std::vector<char> cols;
-        std::vector<uint32_t> cols_vals_nnz;
-        std::vector<uint32_t> cols_vals_all;        
-        uint32_t nnz_cols;
+        //std::vector<uint32_t> cols_vals_nnz;
+        //std::vector<uint32_t> cols_vals_all;        
+        //uint32_t nnz_cols;
 };
 
 void DCSC::run_pagerank() {
     // Degree program
-    num_rows = num_vertices;
+    nrows = nvertices;
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs);
+    nedges = read_binary(file_path, pairs);
     column_sort(pairs);
-    filter();
-    csc = new struct Base(num_edges, nnz_cols);
+    construct_filter();
+    
+    dcsc = new struct Base_dcsc(nedges, nnzcols_);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;  
     //walk();
-    v.resize(num_rows);
-    x.resize(nnz_cols, 1);
-    y.resize(num_rows);
+    construct_vectors_degree();
     (void)spmv();
     v = y;
     //(void)checksum();
     //display();
-    delete csc;
-    csc = nullptr;
-    destroy_filter();
-
+    delete dcsc;
+    dcsc = nullptr;
+    //destroy_filter();
+    destruct_vectors_degree();
+    
     // PageRank program
     pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs, true);
+    nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
-    filter();
-    csc = new struct Base(num_edges, nnz_cols);
-    populate();
+    construct_filter();
+    dcsc = new struct Base_dcsc(nedges, nnzcols_);
+    populate();        
     space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
-    destroy_vectors();
-    x.resize(nnz_cols);
-    d.resize(num_rows);
+    construct_vectors_pagerank();
     d = v;
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    for(uint32_t i = 0; i < num_iterations; i++)
+    for(uint32_t i = 0; i < niters; i++)
     {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
         message();
-        num_operations += spmv();
+        noperations += spmv();
         update();
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "DCSC SpMV");
     display();
-    delete csc;
-    csc = nullptr;
-}
-
-void DCSC::filter() {
-    cols.resize(num_vertices);
-    for(auto &pair: *pairs)
-        cols[pair.col] = 1;
-    cols_vals_all.resize(num_vertices);
-    for(uint32_t i = 0; i < num_vertices; i++)
-    {
-        if(cols[i] == 1)
-        {
-            cols_vals_nnz.push_back(i);
-            cols_vals_all[i] = cols_vals_nnz.size() - 1;
-        }
-    }
-    nnz_cols = cols_vals_nnz.size();
-}
-
-void DCSC::destroy_filter() {
-    cols.clear();
-    cols.shrink_to_fit();
-    cols_vals_nnz.clear();
-    cols_vals_nnz.shrink_to_fit();
-    cols_vals_all.clear();
-    cols_vals_all.shrink_to_fit();
-    nnz_cols = 0;
-}
-
-void DCSC::destroy_vectors() {
-    x.clear();
-    x.shrink_to_fit();
+    delete dcsc;
+    dcsc = nullptr;
+    destruct_vectors_pagerank();
 }
 
 void DCSC::populate() {
-    uint32_t *A  = (uint32_t *) csc->A;  // Weight      
-    uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
-    uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
-    uint32_t ncols = csc->  ncols_plus_one - 1;
-    
+    uint32_t *A  = (uint32_t *) dcsc->A;  // Weight      
+    uint32_t *IA = (uint32_t *) dcsc->IA; // ROW_INDEX
+    uint32_t *JA = (uint32_t *) dcsc->JA; // COL_PTR
+    uint32_t *JC = (uint32_t *) dcsc->JC; // COL_PTR
     uint32_t i = 0;
     uint32_t j = 1;
+    uint32_t k = 1;
     JA[0] = 0;
+    auto &p = pairs->front();
+    JC[0] = p.col;
     for(auto &pair: *pairs) {
-        if((j - 1) != cols_vals_all[pair.col]) {
+        if(JC[j - 1] != pair.col) {
+            JC[j] = pair.col;
             j++;
             JA[j] = JA[j - 1];
         }                  
@@ -145,33 +145,133 @@ void DCSC::populate() {
     }
 }
 
+void DCSC::walk() {
+    uint32_t *A  = (uint32_t *) dcsc->A;
+    uint32_t *IA = (uint32_t *) dcsc->IA;
+    uint32_t *JA = (uint32_t *) dcsc->JA;
+    uint32_t *JC = (uint32_t *) dcsc->JC;
+    uint32_t nnzcols = dcsc->nnzcols_plus_one - 1;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            printf("    i=%d, j=%d, value=%d\n", IA[i], JC[j], A[i]);
+        }
+    }
+}
+
+void DCSC::construct_vectors_degree() {
+    v.resize(nrows);
+    x.resize(nnzcols_, 1);
+    y.resize(nrows);
+}
+
+void DCSC::destruct_vectors_degree() {
+    x.clear();
+    x.shrink_to_fit();
+    y.clear();
+    y.shrink_to_fit();
+}
+
+void DCSC::construct_vectors_pagerank() {
+    v.resize(nrows);
+    x.resize(nnzcols_);
+    y.resize(nrows);
+    d.resize(nrows);
+}
+
+void DCSC::destruct_vectors_pagerank() {
+    v.clear();
+    v.shrink_to_fit();
+    x.clear();
+    x.shrink_to_fit();
+    y.clear();
+    y.shrink_to_fit();
+    d.clear();
+    d.shrink_to_fit();
+}
+
 void DCSC::message() {
-    for(uint32_t i = 0; i < nnz_cols; i++)
-        x[i] = d[cols_vals_nnz[i]] ? (v[cols_vals_nnz[i]]/d[cols_vals_nnz[i]]) : 0;   
+    uint32_t *JC = (uint32_t *) dcsc->JC;
+    uint32_t nnzcols = dcsc->nnzcols_plus_one - 1;
+    for(uint32_t i = 0; i < nnzcols; i++)
+        //x[i] = d[cols_vals_nnz[i]] ? (v[cols_vals_nnz[i]]/d[cols_vals_nnz[i]]) : 0;   
+        x[i] = d[JC[i]] ? (v[JC[i]]/d[JC[i]]) : 0;   
 }
 
 uint64_t DCSC::spmv() {
-    uint64_t num_operations = 0;
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
-    for(uint32_t j = 0; j < num_cols; j++) {
+    uint64_t noperations = 0;
+    uint32_t *A  = (uint32_t *) dcsc->A;
+    uint32_t *IA = (uint32_t *) dcsc->IA;
+    uint32_t *JA = (uint32_t *) dcsc->JA;
+    uint32_t nnzcols = dcsc->nnzcols_plus_one - 1;
+    for(uint32_t j = 0; j < nnzcols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             y[IA[i]] += (A[i] * x[j]);
-            num_operations++;
+            noperations++;
         }
     }
-    return(num_operations);
+    return(noperations);
 }
 
 void DCSC::update() {
-    for(uint32_t i = 0; i < num_rows; i++)
+    for(uint32_t i = 0; i < nrows; i++)
         v[i] = alpha + (1.0 - alpha) * y[i];
 }
 
 void DCSC::space() {
-    total_size += csc->size;
-    total_size += (sizeof(uint32_t) * cols_vals_all.size()) + (sizeof(uint32_t) * cols_vals_nnz.size());
+    total_size += dcsc->size;
 }
+
+double DCSC::checksum() {
+    double value = 0.0;
+    for(uint32_t i = 0; i < nrows; i++)
+        value += v[i];
+    return(value);
+}
+
+void DCSC::display(uint64_t nums) {
+    for(uint32_t i = 0; i < nums; i++)
+        std::cout << "V[" << i << "]=" << v[i] << std::endl;
+}
+
+void DCSC::stats(double time, std::string type) {
+    std::cout << type << " kernel unit test stats:" << std::endl;
+    std::cout << "Utilized Memory: " << total_size / 1e9 << " GB" << std::endl;
+    std::cout << "Elapsed time   : " << time / 1e6 << " Sec" << std::endl;
+    std::cout << "Num Operations : " << noperations <<std::endl;
+    std::cout << "Final value    : " << checksum() <<std::endl;
+}
+
+void DCSC::construct_filter() {
+    cols.resize(nvertices);
+    for(auto &pair: *pairs)
+        cols[pair.col] = 1;
+    //cols_vals_all.resize(nvertices);
+    for(uint32_t i = 0; i < nvertices; i++) {
+        if(cols[i] == 1) {
+            nnzcols_++;
+            //cols_vals_nnz.push_back(i);
+            //cols_vals_all[i] = cols_vals_nnz.size() - 1;
+        }
+    }
+    //nnz_cols = cols_vals_nnz.size();
+    printf("nnzcols_=%d\n", nnzcols_);
+}
+
+void DCSC::destruct_filter() {
+    cols.clear();
+    cols.shrink_to_fit();
+    /*
+    cols_vals_nnz.clear();
+    cols_vals_nnz.shrink_to_fit();
+    cols_vals_all.clear();
+    cols_vals_all.shrink_to_fit();
+    */
+    nnzcols_ = 0;
+}
+
+//void DCSC::destruct_vectors() {
+    //x.clear();
+    //x.shrink_to_fit();
+///}
 #endif
