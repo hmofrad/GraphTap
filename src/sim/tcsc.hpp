@@ -34,6 +34,7 @@ class TCSC {
         std::vector<double> x;
         std::vector<double> x_r;
         std::vector<double> y;
+        std::vector<double> y_r;
         double alpha = 0.15;
         uint64_t noperations = 0;
         uint64_t total_size = 0;
@@ -46,6 +47,7 @@ class TCSC {
         std::vector<uint32_t> rows_regulars_all;
         std::vector<uint32_t> rows_regulars_nnz;
         uint32_t nnzrows_sources_ = 0;
+        std::vector<char> rows_sources;
         std::vector<uint32_t> rows_sources_all;
         std::vector<uint32_t> rows_sources_nnz;
         uint32_t nnzcols_ = 0;
@@ -96,13 +98,14 @@ void TCSC::run_pagerank() {
     for(uint32_t i = 0; i < nnzrows; i++)
         v[IR[i]] =  y[i];
     //(void)checksum();
-    printf("checksum=s%f\n", checksum());
+    
+    std::cout << "checksum=" <<  checksum() << std::endl;
     //display();
     destruct_vectors_degree();
     destruct_filter();
     delete tcsc;
     tcsc = nullptr;
-
+/*
     // PageRank program
     pairs = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs, true);
@@ -115,14 +118,10 @@ void TCSC::run_pagerank() {
     pairs->shrink_to_fit();
     pairs = nullptr;
     construct_vectors_pagerank();
-    
-    
     for(uint32_t i = 0; i < nrows; i++) {
         if(rows[i] == 1)
             d[i] = v[i];
-    }   
-    
-    
+    }
     //d = v;
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
@@ -142,7 +141,6 @@ void TCSC::run_pagerank() {
         message();
         noperations += spmv();
         update();
-        
         for(uint32_t i = 1; i < niters; i++)
         {
             std::fill(x.begin(), x.end(), 0);
@@ -164,6 +162,7 @@ void TCSC::run_pagerank() {
     delete tcsc;
     tcsc = nullptr;
     destruct_vectors_pagerank();
+    */
 }
 
 void TCSC::construct_filter() {
@@ -176,8 +175,17 @@ void TCSC::construct_filter() {
         cols[pair.col] = 1;        
     }
     rows_all.resize(nvertices);
+    
+    nnzrows_regulars_ = 0;
+    rows_regulars_all.resize(nvertices);
+    
+    rows_sources.resize(nvertices);
+    nnzrows_sources_ = 0;
+    rows_sources_all.resize(nvertices);    
+    
     nnzcols_regulars_ = 0;
     cols_regulars_all.resize(nvertices);
+    
     nnzcols_sinks_ = 0;
     cols_sinks_all.resize(nvertices);
     
@@ -186,6 +194,17 @@ void TCSC::construct_filter() {
             rows_nnz.push_back(i);
             rows_all[i] = nnzrows_;
             nnzrows_++;
+            if(cols[i] == 0) {
+                rows_sources[i] = 1;
+                rows_sources_nnz.push_back(i);
+                rows_sources_all[i] = nnzrows_sources_;
+                nnzrows_sources_++;
+            }
+            if(cols[i] == 1) {
+                rows_regulars_nnz.push_back(i);
+                rows_regulars_all[i] = nnzrows_regulars_;
+                nnzrows_regulars_++;   
+            }
         }
         if(cols[i] == 1) {
             nnzcols_++;
@@ -200,11 +219,13 @@ void TCSC::construct_filter() {
                 nnzcols_regulars_++;
             }
         }
-    }
+    }    
+    //for(uint32_t i = 0; i < nrows; i++)
+        //printf("rows_sources_all[%d]=%d\n", i, rows_sources_all[i]);
     
-  //  for(uint32_t i = 0; i < 10; i++)
-  //      printf("i=%d all=%d nnz=%d\n", i, cols_regulars_all[i], cols_regulars_nnz[i]);
-    
+    //printf("nrows=%d nnzrows=%d nnzrows_regulars=%d nnzrows_sources=%d\n", nrows, nnzrows_, nnzrows_regulars_, nnzrows_sources_);
+    //for(uint32_t i = 0; i < nnzrows_sources_; i++)
+      //  printf("rows_sources_nnz[%d]=%d rows_sources_all[rows_sources_nnz[i]]=%d rows_sources[rows_sources_nnz[i]]=%d\n", i, rows_sources_nnz[i], rows_sources_all[rows_sources_nnz[i]], rows_sources[rows_sources_nnz[i]]);
 }
 
 void TCSC::destruct_filter() {
@@ -218,10 +239,31 @@ void TCSC::destruct_filter() {
     cols.clear();
     cols.shrink_to_fit();
     nnzcols_ = 0;
+    
+    rows_sources_nnz.clear();
+    rows_sources_nnz.shrink_to_fit();
+    rows_sources_all.clear();
+    rows_sources_all.shrink_to_fit();
+    nnzrows_sources_ = 0;
+    rows_sources.clear();
+    rows_sources.shrink_to_fit();
+            
+    rows_regulars_nnz.clear();
+    rows_regulars_nnz.shrink_to_fit();
+    rows_regulars_all.clear();
+    rows_regulars_all.shrink_to_fit();
+    nnzrows_regulars_ = 0;
+    
+    
     cols_sinks_nnz.clear();
+    cols_sinks_nnz.shrink_to_fit();
+    cols_sinks_all.clear();
     cols_sinks_all.shrink_to_fit();
     nnzcols_sinks_ = 0;
+    
     cols_regulars_nnz.clear();
+    cols_regulars_nnz.shrink_to_fit();
+    cols_regulars_all.clear();
     cols_regulars_all.shrink_to_fit();
     nnzcols_regulars_ = 0;
 }
@@ -246,6 +288,14 @@ void TCSC::populate() {
         JA[j]++;
         IA[i] = rows_all[pair.row];
         i++;
+        
+        //if(rows_regulars_all[pair.row])
+        //    printf("regular row=%d\n", pair.row);
+        //if(rows_sources[pair.row])
+          //  printf("source row=%d, col=%d IA[i-1]=%d rows_nnz[IA[i-1]]=%d rows_sources_all[IA[i-1]]=%d\n", pair.row, pair.col, IA[i-1], rows_nnz[IA[i-1]], rows_sources_all[rows_nnz[IA[i-1]]]);
+        //if(pair.row == 5)
+        //    break;
+
     }
     uint32_t *IR = (uint32_t *) tcsc->IR; // ROW_PTR
     uint32_t nnzrows = tcsc->nnzrows;
@@ -265,46 +315,78 @@ void TCSC::populate() {
             JA_R[l + 1] = JA[j + 1];
             l += 2;
         }
-      //  else
-        //{
-          // s += (JA[j+1] - JA[j]);
-            //printf("Skipping JC=%d JA=%d JA+1=%d\n", JC[j], JA[j], JA[j+1]);
-        //}
     }
-    //printf("Skipping %d ops\n", s);
     
-    /*
-    for(auto &pair: *pairs) {
-        if((k - 1) != cols_regulars_all[pair.col]) {
-            JC_R[k - 1] = pair.col;
-            k++;
-            JA_R[k] = JA_R[k - 1];
+    uint32_t m = 0;
+    uint32_t n = 0;
+    std::vector<uint32_t> r;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            //printf("i=%d IA[i]=%d IR[IA[i]]=%d rows_sources[IR[IA[i]]]=%d\n", i, IA[i], IR[IA[i]], rows_sources[IR[IA[i]]]);
+            //if(rows_sources[IR[IA[i]]] == 1)
+                //printf("source\n");
+             //   printf(">>IA=%d i=%d j=%d jc=%d nnz_row=%d all_row=%d %d %d\n", IA[i], IR[IA[i]], j, JC[j], rows_sources_nnz[IA[i]], rows_regulars_all[IR[IA[i]]],    rows_regulars_nnz[IA[i]], rows_sources_all[IR[IA[i]]]);
+             if(rows_sources[IR[IA[i]]] == 1)
+             {
+                 m = (JA[j+1] - JA[j]);
+                 r.push_back(i);
+                 //r.push_back(i - JA[j]);
+                 //printf("m=%d idx=%d ir=%d ja=%d ja+1=%d\n", m, r.back(), IR[IA[r.back()]], JA[j], JA[j+1]);
+                 //printf("IR[IA[i]]=%d rows_sources_all[IR[IA[i]]]=%d i=%d imx=%d\n", IR[IA[i]], rows_sources_all[IR[IA[i]]], (i - JA[j]), (JA[j+1] - JA[j]));
+
+                     
+                 //std::swap(IR[IA[i]], IR[IA[i+1]]);
+            //if(rows_sources[IR[IA[i]]] == 1)
+                //break;
+             }
+        }
+        
+        if(m > 0) {
+            n = r.size();
+            printf("Swapping m=%d n=%d\n", m, n);
+            //while(true) {
+                if(m == n)
+                    break;
+                else {
+                    for(uint32_t p = 0; p < n; p++) {
+                        for(uint32_t q = JA[j+1] - 1; q >= JA[j]; q--) {    
+                            //printf("p %d q %d\n", p, q);
+                            if(rows_sources[IR[IA[q]]] != 1) {
+                                
+                                //printf("swap %d %d\n",r[p], q);
+                                //printf("1.swap %d %d %d %d\n", IA[r[p]], IR[IA[r[p]]], IA[q], IR[IA[q]]);
+                                
+                                
+                                std::swap(IA[r[p]], IA[q]);
+                                std::swap(A[r[p]], A[q]);
+                                //printf("2.swap %d %d %d %d\n", IA[r[p]], IR[IA[r[p]]], IA[q], IR[IA[q]]);
+                                
+                                
+                                break;
+                            }
+                        }
+                    }
+                }
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+           // break;
+        }
+        
+
+    }
+    
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            if(rows_sources[IR[IA[i]]] == 1)
+            {
+                for(uint32_t k = JA[j]; k < JA[j + 1]; k++) 
+                    printf("    i=%d, j=%d, value=%d %d\n", IA[k], JC[j], A[k], rows_sources[IR[IA[k]]]);
+            }
         }
     }
-    */
-    /*
-    
-    //printf("%d %d %d %d s=%d\n", tcsc->nnzcols, tcsc->nnzcols_regulars, nnzcols_, nnzcols_sinks_, s);
-    for(uint32_t i = 0; i < 10; i++)
-    {
-        //if(JC[i] == JC_R[i]
-            printf("i=%d JC=%d JA=%d JA+1=%d\n", i, JC[i], JA[i], JA[i+1]);
-    }
-    printf("\n");
-    k = 0;
-    for(uint32_t i = 0; i < 10; i = i + 2)
-    {
-        
-        //if(JC[i] == JC_R[i]
-            printf("k=%d JC_R=%d JA_R=%d, JA_R+1=%d\n", k, JC_R[k], JA_R[i], JA_R[i+1]);
-            k++;
-    }
-    */
-    
-    //for(uint32_t j = 0, k = 0; j < nnzcols_regulars_; j++, k = k + 2) {
-       // if(j > 544)
-         //  printf("j=%d k=%d JC=%d JA_R=%d JA_R+1=%d\n", j, k, JC[j], JA_R[k], JA_R[k+1]);
-    //}
     
     
 }
@@ -340,6 +422,7 @@ void TCSC::construct_vectors_pagerank() {
     x.resize(nnzcols_);
     x_r.resize(nnzcols_regulars_);
     y.resize(nnzrows_);
+    y_r.resize(nnzrows_regulars_);
     d.resize(nrows);
 }
 
@@ -352,6 +435,8 @@ void TCSC::destruct_vectors_pagerank() {
     x_r.shrink_to_fit();
     y.clear();
     y.shrink_to_fit();
+    y_r.clear();
+    y_r.shrink_to_fit();
     d.clear();
     d.shrink_to_fit();
 }
