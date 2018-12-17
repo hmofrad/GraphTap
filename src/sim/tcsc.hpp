@@ -142,7 +142,7 @@ void TCSC::run_pagerank() {
         message();
         noperations += spmv();
         update();
-        for(uint32_t i = 1; i < niters; i++)
+        for(uint32_t i = 1; i < niters - 1; i++)
         {
             std::fill(x.begin(), x.end(), 0);
             std::fill(x_r.begin(), x_r.end(), 0);
@@ -152,8 +152,14 @@ void TCSC::run_pagerank() {
             message_regular();
             noperations += spmv_regular();
             update();
-            //printf("%d\n", i);
+            printf(">>>>%d\n", i);
         }
+        std::fill(x.begin(), x.end(), 0);
+        std::fill(x_r.begin(), x_r.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message_regular();
+        noperations += spmv_regular_();
+        update();
         
     }
     t2 = std::chrono::steady_clock::now();
@@ -552,26 +558,29 @@ uint64_t TCSC::spmv_regular() {
     uint32_t *JA_R = (uint32_t *) tcsc->JA_R;
     uint32_t *JC_R = (uint32_t *) tcsc->JC_R;
     uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
-    //printf("nnzcols_regulars=%d\n", nnzcols_regulars);
-    int n = 0;
     for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
-      //  if(j > 544)
-        //    printf("spmv_regular: j=%d k=%d JC_R=%d JA_R=%d JA_R+1=%d nnzcols_regulars=%d\n", j, k, JC_R[j], JA_R[k], JA_R[k+1], nnzcols_regulars);
-    
         for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
-            //if(IA[i] == 32) {
-              //  printf("1.IA[i]=%d, y[IA[i]]=%f JC=%d x=%f\n", IA[i], y[IA[i]], JC_R[j], x_r[j]);
-                //n++;
-            //}
             y[IA[i]] += (A[i] * x_r[j]);
             noperations++;
-            //if(IA[i] == 32) {
-              //  printf("2.IA[i]=%d, y[IA[i]]=%f JC=%d x=%f\n", IA[i], y[IA[i]], JC_R[j], x_r[j]);
-                //n++;
-            //}
         }
     }
-    //printf("SPMSPV noperations=%d\n", n);
+    return(noperations);
+}
+
+uint64_t TCSC::spmv_regular_() {
+    uint64_t noperations = 0;
+    uint32_t *A  = (uint32_t *) tcsc->A;
+    uint32_t *IA = (uint32_t *) tcsc->IA;
+    //uint32_t *JA_R = (uint32_t *) tcsc->JA_R;
+    uint32_t *JA_RC = (uint32_t *) tcsc->JA_RC;
+    uint32_t *JC_R = (uint32_t *) tcsc->JC_R;
+    uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
+    for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+        for(uint32_t i = JA_RC[k]; i < JA_RC[k + 1]; i++) {
+            y[IA[i]] += (A[i] * x_r[j]);
+            noperations++;
+        }
+    }
     return(noperations);
 }
 
