@@ -106,7 +106,7 @@ void TCSC::run_pagerank() {
     destruct_filter();
     delete tcsc;
     tcsc = nullptr;
-
+    
     // PageRank program
     pairs = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs, true);
@@ -142,23 +142,21 @@ void TCSC::run_pagerank() {
         message();
         noperations += spmv();
         update();
+        
         for(uint32_t i = 1; i < niters - 1; i++)
         {
-            std::fill(x.begin(), x.end(), 0);
+            //std::fill(x.begin(), x.end(), 0);
             std::fill(x_r.begin(), x_r.end(), 0);
             std::fill(y.begin(), y.end(), 0);
-            //message_regular();
-            //noperations += spmv_regular();
             message_regular();
-            noperations += spmv_regular();
+            noperations += spmv_regular_();
             update();
-            printf(">>>>%d\n", i);
         }
-        std::fill(x.begin(), x.end(), 0);
+        //std::fill(x.begin(), x.end(), 0);
         std::fill(x_r.begin(), x_r.end(), 0);
         std::fill(y.begin(), y.end(), 0);
         message_regular();
-        noperations += spmv_regular_();
+        noperations += spmv_regular();
         update();
         
     }
@@ -169,7 +167,6 @@ void TCSC::run_pagerank() {
     delete tcsc;
     tcsc = nullptr;
     destruct_vectors_pagerank();
-    
 }
 
 void TCSC::construct_filter() {
@@ -227,6 +224,8 @@ void TCSC::construct_filter() {
             }
         }
     }    
+    printf("nnzrows_sources_=%d nnzrows_regulars=%d, nrows=%d\n", nnzrows_sources_, nnzrows_regulars_, nnzrows_);
+    printf("nnzcols_sinks=%d nnzcols_regulars=%d, ncols=%d\n", nnzcols_sinks_, nnzcols_regulars_, nnzcols_);
     //for(uint32_t i = 0; i < nrows; i++)
         //printf("rows_sources_all[%d]=%d\n", i, rows_sources_all[i]);
     
@@ -321,7 +320,7 @@ void TCSC::populate() {
             l += 2;
         }
     }
-    
+    int s = 0;
     uint32_t m = 0;
     uint32_t n = 0;
     std::vector<uint32_t> r;
@@ -336,7 +335,7 @@ void TCSC::populate() {
                  m = (JA[j+1] - JA[j]);
                  r.push_back(i);
                  //r.push_back(i - JA[j]);
-                 //printf("m=%d idx=%d ir=%d ja=%d ja+1=%d\n", m, r.back(), IR[IA[r.back()]], JA[j], JA[j+1]);
+                // printf("begin=%d end=%d len=%d idx=%d row=%d\n", JA[j], JA[j+1], m, r.back(), IR[IA[r.back()]]);
                  //printf("IR[IA[i]]=%d rows_sources_all[IR[IA[i]]]=%d i=%d imx=%d\n", IR[IA[i]], rows_sources_all[IR[IA[i]]], (i - JA[j]), (JA[j+1] - JA[j]));
 
                      
@@ -348,26 +347,34 @@ void TCSC::populate() {
         
         if(m > 0) {
             n = r.size();
-            //printf("Swapping m=%d n=%d\n", m, n);
+            s += n;
+            //assert(m >= n);
+          //  printf("Swapping j=%d m=%d n=%d\n", j, m, n);
+           // for(uint32_t p = 0; p < n; p++) {
+           //     printf("[%d %d]", r[p], IA[r[p]]);
+            //}
+           // printf("\n");
             //while(true) {
-                if(m == n)
-                    break;
-                else {
+                if(m > n) {
+                    //break;
+                //else {
                     for(uint32_t p = 0; p < n; p++) {
                         for(uint32_t q = JA[j+1] - 1; q >= JA[j]; q--) {    
                             //printf("p %d q %d\n", p, q);
                             if(rows_sources[IR[IA[q]]] != 1) {
                                 
-                                //printf("swap %d %d\n",r[p], q);
+                              //  printf("swap %d %d\n",r[p], q);
                                 //printf("1.swap %d %d %d %d\n", IA[r[p]], IR[IA[r[p]]], IA[q], IR[IA[q]]);
                                 
                                 
                                 std::swap(IA[r[p]], IA[q]);
                                 std::swap(A[r[p]], A[q]);
                                 //printf("2.swap %d %d %d %d\n", IA[r[p]], IR[IA[r[p]]], IA[q], IR[IA[q]]);
-                                
-                                
                                 break;
+                            }
+                            else {
+                                if(r[p] == q)
+                                    break;
                             }
                         }
                     }
@@ -376,22 +383,33 @@ void TCSC::populate() {
             n = 0;
             r.clear();
             r.shrink_to_fit();
-           // break;
         }
+        
+        //if(j == 2)
+          //  break;
+        
     }
        
     m = 0;
     n = 0;
     r.clear();
     r.shrink_to_fit(); 
+    k = 0;
     l = 0;
+    int x = 0;
     uint32_t *JA_RC = (uint32_t *) tcsc->JA_RC; // COL_PTR_REG_REG
-    for(uint32_t j = 0; j < nnzcols; j++) {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+    //for(uint32_t j = 0; j < nnzcols; j++) {
+      //  for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+  uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
+    for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+        for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
             if(rows_sources[IR[IA[i]]] == 1) {
-                m = (JA[j+1] - JA[j]);
+                m = (JA_R[k+1] - JA_R[k]);
                 r.push_back(i);
             }
+            
+            //if(j == 549)
+                
            
             /*
         if(JC[j] ==  cols_regulars_nnz[k]) {
@@ -403,38 +421,88 @@ void TCSC::populate() {
             */
         }
         if(m > 0) {
+            //printf("j=%d m=%d n=%lu\n", j, m, r.size());
             n = r.size();
-            JA_RC[l] = JA[j];
-            JA_RC[l + 1] = JA[j + 1] - n;            
+            JA_RC[l] = JA_R[k];
+            JA_RC[l + 1] = JA_R[k + 1] - n;            
             l += 2; 
+            
+            //if(m == n)
+                x++;
+            
             m = 0;
             n = 0;
             r.clear();
             r.shrink_to_fit();
         }
         else {
-            JA_RC[l] = JA[j];
-            JA_RC[l + 1] = JA[j + 1];
-            l += 2;      
+            JA_RC[l] = JA_R[k];
+            JA_RC[l + 1] = JA_R[k + 1];
+            l += 2;  
         }
     }
     
+    
+    //printf("%d %d %d %d %d skip=%d\n", l, l / 2, nnzcols, nnzcols_regulars_, nnzcols_sinks_, x);
+    
+    
+    //printf("l/2=%d %d\n", l/2, nnzcols_regulars);
     /*
-    uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
     for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
-    //for(uint32_t j = 0; j < nnzcols; j++) {
+        //for(uint32_t j = 0; j < nnzcols; j++) {
+        //j = 570;    
         printf("j=%d\n", j);
         for(uint32_t i = JA_RC[k]; i < JA_RC[k + 1]; i++) {
-        //for(uint32_t i = JA_RC[j]; i < JA_RC[j + 1]; i++) {
-            //if(rows_sources[IR[IA[i]]] == 1)
-            //{
-              //  for(uint32_t k = JA_RC[j]; k < JA_RC[j + 1]; k++) 
-                  if(rows_sources[IR[IA[i]]])
-                    printf("    i=%d, j=%d, value=%d %d\n", IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
-            //}
+    //    for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            if(rows_sources[IR[IA[i]]])
+                printf("    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
         }
     }
     */
+/*    
+    for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+        //printf("j=%d\n", j);
+        //bool tf = false;
+        
+        if(j == 549) {
+            printf("j=%d\n", j);
+        for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
+        //for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
+            //if(rows_sources[IR[IA[i]]]) {
+            //    tf = true;
+          //  }
+        //}
+        //if(tf) {
+            
+            
+            //for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
+                printf("1.    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
+            //}
+            //printf("\n");
+            }
+            //for(uint32_t i = JA_RC[k]; i < JA_RC[k + 1]; i++) {
+            //    printf("    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
+            //}
+        }
+    }     
+*/    
+
+    /*
+    printf("\n");
+    for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+        
+        if(j == 549) {
+            printf("2.j=%d\n", j);
+        for(uint32_t i = JA_RC[k]; i < JA_RC[k + 1]; i++) {
+            
+            //
+            printf("2.    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
+            }
+        }
+    }
+    */
+    //prin
+    
     
     
 }
@@ -532,7 +600,7 @@ uint64_t TCSC::spmv() {
             //}
         }
     }
-    //printf("SPMV noperations=%d\n", n);
+    //printf("1 SPMV noperations=%lu\n", noperations);
     return(noperations);
 }
 
@@ -564,6 +632,7 @@ uint64_t TCSC::spmv_regular() {
             noperations++;
         }
     }
+    //printf("2 SPMV noperations=%lu\n", noperations);
     return(noperations);
 }
 
@@ -571,16 +640,27 @@ uint64_t TCSC::spmv_regular_() {
     uint64_t noperations = 0;
     uint32_t *A  = (uint32_t *) tcsc->A;
     uint32_t *IA = (uint32_t *) tcsc->IA;
-    //uint32_t *JA_R = (uint32_t *) tcsc->JA_R;
+    uint32_t *IR = (uint32_t *) tcsc->IR;
     uint32_t *JA_RC = (uint32_t *) tcsc->JA_RC;
+    uint32_t *JA_R = (uint32_t *) tcsc->JA_R;
     uint32_t *JC_R = (uint32_t *) tcsc->JC_R;
     uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
     for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
         for(uint32_t i = JA_RC[k]; i < JA_RC[k + 1]; i++) {
+      //for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+        //for(uint32_t i = JA_R[k]; i < JA_R[k + 1]; i++) {
+            //if(rows_sources[IR[IA[i]]] == 0)
+                //printf("skip this one\n");
             y[IA[i]] += (A[i] * x_r[j]);
             noperations++;
+            //
+              //  break;
         }
     }
+    
+    
+    
+    printf("3_ SPMV noperations=%lu\n", noperations);
     return(noperations);
 }
 
@@ -621,301 +701,4 @@ void TCSC::stats(double time, std::string type) {
     std::cout << "Final value    : " << checksum() <<std::endl;
 }
 
-
-
-/*
-class TCSC : protected CSC {
-    using CSC::CSC;    
-    public:
-        virtual void run_pagerank();
-    protected:
-        virtual void populate();
-        virtual void message();
-        virtual uint64_t spmv();
-        virtual void update();
-        virtual void space();
-        
-        void message_reg();
-        void spmv_reg();
-
-        void filter();
-        void destroy_filter();
-        void destroy_vectors();
-        
-        std::vector<char> rows;
-        std::vector<uint32_t> rows_vals_nnz;
-        std::vector<uint32_t> rows_vals_all;
-        uint32_t nnz_rows;
-        std::vector<char> cols;
-        std::vector<uint32_t> cols_vals_nnz;
-        std::vector<uint32_t> cols_vals_all;        
-        uint32_t nnz_cols;
-        
-        std::vector<char> srcs;
-        std::vector<char>     regs_cols_vals_all;
-        std::vector<uint32_t> regs_cols_vals_nnz;
-        std::vector<char>     snks_cols_vals_all;
-        std::vector<uint32_t> snks_cols_vals_nnz;
-        std::vector<uint32_t> regs_2_nnz;
-        std::vector<uint32_t> snks_2_nnz;
-        uint32_t nnz_regs_cols;
-        uint32_t nnz_snks_cols;
-};
-
-void TCSC::run_pagerank() {
-    // Degree program
-    num_rows = num_vertices;
-    pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs);
-    column_sort(pairs);
-    filter();
-    csc = new struct Base_csc(num_edges, nnz_cols);
-    populate();
-    pairs->clear();
-    pairs->shrink_to_fit();
-    pairs = nullptr;  
-    //walk();
-    v.resize(num_rows);
-    x.resize(nnz_cols, 1);
-    y.resize(nnz_rows);
-    (void)spmv();
-    for(uint32_t i = 0; i < nnz_rows; i++)
-        v[rows_vals_nnz[i]] =  y[i];
-    //(void)checksum();
-    //display();
-    delete csc;
-    csc = nullptr;
-    destroy_filter();
-    printf("%f\n", checksum());
-    
-    // PageRank program
-    pairs = new std::vector<struct Pair>;
-    num_edges = read_binary(file_path, pairs, true);
-    column_sort(pairs);
-    filter();
-    csc = new struct Base_csc(num_edges, nnz_cols);
-    populate();
-    space();
-    pairs->clear();
-    pairs->shrink_to_fit();
-    pairs = nullptr;
-    destroy_vectors();
-    x.resize(nnz_cols);
-    y.resize(nnz_rows);
-    d.resize(num_rows);
-    d = v;
-    std::fill(v.begin(), v.end(), alpha);
-    
-    std::chrono::steady_clock::time_point t1, t2;
-    t1 = std::chrono::steady_clock::now();
-    
-    if(num_iterations == 1) {
-        std::fill(x.begin(), x.end(), 0);
-        std::fill(y.begin(), y.end(), 0);
-        message();
-        num_operations += spmv();
-        update();
-    }
-    else if(num_iterations == 2) {
-        ;
-    }
-    else if(num_iterations > 2) {
-        // Sources
-        
-        // Regulars
-        for(uint32_t i = 1; i < num_iterations - 1; i++) {
-            std::fill(x.begin(), x.end(), 0);
-            std::fill(y.begin(), y.end(), 0);
-            message_reg();
-            num_operations += spmv();
-            update();
-        }
-        
-        // Sinks
-    }
-    t2 = std::chrono::steady_clock::now();
-    auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "TCSC SpMSpV");
-    display();
-    delete csc;
-    csc = nullptr;
-}
-
-
-void TCSC::filter() {
-    rows.resize(num_vertices);
-    cols.resize(num_vertices);
-    for(auto &pair: *pairs) {
-        rows[pair.row] = 1;
-        cols[pair.col] = 1;
-    }
-    rows_vals_all.resize(num_vertices);
-    cols_vals_all.resize(num_vertices);
-    //srcs.resize(num_vertices);
-    regs_cols_vals_all.resize(num_vertices);
-    snks_cols_vals_all.resize(num_vertices);
-    for(uint32_t i = 0; i < num_vertices; i++) {
-        if(rows[i] == 1) {
-            rows_vals_nnz.push_back(i);
-            rows_vals_all[i] = rows_vals_nnz.size() - 1;
-        }
-        
-        if(cols[i] == 1) {
-            cols_vals_nnz.push_back(i);
-            cols_vals_all[i] = cols_vals_nnz.size() - 1;
-            if (rows[i] == 1) { // Regular columns
-                regs_cols_vals_nnz.push_back(i);
-                //regs_cols_vals_all[i] = 1;
-                regs_cols_vals_all[i] = regs_cols_vals_nnz.size() - 1;
-                regs_2_nnz.push_back(cols_vals_nnz.size() - 1);
-            }
-            else { // Sink columns
-                snks_cols_vals_nnz.push_back(i);
-                snks_cols_vals_all[i] = snks_cols_vals_nnz.size() - 1;
-                snks_2_nnz.push_back(cols_vals_nnz.size() - 1);
-            }
-        }
-        //if((rows[i] == 1) and (cols[i] == 0))
-        //    srcs[i] = 1;
-        
-        
-       // if(cols[i] == 1) {
-            // Regular columns
-         //   if (rows[i] == 1)
-           //     regs_cols_vals_all[i] = 1;
-            // Sink columns
-           // else // if(rows[i] == 0)
-             //   snks_cols_vals_all[i] = 1;
-        //}
-
-        
-    }
-    nnz_rows = rows_vals_nnz.size();
-    nnz_cols = cols_vals_nnz.size();
-    nnz_regs_cols = regs_cols_vals_nnz.size();
-    nnz_snks_cols = snks_cols_vals_nnz.size();
-    printf("%d %d %d %d\n", nnz_cols , nnz_regs_cols, nnz_snks_cols, nnz_regs_cols + nnz_snks_cols);
-}
-
-void TCSC::destroy_filter() {
-    rows.clear();
-    rows.shrink_to_fit();
-    rows_vals_nnz.clear();
-    rows_vals_nnz.shrink_to_fit();
-    rows_vals_all.clear();
-    rows_vals_all.shrink_to_fit();
-    nnz_rows = 0;
-    
-    cols.clear();
-    cols.shrink_to_fit();
-    cols_vals_nnz.clear();
-    cols_vals_nnz.shrink_to_fit();
-    cols_vals_all.clear();
-    cols_vals_all.shrink_to_fit();
-    nnz_cols = 0;
-    
-    regs_cols_vals_all.clear();
-    regs_cols_vals_all.shrink_to_fit();
-    regs_cols_vals_nnz.clear();
-    regs_cols_vals_nnz.shrink_to_fit();
-    nnz_regs_cols = 0;
-    snks_cols_vals_all.clear();
-    snks_cols_vals_all.shrink_to_fit();
-    snks_cols_vals_nnz.clear();
-    snks_cols_vals_nnz.shrink_to_fit();
-    nnz_snks_cols = 0;
-    regs_2_nnz.clear();
-    regs_2_nnz.shrink_to_fit();
-    snks_2_nnz.shrink_to_fit();
-}
-
-void TCSC::destroy_vectors() {
-    x.clear();
-    x.shrink_to_fit();
-    y.clear();
-    y.shrink_to_fit();
-}
-
-void TCSC::populate() {
-    uint32_t *A  = (uint32_t *) csc->A;  // Weight      
-    uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
-    uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
-    uint32_t ncols = csc->  ncols_plus_one - 1;
-    
-    uint32_t i = 0;
-    uint32_t j = 1;
-    JA[0] = 0;
-    for(auto &pair: *pairs) {
-        if((j - 1) != cols_vals_all[pair.col]) {
-            j++;
-            JA[j] = JA[j - 1];
-            //snks_vals_nnz
-            
-            //if(regs_cols_vals_all[pair.col]) {
-              //  regs_cols_vals_nnz.push_back(j);
-                //printf("SINKs %d %d\n", pair.col, j);
-            //}
-            //else if(snks_cols_vals_all[pair.col]) {
-            //    snks_cols_vals_nnz.push_back(j);
-                //printf("SINKs %d %d\n", pair.col, j);
-            //}
-           // else
-             //   exit(0);
-            
-            
-        
-        }                  
-        A[i] = 1;
-        JA[j]++;
-        IA[i] = rows_vals_all[pair.row];
-        i++;
-        
-        //else if(snks[pair.col])
-            //printf("Regular%d\n", pair.col);
-        
-    }
-    //for(int i = 0; i < snks_cols_vals_nnz.size(); i++)
-        //printf("%d %d\n", i, snks_cols_vals_nnz[i]);
-    //printf("nnz_cols=%d nnz_cols=%d regs_cols_vals_nnz=%lu snks_cols_vals_nnz=%lu\n", num_rows, nnz_cols, regs_cols_vals_nnz.size(), snks_cols_vals_nnz.size() );
-}
-
-void TCSC::message() {
-    for(uint32_t i = 0; i < nnz_cols; i++)
-        x[i] = d[cols_vals_nnz[i]] ? (v[cols_vals_nnz[i]]/d[cols_vals_nnz[i]]) : 0;   
-}
-
-void TCSC::message_reg() {
-    for(uint32_t i = 0; i < nnz_regs_cols; i++)
-        x[regs_2_nnz[i]] = d[regs_cols_vals_nnz[i]] ? (v[regs_cols_vals_nnz[i]]/d[regs_cols_vals_nnz[i]]) : 0;   
-}
-
-uint64_t TCSC::spmv() {
-    uint64_t num_operations = 0;
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t num_cols = csc->ncols_plus_one - 1;
-    for(uint32_t j = 0; j < num_cols; j++) {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-            y[IA[i]] += (A[i] * x[j]);
-            num_operations++;
-        }
-    }
-    return(num_operations);
-}
-
-
-
-
-void TCSC::update() {
-    for(uint32_t i = 0; i < nnz_rows; i++)
-        v[rows_vals_nnz[i]] = alpha + (1.0 - alpha) * y[i];
-}
-
-void TCSC::space() {
-    total_size += csc->size;
-    total_size += (sizeof(uint32_t) * rows_vals_all.size()) + (sizeof(uint32_t) * rows_vals_nnz.size());
-    total_size += (sizeof(uint32_t) * cols_vals_all.size()) + (sizeof(uint32_t) * cols_vals_nnz.size());
-}
-*/
 #endif
