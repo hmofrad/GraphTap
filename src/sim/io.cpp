@@ -34,8 +34,7 @@ uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pair
         {
             fprintf(stderr, "read() failure\n");
             exit(1);
-        }
-        
+        }        
         nedges++;
         offset += sizeof(struct Pair);
 
