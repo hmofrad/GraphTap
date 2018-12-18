@@ -1,9 +1,7 @@
 /*
- * odcsc.cpp: ODCSC SpMV implementation (LA3)
+ * odcsc.cpp: ODCSC SpMSpV implementation (LA3)
  * (c) Mohammad Mofrad, 2018
- * (e) m.hasanzadeh.mofrad@gmail.com 
- * Standalone compile commnad:
- * g++ -o spmv spmv.cpp -std=c++14
+ * (e) m.hasanzadeh.mofrad@gmail.com
  */
  
 #include <iostream>
