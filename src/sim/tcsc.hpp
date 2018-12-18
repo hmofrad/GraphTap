@@ -156,7 +156,7 @@ void TCSC::run_pagerank() {
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "TCSC SpMV");
+    stats(t, "TCSC SpMSpV");
     display();
     destruct_vectors_pagerank();
     destruct_filter();
