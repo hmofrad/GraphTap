@@ -92,7 +92,7 @@ void DCSC_::run_pagerank() {
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "DCSC SpMV");
+    stats(t, "DCSC SpMSpV");
     display();
     destruct_vectors_pagerank();
     destruct_filter();
