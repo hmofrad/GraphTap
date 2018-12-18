@@ -72,6 +72,7 @@ class TCSC {
         virtual void message_regular();        
         virtual uint64_t spmv_regular();
         virtual uint64_t spmv_regular_();
+        virtual uint64_t spmv_regular_regular();
         virtual void update();
         virtual void space();
         void display(uint64_t nums = 10);
@@ -671,6 +672,40 @@ uint64_t TCSC::spmv() {
     //printf("1 SPMV noperations=%lu\n", noperations);
     return(noperations);
 }
+
+uint64_t TCSC::spmv_regular_regular() {
+    uint64_t noperations = 0;
+    uint32_t *A  = (uint32_t *) tcsc->A;
+    uint32_t *IA = (uint32_t *) tcsc->IA;
+    uint32_t *JA_C = (uint32_t *) tcsc->JA_C;
+    uint32_t *JC = (uint32_t *) tcsc->JC;
+    uint32_t nnzcols = tcsc->nnzcols;
+    //printf("nnzcols=%d\n", nnzcols);
+    //int n = 0;
+    for(uint32_t j = 0, k = 0; j < nnzcols; j++, k = k + 2) {
+        for(uint32_t i = JA_C[k]; i < JA_C[k + 1]; i++) {
+    
+    
+    //for(uint32_t j = 0; j < nnzcols; j++) {
+       // if(j > 544)
+         //   printf("spmv j=%d JC=%d JA=%d JA+1=%d nnzcols_=%d\n", j, JC[j], JA[j], JA[j+1], nnzcols_);
+      //  for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            //if(IA[i] == 32){
+              //  printf("1.IA[i]=%d, y[IA[i]]=%f JC=%d x=%f\n", IA[i], y[IA[i]], JC[j], x[j]);
+                //n++;
+            //}
+            y[IA[i]] += (A[i] * x[j]);
+            noperations++;
+            //if(IA[i] == 32){
+              //  printf("2.IA[i]=%d, y[IA[i]]=%f JC=%d x=%f\n", IA[i], y[IA[i]], JC[j], x[j]);
+                //n++;
+            //}
+        }
+    }
+    //printf("1 SPMV noperations=%lu\n", noperations);
+    return(noperations);
+}
+
 
 void TCSC::message_regular() {
     uint32_t *JC_R = (uint32_t *) tcsc->JC_R;
