@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 { 
     if(argc != 5)
     {
-        std::cout << "\"Usage: " << argv[0] << " <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC(LA3)|TCSC SpMSpV(GT)|> <iterations> <file_path> <num_vertices>\"" << std::endl;
+        std::cout << "\"Usage: " << argv[0] << "<file> <nvertices> <niters> <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC(LA3)|TCSC SpMSpV(GT)|>\"" << std::endl;
         exit(1);
     }
 
