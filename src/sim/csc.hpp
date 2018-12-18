@@ -35,7 +35,10 @@ class CSC {
         double alpha = 0.15;
         uint64_t noperations = 0;
         uint64_t total_size = 0;
+        std::vector<char> rows;
 
+        virtual void construct_filter();
+        virtual void destruct_filter();
         void populate();
         void walk();
         void construct_vectors();
@@ -73,13 +76,19 @@ void CSC::run_pagerank() {
     pairs = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
+    construct_filter();
     csc = new struct Base_csc(nedges, nvertices);
     populate();
     total_size += csc->size;
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
-    d = v;
+    
+    for(uint32_t i = 0; i < nrows; i++) {
+        if(rows[i] == 1)
+            d[i] = v[i];
+    }  
+    //d = v;
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
@@ -95,16 +104,29 @@ void CSC::run_pagerank() {
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "CSC SpMV");
     display();
+    destruct_vectors();
+    destruct_filter();  
     delete csc;
     csc = nullptr;
-    destruct_vectors();
+
+}
+
+void CSC::construct_filter() {
+    rows.resize(nvertices);
+    for(auto &pair: *pairs)
+        rows[pair.row] = 1;
+}
+
+void CSC::destruct_filter() {
+    rows.clear();
+    rows.shrink_to_fit();
 }
 
 void CSC::populate() {
-    uint32_t *A  = (uint32_t *) csc->A;  // Weight      
-    uint32_t *IA = (uint32_t *) csc->IA; // ROW_INDEX
+    uint32_t *A  = (uint32_t *) csc->A;  // WEIGHT      
+    uint32_t *IA = (uint32_t *) csc->IA; // ROW_IDX
     uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
-    uint32_t ncols = csc-> ncols_plus_one - 1;
+    uint32_t ncols = csc-> ncols - 1;
     uint32_t i = 0;
     uint32_t j = 1;
     JA[0] = 0;
@@ -128,7 +150,7 @@ void CSC::walk() {
     uint32_t *A  = (uint32_t *) csc->A;
     uint32_t *IA = (uint32_t *) csc->IA;
     uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t ncols = csc->ncols_plus_one - 1;
+    uint32_t ncols = csc->ncols;
     for(uint32_t j = 0; j < ncols; j++) {
         printf("j=%d\n", j);
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -165,7 +187,7 @@ uint64_t CSC::spmv() {
     uint32_t *A  = (uint32_t *) csc->A;
     uint32_t *IA = (uint32_t *) csc->IA;
     uint32_t *JA = (uint32_t *) csc->JA;
-    uint32_t ncols = csc->ncols_plus_one - 1;
+    uint32_t ncols = csc->ncols;
     for(uint32_t j = 0; j < ncols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             y[IA[i]] += (A[i] * x[j]);
@@ -200,8 +222,8 @@ void CSC::stats(double time, std::string type) {
     std::cout << type << " kernel unit test stats:" << std::endl;
     std::cout << "Utilized Memory: " << total_size / 1e9 << " GB" << std::endl;
     std::cout << "Elapsed time   : " << time / 1e6 << " Sec" << std::endl;
-    std::cout << "Num Operations : " << noperations <<std::endl;
-    std::cout << "Final value    : " << checksum() <<std::endl;
+    std::cout << "Num Operations : " << noperations << std::endl;
+    std::cout << "Final value    : " << checksum() << std::endl;
 }
 
 #endif
