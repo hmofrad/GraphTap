@@ -389,14 +389,80 @@ void TCSC::populate() {
           //  break;
         
     }
+    
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit(); 
+
+    uint32_t *JA_C = (uint32_t *) tcsc->JA_C; // COL_PTR_REG_ALL
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            if(rows_sources[IR[IA[i]]] == 1) {
+                m = (JA[j+1] - JA[j]);
+                r.push_back(i);
+            }
+            
+        }
+    
+        if(m > 0) {
+            //printf("j=%d m=%d n=%lu\n", j, m, r.size());
+            n = r.size();
+            JA_C[l] = JA[j];
+            JA_C[l + 1] = JA[j + 1] - n;            
+            l += 2; 
+            
+            //if(m == n)
+                //x++;
+            
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+        }
+        else {
+            JA_C[l] = JA[j];
+            JA_C[l + 1] = JA[j + 1];
+            l += 2;  
+        }
+    }
+    
+    /*
+    printf("1111111111111\n");
+    
+    for(uint32_t j = 0, k = 0; j < nnzcols; j++, k = k + 2) {
+        if(j > 560)
+        {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA_C[k]; i < JA_C[k + 1]; i++) {
+            //if(rows_sources[IR[IA[i]]])
+                printf("    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
+        }
+        }
+    }
+    
+    printf("22222222222222\n");
+    
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        if(j > 560)
+        {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            //if(rows_sources[IR[IA[i]]])
+                printf("    i=%d, %d, j=%d, value=%d %d\n", i, IA[i], JC[j], A[i], rows_sources[IR[IA[i]]]);
+        }
+        }
+    }
+    */
+    
        
     m = 0;
     n = 0;
     r.clear();
     r.shrink_to_fit(); 
-    k = 0;
     l = 0;
-    int x = 0;
+    //int x = 0;
     uint32_t *JA_RC = (uint32_t *) tcsc->JA_RC; // COL_PTR_REG_REG
     //for(uint32_t j = 0; j < nnzcols; j++) {
       //  for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -428,7 +494,7 @@ void TCSC::populate() {
             l += 2; 
             
             //if(m == n)
-                x++;
+                //x++;
             
             m = 0;
             n = 0;
@@ -441,6 +507,8 @@ void TCSC::populate() {
             l += 2;  
         }
     }
+    
+
     
     
     //printf("%d %d %d %d %d skip=%d\n", l, l / 2, nnzcols, nnzcols_regulars_, nnzcols_sinks_, x);
