@@ -225,5 +225,4 @@ void CSC::stats(double time, std::string type) {
     std::cout << "Num Operations : " << noperations << std::endl;
     std::cout << "Final value    : " << checksum() << std::endl;
 }
-
 #endif
