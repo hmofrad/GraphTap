@@ -98,8 +98,6 @@ void TCSC::run_pagerank() {
     for(uint32_t i = 0; i < nnzrows; i++)
         v[IR[i]] =  y[i];
     //(void)checksum();
-    
-    std::cout << "checksum=" <<  checksum() << std::endl;
     //display();
     destruct_vectors_degree();
     destruct_filter();
@@ -155,7 +153,6 @@ void TCSC::run_pagerank() {
         message_nnzcols_regular_rows();
         noperations += spmv_nnzcols_regular();
         update();
-        
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
@@ -165,7 +162,6 @@ void TCSC::run_pagerank() {
     destruct_filter();
     delete tcsc;
     tcsc = nullptr;
-    
 }
 
 void TCSC::construct_filter() {
