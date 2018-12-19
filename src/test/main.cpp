@@ -1,12 +1,12 @@
 /*
- * spmspv.cpp: Unit test kernels 
+ * main.cpp: Unit test kernels 
                    Compressed Sparse Column (CSC)   SpMV/SpMSpV
             Double Compressed Sparse Column (DCSC)  SpMV/SpMSpV
    Optmized Double Compressed Sparse Column (ODCSC) SpMSpV (LA3)
             Triple Compressed Sparse Column (TCSC)  SpMSpV (GraphTap)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
- * Compile: g++ -o spmspv spmspv.cpp -std=c++14 -DNDEBUG -O3 -flto -fwhole-program -march=native
+ * Compile: g++ -o main main.cpp -std=c++14 -DNDEBUG -O3 -flto -fwhole-program -march=native
  */
  
 #include <iostream>
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 { 
     if(argc != 5)
     {
-        std::cout << "\"Usage: " << argv[0] << " <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC SpMSpV(LA3)|TCSC SpMSpV(GT)|> <file> <nvertices> <niters>\"" << std::endl;
+        std::cout << "\"Usage: " << argv[0] << " <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC SpMSpV(LA3)|TCSC SpMSpV(GraphTap)|> <file> <nvertices> <niters>\"" << std::endl;
         exit(1);
     }
     int which = std::atoi(argv[1]);
