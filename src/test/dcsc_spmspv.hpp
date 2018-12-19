@@ -1,18 +1,17 @@
 /*
- * dcsc_.hpp: DCSC SpMSpV implementation
+ * dcsc_spmspv.hpp: DCSC SpMSpV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef DCSC__HPP
-#define DCSC__HPP 
+#ifndef DCSC_SPMSPV_HPP
+#define DCSC_SPMSPV_HPP 
  
 #include <chrono> 
  
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_dcsc.hpp" 
-#include "dcsc.hpp"
+#include "dcsc_spmv.hpp"
 
 
 class DCSC_ : protected DCSC {
@@ -45,7 +44,7 @@ void DCSC_::run_pagerank() {
     nedges = read_binary(file_path, pairs);
     column_sort(pairs);
     construct_filter();
-    dcsc = new struct Base_dcsc(nedges, nnzcols_);
+    dcsc = new struct DCSC_BASE(nedges, nnzcols_);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -67,7 +66,7 @@ void DCSC_::run_pagerank() {
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     construct_filter();
-    dcsc = new struct Base_dcsc(nedges, nnzcols_);
+    dcsc = new struct DCSC_BASE(nedges, nnzcols_);
     populate();        
     space();
     pairs->clear();
