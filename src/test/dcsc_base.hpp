@@ -1,19 +1,19 @@
 /*
- * Base_dcsc.hpp: Base_csc class for column compressed data structures
+ * dcsc_base.hpp: Base class for Double Compressed Sparse Column (DCSC) data structure
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef BASE_DCSC_HPP
-#define BASE_DCSC_HPP
+#ifndef DCSC_BASE_HPP
+#define DCSC_BASE_HPP
 
 #include <sys/mman.h>
 #include <cstring> 
 
-struct Base_dcsc {
+struct DCSC_BASE {
     public:
-        Base_dcsc(uint64_t nnz_, uint32_t nnzcols_);
-        ~Base_dcsc();
+        DCSC_BASE(uint64_t nnz_, uint32_t nnzcols_);
+        ~DCSC_BASE();
         uint64_t nnz;
         uint32_t nnzcols;
         uint64_t size;
@@ -23,7 +23,7 @@ struct Base_dcsc {
         void *JC; // COL_IDX
 };
 
-Base_dcsc::Base_dcsc(uint64_t nnz_, uint32_t nnzcols_) {
+DCSC_BASE::DCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
     nnz = nnz_;
     nnzcols = nnzcols_;
     
@@ -54,7 +54,7 @@ Base_dcsc::Base_dcsc(uint64_t nnz_, uint32_t nnzcols_) {
     size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
-Base_dcsc::~Base_dcsc() {
+DCSC_BASE::~DCSC_BASE() {
     if(munmap(A, nnz * sizeof(uint32_t)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
