@@ -4,14 +4,14 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef TCSC_HPP
-#define TCSC_HPP 
+#ifndef TCSC_SPMVSPV_HPP
+#define TCSC_SPMSPV_HPP 
  
 #include <chrono> 
  
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_tcsc.hpp" 
+#include "tcsc_base.hpp" 
 
 class TCSC {  
     public:
@@ -19,7 +19,7 @@ class TCSC {
         TCSC(const std::string file_path_, const uint32_t nvertices_, const uint32_t niters_) 
             : file_path(file_path_), nvertices(nvertices_), niters(niters_) {}
         ~TCSC() {};
-        virtual void run_pagerank();
+        void run_pagerank();
     protected:
         std::string file_path = "\0";
         uint32_t nvertices = 0;
@@ -27,7 +27,7 @@ class TCSC {
         uint64_t nedges = 0;
         uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
-        struct Base_tcsc *tcsc = nullptr;
+        struct TCSC_BASE *tcsc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -85,7 +85,7 @@ void TCSC::run_pagerank() {
     nedges = read_binary(file_path, pairs);
     column_sort(pairs);
     construct_filter();
-    tcsc = new struct Base_tcsc(nedges, nnzcols_, nnzrows_, nnzcols_regulars_);
+    tcsc = new struct TCSC_BASE(nedges, nnzcols_, nnzrows_, nnzcols_regulars_);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -109,7 +109,7 @@ void TCSC::run_pagerank() {
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     construct_filter();
-    tcsc = new struct Base_tcsc(nedges, nnzcols_, nnzrows_, nnzcols_regulars_);
+    tcsc = new struct TCSC_BASE(nedges, nnzcols_, nnzrows_, nnzcols_regulars_);
     populate();        
     space();
     pairs->clear();
