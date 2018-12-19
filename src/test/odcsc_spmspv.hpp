@@ -27,7 +27,11 @@ class ODCSC {
         uint64_t nedges = 0;
         uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
-        struct ODCSC_BASE *odcsc = nullptr;
+        std::vector<struct Pair> *pairs_regulars = nullptr;
+        std::vector<struct Pair> *pairs_sources = nullptr;
+        //std::vector<struct Pair> *pairs_sinks = nullptr;
+        struct ODCSC_BASE *odcsc_regulars = nullptr;
+        struct ODCSC_BASE *odcsc_sources = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -35,9 +39,31 @@ class ODCSC {
         double alpha = 0.15;
         uint64_t noperations = 0;
         uint64_t total_size = 0;
+        
+        uint32_t nnzrows_ = 0;
         std::vector<char> rows;
+        std::vector<uint32_t> rows_all;
+        std::vector<uint32_t> rows_nnz;
+        uint32_t nnzrows_regulars_ = 0;
+        std::vector<char> rows_regulars;
+        std::vector<uint32_t> rows_regulars_all;
+        std::vector<uint32_t> rows_regulars_nnz;
+        uint32_t nnzrows_sources_ = 0;
+        std::vector<char> rows_sources;
+        std::vector<uint32_t> rows_sources_all;
+        std::vector<uint32_t> rows_sources_nnz;
         uint32_t nnzcols_ = 0;
         std::vector<char> cols;
+        /*
+        uint32_t nnzrows_sinks_ = 0;
+        std::vector<char> rows_sinks;
+        std::vector<uint32_t> rows_sinks_all;
+        std::vector<uint32_t> rows_sinks_nnz;
+        uint32_t nnzrows_isolates_ = 0;
+        std::vector<char> rows_isolates;
+        std::vector<uint32_t> rows_isolates_all;
+        std::vector<uint32_t> rows_isolates_nnz;
+        */
         void construct_filter();
         void destruct_filter();
         
@@ -60,16 +86,26 @@ void ODCSC::run_pagerank() {
     // Degree program
     nrows = nvertices;
     pairs = new std::vector<struct Pair>;
+    pairs_regulars = new std::vector<struct Pair>;
+    pairs_sources = new std::vector<struct Pair>;
+    //pairs_sinks = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs);
-    column_sort(pairs);
     construct_filter();
-    /*
-    odcsc = new struct ODCSC_BASE(nedges, nnzcols_);
+    
+    odcsc_regulars = new struct ODCSC_BASE(nedges, nnzcols_);
+    odcsc_sources = new struct ODCSC_BASE(nedges, nnzcols_);
     populate();
-    pairs->clear();
-    pairs->shrink_to_fit();
-    pairs = nullptr;  
-    //walk();
+    pairs_regulars->clear();
+    pairs_regulars->shrink_to_fit();
+    pairs_regulars = nullptr;
+    pairs_sources->clear();
+    pairs_sources->shrink_to_fit();
+    pairs_sources = nullptr;
+    walk();
+    /*
+
+    
+    
     construct_vectors_degree();
     (void)spmv();
     v = y;
@@ -122,20 +158,192 @@ void ODCSC::run_pagerank() {
 
 
 void ODCSC::construct_filter() {
-    printf("constructing filter\n");
-    
+    nnzrows_ = 0;
+    rows.resize(nvertices);
+    nnzcols_ = 0;
+    cols.resize(nvertices);
+    for(auto& pair:* pairs) {
+        rows[pair.row] = 1;
+        cols[pair.col] = 1;        
+    }
+    rows_all.resize(nvertices);
+    nnzrows_regulars_ = 0;
+    rows_regulars_all.resize(nvertices);
+    rows_sources.resize(nvertices);
+    nnzrows_sources_ = 0;
+    rows_regulars.resize(nvertices);    
+    rows_sources_all.resize(nvertices);    
+    /*
+    nnzrows_sinks_ = 0;
+    rows_sinks.resize(nvertices);
+    rows_sinks_all.resize(nvertices);
+    nnzrows_isolates_ = 0;
+    rows_isolates.resize(nvertices);
+    rows_isolates_all.resize(nvertices);
+    */
+    for(uint32_t i = 0; i < nvertices; i++) {
+        if(rows[i] == 1) {
+            rows_nnz.push_back(i);
+            rows_all[i] = nnzrows_;
+            nnzrows_++;
+            if(cols[i] == 0) {
+                rows_sources[i] = 1;
+                rows_sources_nnz.push_back(i);
+                rows_sources_all[i] = nnzrows_sources_;
+                nnzrows_sources_++;
+            }
+            if(cols[i] == 1) {
+                rows_regulars[i] = 1;
+                rows_regulars_nnz.push_back(i);
+                rows_regulars_all[i] = nnzrows_regulars_;
+                nnzrows_regulars_++;   
+            }
+        }
+        if(cols[i] == 1) {
+            nnzcols_++;
+        }
+        /*
+        if(cols[i] == 1) {
+            nnzcols_++;
+            if(rows[i] == 0) {
+                rows_sinks[i] = 1;
+                rows_sinks_nnz.push_back(i);
+                rows_sinks_all[i] = nnzrows_sinks_;
+                nnzrows_sinks_++;
+            }
+        }
+        if(rows[i] == 0 and cols[i] == 0) {
+            rows_isolates[i] = 1;
+            rows_isolates_nnz.push_back(i);
+            rows_isolates_all[i] = nnzrows_isolates_;
+            nnzrows_isolates_++;
+        }
+        */
+        //printf("i=%d, row=%d, col=%d, regulars=%d, sources=%d, sinks=%d, isolates=%d\n", i, rows[i], cols[i], rows_regulars[i], rows_sources[i], rows_sinks[i], rows_isolates[i]);
+    } 
 }
 
 void ODCSC::destruct_filter() {
-    
+    rows.clear();
+    rows.shrink_to_fit();
+    rows_all.clear();
+    rows_all.shrink_to_fit();
+    rows_nnz.clear();
+    rows_nnz.shrink_to_fit(); 
+    nnzrows_ = 0;
+    rows_regulars.clear();
+    rows_regulars.shrink_to_fit();
+    rows_regulars_all.clear();
+    rows_regulars_all.shrink_to_fit();
+    rows_regulars_nnz.clear();
+    rows_regulars_nnz.shrink_to_fit();
+    nnzrows_regulars_ = 0;
+    rows_sources.clear();
+    rows_sources.shrink_to_fit();
+    rows_sources_all.clear();
+    rows_sources_all.shrink_to_fit();
+    rows_sources_nnz.clear();
+    rows_sources_nnz.shrink_to_fit();
+    nnzrows_sources_ = 0;
+    /*
+    rows_sinks.clear();
+    rows_sinks.shrink_to_fit();
+    rows_sinks_all.clear();
+    rows_sinks_all.shrink_to_fit();
+    rows_sinks_nnz.clear();
+    rows_sinks_nnz.shrink_to_fit();
+    */
+    nnzrows_sources_ = 0;
+    cols.clear();
+    cols.shrink_to_fit();
+    nnzcols_ = 0;
 }
  
 void ODCSC::populate() {
-    
+    for(auto& pair: *pairs) {
+        if(rows_regulars[pair.row])
+            pairs_regulars->push_back(pair);
+        else if(rows_sources[pair.row]) 
+            pairs_sources->push_back(pair);
+        //else if(rows_sinks[pair.col])
+          //  pairs_sinks->push_back(pair);
+        else {
+            printf("Invalid edge\n");
+            exit(0);
+        }
+    }
+    pairs->clear();
+    pairs->shrink_to_fit();
+    pairs = nullptr;
+    //printf("reg=%lu src=%lu all=%lu\n", pairs_regulars->size(), pairs_sources->size(), pairs_regulars->size() + pairs_sources->size());
+    // Regulars
+    column_sort(pairs_regulars);
+    CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES; // ENTRIES  
+    uint32_t* JA = (uint32_t*) odcsc_regulars->JA; // COL_PTR
+    uint32_t* JC = (uint32_t*) odcsc_regulars->JC; // COL_IDX
+    uint32_t i = 0;
+    uint32_t j = 1;
+    JA[0] = 0;
+    auto& p = pairs_regulars->front();
+    JC[0] = p.col;
+    for(auto& pair:* pairs_regulars) {
+        if(JC[j - 1] != pair.col) {
+            JC[j] = pair.col;
+            j++;
+            JA[j] = JA[j - 1];
+        }                 
+        ENTRIES[i].idx = pair.row;
+        ENTRIES[i].global_idx = rows_regulars_all[pair.row];
+        ENTRIES[i].weight = 1;        
+        JA[j]++;
+        i++;
+    }
+    // Sources
+    column_sort(pairs_sources);
+    ENTRIES  = (CSCEntry*) odcsc_sources->ENTRIES; // ENTRIES  
+    JA = (uint32_t *) odcsc_sources->JA; // COL_PTR
+    JC = (uint32_t *) odcsc_sources->JC; // COL_IDX
+    i = 0;
+    j = 1;
+    JA[0] = 0;
+    p = pairs_sources->front();
+    JC[0] = p.col;
+    for(auto& pair:* pairs_sources) {
+        if(JC[j - 1] != pair.col) {
+            JC[j] = pair.col;
+            j++;
+            JA[j] = JA[j - 1];
+        }                 
+        ENTRIES[i].idx = pair.row;
+        ENTRIES[i].global_idx = rows_sources_all[pair.row];
+        ENTRIES[i].weight = 1;        
+        JA[j]++;
+        i++;
+    }
 }    
 
 void ODCSC::walk() {
+    CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES;
+    uint32_t* JA = (uint32_t*) odcsc_regulars->JA;
+    uint32_t* JC = (uint32_t*) odcsc_regulars->JC;
+    uint32_t nnzcols =  odcsc_regulars->nnzcols;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            printf("    i=%d,%d, j=%d, value=%d\n", ENTRIES[i].idx, ENTRIES[i].global_idx, JC[j], ENTRIES[i].weight);
+        }
+    }
     
+    ENTRIES  = (CSCEntry*) odcsc_sources->ENTRIES;
+    JA = (uint32_t*) odcsc_sources->JA;
+    JC = (uint32_t*) odcsc_sources->JC;
+    nnzcols =  odcsc_sources->nnzcols;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        printf("j=%d\n", j);
+        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            printf("    i=%d,%d, j=%d, value=%d\n", ENTRIES[i].idx, ENTRIES[i].global_idx, JC[j], ENTRIES[i].weight);
+        }
+    }
 }   
 
 
@@ -168,7 +376,7 @@ void ODCSC::update() {
 }
 
 void ODCSC::space() {
-    total_size += odcsc->size;
+    total_size += odcsc_regulars->size + odcsc_sources->size;
 }
 
 double ODCSC::checksum() {
