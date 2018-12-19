@@ -36,8 +36,7 @@ struct ODCSC_BASE {
         uint64_t nnz;
         uint32_t nnzcols;
         uint64_t size;
-        void *A;  // WEIGHT
-        void *IA; // ROW_IDX
+        void *ENTRIES;  // ENTRIES
         void *JA; // COL_PTR
         void *JC; // COL_IDX
 };
@@ -46,17 +45,11 @@ ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
     nnz = nnz_;
     nnzcols = nnzcols_;
     
-    if((A = mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+    if((ENTRIES = mmap(nullptr, nnz * sizeof(CSCEntry), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
-    memset(A, 0, nnz * sizeof(uint32_t));
-    
-    if((IA = mmap(nullptr, nnz * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(IA, 0, nnz * sizeof(uint32_t));
+    memset(ENTRIES, 0, nnz * sizeof(CSCEntry));
     
     if((JA = mmap(nullptr, (nnzcols + 1) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
@@ -69,17 +62,30 @@ ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
         exit(1);
     }
     memset(JC, 0, nnzcols * sizeof(uint32_t));
+    /*
+    colptrs_regulars = (uint32_t*) mmap(nullptr, (ncols_regulars) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
+                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(colptrs_regulars != nullptr);
+    memset(colptrs_regulars, 0, ncols_regulars * sizeof(uint32_t));        
+    colidxs_regulars = (uint32_t*) mmap(nullptr, (ncols_regulars) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
+                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(colidxs_regulars != nullptr);
+    memset(colidxs_regulars, 0, ncols_regulars * sizeof(uint32_t));        
+    entries_regulars = (CSCEntry*) mmap(nullptr, nentries_regulars * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
+                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    assert(entries_regulars != nullptr);    
+    memset(entries_regulars, 0, nentries_regulars * sizeof(CSCEntry));   
+
+*/    
     
-    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
+    
+    
+    
+    size = (nnz * sizeof(CSCEntry)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
 ODCSC_BASE::~ODCSC_BASE() {
-    if(munmap(A, nnz * sizeof(uint32_t)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    
-    if(munmap(IA, nnz * sizeof(uint32_t)) == -1) {
+    if(munmap(ENTRIES, nnz * sizeof(CSCEntry)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
