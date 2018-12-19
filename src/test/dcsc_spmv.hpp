@@ -4,14 +4,14 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef DCSC_HPP
-#define DCSC_HPP 
+#ifndef DCSC_SPMV_HPP
+#define DCSC_SPMV_HPP 
  
 #include <chrono> 
  
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_dcsc.hpp" 
+#include "dcsc_base.hpp" 
  
 class DCSC {  
     public:
@@ -27,7 +27,7 @@ class DCSC {
         uint64_t nedges = 0;
         uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
-        struct Base_dcsc *dcsc = nullptr;
+        struct DCSC_BASE *dcsc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -63,7 +63,7 @@ void DCSC::run_pagerank() {
     nedges = read_binary(file_path, pairs);
     column_sort(pairs);
     construct_filter();
-    dcsc = new struct Base_dcsc(nedges, nnzcols_);
+    dcsc = new struct DCSC_BASE(nedges, nnzcols_);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -78,14 +78,13 @@ void DCSC::run_pagerank() {
     destruct_filter();
     delete dcsc;
     dcsc = nullptr;
-    //destroy_filter();
     
     // PageRank program
     pairs = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     construct_filter();
-    dcsc = new struct Base_dcsc(nedges, nnzcols_);
+    dcsc = new struct DCSC_BASE(nedges, nnzcols_);
     populate();        
     space();
     pairs->clear();
