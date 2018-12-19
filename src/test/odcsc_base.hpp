@@ -1,11 +1,11 @@
 /*
- * Base_dcsc.hpp: Base_csc class for column compressed data structures
+ * odcsc_base.hpp: Base class for Optimized Double Compressed Sparse Column (ODCSC) data structure
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef BASE_ODCSC_HPP
-#define BASE_ODCSC_HPP
+#ifndef ODCSC_BASE_HPP
+#define ODCSC_BASE_HPP
 
 #include <sys/mman.h>
 #include <cstring> 
@@ -29,10 +29,10 @@ struct Edge
       : src(src), dst(dst), weight(weight) {}
 };
 
-struct Base_odcsc {
+struct ODCSC_BASE {
     public:
-        Base_odcsc(uint64_t nnz_, uint32_t nnzcols_);
-        ~Base_odcsc();
+        ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_);
+        ~ODCSC_BASE();
         uint64_t nnz;
         uint32_t nnzcols;
         uint64_t size;
@@ -42,7 +42,7 @@ struct Base_odcsc {
         void *JC; // COL_IDX
 };
 
-Base_odcsc::Base_odcsc(uint64_t nnz_, uint32_t nnzcols_) {
+ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
     nnz = nnz_;
     nnzcols = nnzcols_;
     
@@ -73,7 +73,7 @@ Base_odcsc::Base_odcsc(uint64_t nnz_, uint32_t nnzcols_) {
     size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
-Base_odcsc::~Base_odcsc() {
+ODCSC_BASE::~ODCSC_BASE() {
     if(munmap(A, nnz * sizeof(uint32_t)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
