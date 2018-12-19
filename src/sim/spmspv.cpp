@@ -7,7 +7,7 @@
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Compile commnad:
- * g++ -o spmspv spmspv.cpp -std=c++14
+ * g++ -o spmspv spmspv.cpp -std=c++14 -DNDEBUG -O3 -flto -fwhole-program -march=native
  */
  
 #include <iostream>
