@@ -62,25 +62,7 @@ ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
         exit(1);
     }
     memset(JC, 0, nnzcols * sizeof(uint32_t));
-    /*
-    colptrs_regulars = (uint32_t*) mmap(nullptr, (ncols_regulars) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
-                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(colptrs_regulars != nullptr);
-    memset(colptrs_regulars, 0, ncols_regulars * sizeof(uint32_t));        
-    colidxs_regulars = (uint32_t*) mmap(nullptr, (ncols_regulars) * sizeof(uint32_t), PROT_READ | PROT_WRITE,
-                               MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(colidxs_regulars != nullptr);
-    memset(colidxs_regulars, 0, ncols_regulars * sizeof(uint32_t));        
-    entries_regulars = (CSCEntry*) mmap(nullptr, nentries_regulars * sizeof(CSCEntry), PROT_READ | PROT_WRITE,
-                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    assert(entries_regulars != nullptr);    
-    memset(entries_regulars, 0, nentries_regulars * sizeof(CSCEntry));   
 
-*/    
-    
-    
-    
-    
     size = (nnz * sizeof(CSCEntry)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
