@@ -1,19 +1,19 @@
 /*
- * Base_dcsc.hpp: Base_csc class for column compressed data structures
+ * tcsc_base.hpp: Base class for Triple Compressed Sparse Column (TCSC) data structure
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef BASE_TCSC_HPP
-#define BASE_TCSC_HPP
+#ifndef TCSC_BASE_HPP
+#define TCSC_BASE_HPP
 
 #include <sys/mman.h>
 #include <cstring> 
 
-struct Base_tcsc {
+struct TCSC_BASE {
     public:
-        Base_tcsc(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32_t nnzcols_regulars_);
-        ~Base_tcsc();
+        TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32_t nnzcols_regulars_);
+        ~TCSC_BASE();
         uint64_t nnz;
         uint32_t nnzcols;
         uint32_t nnzcols_regulars;
@@ -30,7 +30,7 @@ struct Base_tcsc {
         void *JA_REG_RC; // COL_PTR_REG_COL_REG_ROW
 };
 
-Base_tcsc::Base_tcsc(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32_t nnzcols_regulars_) {
+TCSC_BASE::TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32_t nnzcols_regulars_) {
     nnz = nnz_;
     nnzcols = nnzcols_;
     nnzrows = nnzrows_;
@@ -96,7 +96,7 @@ Base_tcsc::Base_tcsc(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32
                                     
 }
 
-Base_tcsc::~Base_tcsc() {
+TCSC_BASE::~TCSC_BASE() {
     if(munmap(A, nnz * sizeof(uint32_t)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
