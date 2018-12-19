@@ -1,19 +1,19 @@
 /*
- * Base_csc.hpp: Base_csc class for column compressed data structures
+ * csc_base.hpp: Base class for Compressed Sparse Column (CSC) data structure
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef BASE_CSC_HPP
-#define BASE_CSC_HPP
+#ifndef CSC_BASE_HPP
+#define CSC_BASE_HPP
 
 #include <sys/mman.h>
 #include <cstring> 
 
-struct Base_csc {
+struct CSC_BASE {
     public:
-        Base_csc(uint64_t nnz_, uint32_t ncols_);
-        ~Base_csc();
+        CSC_BASE(uint64_t nnz_, uint32_t ncols_);
+        ~CSC_BASE();
         uint64_t nnz;
         uint32_t ncols;
         uint64_t size;    
@@ -22,7 +22,7 @@ struct Base_csc {
         void *JA; // COL_PTR
 };
 
-Base_csc::Base_csc(uint64_t nnz_, uint32_t ncols_) {
+CSC_BASE::CSC_BASE(uint64_t nnz_, uint32_t ncols_) {
     nnz = nnz_;
     ncols = ncols_;
     
@@ -47,7 +47,7 @@ Base_csc::Base_csc(uint64_t nnz_, uint32_t ncols_) {
     size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((ncols + 1) * sizeof(uint32_t));
 }
 
-Base_csc::~Base_csc() {
+CSC_BASE::~CSC_BASE() {
     if(munmap(A, nnz * sizeof(uint32_t)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
