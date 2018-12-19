@@ -1,18 +1,17 @@
 /*
- * csc_.hpp: CSC SpMSpV implementation
+ * csc_spmspv.hpp: CSC SpMSpV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef CSC__HPP
-#define CSC__HPP 
+#ifndef CSC_SPMSPV_HPP
+#define CSC_SPMSPV_HPP 
 
 #include <chrono>
 
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_csc.hpp" 
-#include "csc.hpp"
+#include "csc_spmspv.hpp"
 
 class CSC_ : protected CSC {
     using CSC::CSC;
@@ -47,7 +46,7 @@ void CSC_::run_pagerank() {
     nedges = read_binary(file_path, pairs);
     column_sort(pairs);
     construct_filter();
-    csc = new struct Base_csc(nedges, nvertices);
+    csc = new struct CSC_BASE(nedges, nvertices);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -69,7 +68,7 @@ void CSC_::run_pagerank() {
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     construct_filter();
-    csc = new struct Base_csc(nedges, nvertices);
+    csc = new struct CSC_BASE(nedges, nvertices);
     populate();
     space();
     pairs->clear();
