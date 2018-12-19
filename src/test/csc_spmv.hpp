@@ -1,17 +1,17 @@
 /*
- * csc.hpp: CSC SpMV implementation
+ * csc_spmv.hpp: CSC SpMV implementation
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef CSC_HPP
-#define CSC_HPP
+#ifndef CSC_SPMV_HPP
+#define CSC_SPMV_HPP
 
 #include <chrono>
 
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "base_csc.hpp" 
+#include "csc_base.hpp" 
 
 class CSC {
     public:
@@ -27,7 +27,7 @@ class CSC {
         uint64_t nedges = 0;
         uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
-        struct Base_csc *csc = nullptr;
+        struct CSC_BASE *csc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -58,7 +58,7 @@ void CSC::run_pagerank() {
     pairs = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs);
     column_sort(pairs);
-    csc = new struct Base_csc(nedges, nvertices);
+    csc = new struct CSC_BASE(nedges, nvertices);
     populate();
     pairs->clear();
     pairs->shrink_to_fit();
@@ -77,7 +77,7 @@ void CSC::run_pagerank() {
     nedges = read_binary(file_path, pairs, true);
     column_sort(pairs);
     construct_filter();
-    csc = new struct Base_csc(nedges, nvertices);
+    csc = new struct CSC_BASE(nedges, nvertices);
     populate();
     total_size += csc->size;
     pairs->clear();
@@ -108,7 +108,6 @@ void CSC::run_pagerank() {
     destruct_filter();  
     delete csc;
     csc = nullptr;
-
 }
 
 void CSC::construct_filter() {
