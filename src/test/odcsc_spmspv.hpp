@@ -54,11 +54,15 @@ class ODCSC {
         std::vector<uint32_t> rows_sources_nnz;
         uint32_t nnzcols_ = 0;
         std::vector<char> cols;
+        uint32_t nnzcols_regulars_ = 0;
+        std::vector<char> cols_regulars;
+        std::vector<uint32_t> cols_regulars_all;
+        std::vector<uint32_t> cols_regulars_nnz;        
+        uint32_t nnzcols_sinks_ = 0;
+        std::vector<char> cols_sinks;
+        std::vector<uint32_t> cols_sinks_all;
+        std::vector<uint32_t> cols_sinks_nnz;
         /*
-        uint32_t nnzrows_sinks_ = 0;
-        std::vector<char> rows_sinks;
-        std::vector<uint32_t> rows_sinks_all;
-        std::vector<uint32_t> rows_sinks_nnz;
         uint32_t nnzrows_isolates_ = 0;
         std::vector<char> rows_isolates;
         std::vector<uint32_t> rows_isolates_all;
@@ -166,17 +170,20 @@ void ODCSC::construct_filter() {
         rows[pair.row] = 1;
         cols[pair.col] = 1;        
     }
-    rows_all.resize(nvertices);
     nnzrows_regulars_ = 0;
+    rows_all.resize(nvertices);
     rows_regulars_all.resize(nvertices);
     rows_sources.resize(nvertices);
     nnzrows_sources_ = 0;
     rows_regulars.resize(nvertices);    
     rows_sources_all.resize(nvertices);    
+    nnzcols_regulars_ = 0;
+    cols_regulars.resize(nvertices);
+    cols_regulars_all.resize(nvertices);    
+    nnzcols_sinks_ = 0;
+    cols_sinks.resize(nvertices);
+    cols_sinks_all.resize(nvertices);
     /*
-    nnzrows_sinks_ = 0;
-    rows_sinks.resize(nvertices);
-    rows_sinks_all.resize(nvertices);
     nnzrows_isolates_ = 0;
     rows_isolates.resize(nvertices);
     rows_isolates_all.resize(nvertices);
@@ -202,16 +209,21 @@ void ODCSC::construct_filter() {
         if(cols[i] == 1) {
             nnzcols_++;
         }
-        /*
+        
         if(cols[i] == 1) {
             nnzcols_++;
             if(rows[i] == 0) {
-                rows_sinks[i] = 1;
-                rows_sinks_nnz.push_back(i);
-                rows_sinks_all[i] = nnzrows_sinks_;
-                nnzrows_sinks_++;
+                cols_sinks_nnz.push_back(i);
+                cols_sinks_all[i] = nnzcols_sinks_;
+                nnzcols_sinks_++;
+            }
+            if(rows[i] == 1) {
+                cols_regulars_nnz.push_back(i);
+                cols_regulars_all[i] = nnzcols_regulars_;
+                nnzcols_regulars_++;
             }
         }
+        /*
         if(rows[i] == 0 and cols[i] == 0) {
             rows_isolates[i] = 1;
             rows_isolates_nnz.push_back(i);
@@ -224,39 +236,40 @@ void ODCSC::construct_filter() {
 }
 
 void ODCSC::destruct_filter() {
+    nnzrows_ = 0;
     rows.clear();
     rows.shrink_to_fit();
     rows_all.clear();
     rows_all.shrink_to_fit();
     rows_nnz.clear();
     rows_nnz.shrink_to_fit(); 
-    nnzrows_ = 0;
+    nnzrows_regulars_ = 0;
     rows_regulars.clear();
     rows_regulars.shrink_to_fit();
     rows_regulars_all.clear();
     rows_regulars_all.shrink_to_fit();
     rows_regulars_nnz.clear();
     rows_regulars_nnz.shrink_to_fit();
-    nnzrows_regulars_ = 0;
+    nnzrows_sources_ = 0;
     rows_sources.clear();
     rows_sources.shrink_to_fit();
     rows_sources_all.clear();
     rows_sources_all.shrink_to_fit();
     rows_sources_nnz.clear();
     rows_sources_nnz.shrink_to_fit();
-    nnzrows_sources_ = 0;
-    /*
-    rows_sinks.clear();
-    rows_sinks.shrink_to_fit();
-    rows_sinks_all.clear();
-    rows_sinks_all.shrink_to_fit();
-    rows_sinks_nnz.clear();
-    rows_sinks_nnz.shrink_to_fit();
-    */
-    nnzrows_sources_ = 0;
+    nnzcols_ = 0;
     cols.clear();
     cols.shrink_to_fit();
-    nnzcols_ = 0;
+    nnzcols_regulars_ = 0;
+    cols_regulars.clear();
+    cols_regulars.shrink_to_fit();
+    cols_regulars_all.clear();    
+    cols_regulars_all.shrink_to_fit();    
+    nnzcols_sinks_ = 0;
+    cols_sinks.clear();
+    cols_sinks.shrink_to_fit();
+    cols_sinks_all.clear();
+    cols_sinks_all.shrink_to_fit();
 }
  
 void ODCSC::populate() {
