@@ -4,6 +4,197 @@
  * (e) m.hasanzadeh.mofrad@gmail.com
  */
  
+#ifndef ODCSC_SPMSPV_HPP
+#define ODCSC_SPMSPV_HPP 
+ 
+#include <chrono> 
+ 
+#include "pair.hpp" 
+#include "io.cpp" 
+#include "odcsc_base.hpp"  
+
+class ODCSC {  
+    public:
+        ODCSC() {};
+        ODCSC(const std::string file_path_, const uint32_t nvertices_, const uint32_t niters_) 
+            : file_path(file_path_), nvertices(nvertices_), niters(niters_) {}
+        ~ODCSC() {};
+        void run_pagerank();
+    protected:
+        std::string file_path = "\0";
+        uint32_t nvertices = 0;
+        uint32_t niters = 0;
+        uint64_t nedges = 0;
+        uint32_t nrows = 0;
+        std::vector<struct Pair> *pairs = nullptr;
+        struct ODCSC_BASE *odcsc = nullptr;
+        std::vector<double> v;
+        std::vector<double> d;
+        std::vector<double> x;
+        std::vector<double> y;
+        double alpha = 0.15;
+        uint64_t noperations = 0;
+        uint64_t total_size = 0;
+        std::vector<char> rows;
+        uint32_t nnzcols_ = 0;
+        std::vector<char> cols;
+        void construct_filter();
+        void destruct_filter();
+        
+        void populate();
+        void walk();
+        void construct_vectors_degree();
+        void destruct_vectors_degree();
+        void construct_vectors_pagerank();
+        void destruct_vectors_pagerank();
+        virtual void message();        
+        virtual uint64_t spmv();
+        virtual void update();
+        virtual void space();
+        void display(uint64_t nums = 10);
+        double checksum();
+        void stats(double elapsed_time, std::string type);
+};
+ 
+void ODCSC::run_pagerank() {
+    // Degree program
+    nrows = nvertices;
+    pairs = new std::vector<struct Pair>;
+    nedges = read_binary(file_path, pairs);
+    column_sort(pairs);
+    construct_filter();
+    /*
+    odcsc = new struct ODCSC_BASE(nedges, nnzcols_);
+    populate();
+    pairs->clear();
+    pairs->shrink_to_fit();
+    pairs = nullptr;  
+    //walk();
+    construct_vectors_degree();
+    (void)spmv();
+    v = y;
+    //(void)checksum();
+    //display();
+    destruct_vectors_degree();
+    destruct_filter();
+    delete dcsc;
+    dcsc = nullptr;
+    //destroy_filter();
+    
+    // PageRank program
+    pairs = new std::vector<struct Pair>;
+    nedges = read_binary(file_path, pairs, true);
+    column_sort(pairs);
+    construct_filter();
+    dcsc = new struct ODCSC_BASE(nedges, nnzcols_);
+    populate();        
+    space();
+    pairs->clear();
+    pairs->shrink_to_fit();
+    pairs = nullptr;
+    construct_vectors_pagerank(); 
+    for(uint32_t i = 0; i < nrows; i++) {
+        if(rows[i] == 1)
+            d[i] = v[i];
+    }
+    //d = v;
+    std::fill(v.begin(), v.end(), alpha);
+    std::chrono::steady_clock::time_point t1, t2;
+    t1 = std::chrono::steady_clock::now();
+    for(uint32_t i = 0; i < niters; i++)
+    {
+        std::fill(x.begin(), x.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message();
+        noperations += spmv();
+        update();
+    }
+    t2 = std::chrono::steady_clock::now();
+    auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
+    stats(t, "DCSC SpMV");
+    display();
+    destruct_vectors_pagerank();
+    destruct_filter();
+    delete dcsc;
+    dcsc = nullptr;
+    */
+}
+
+
+void ODCSC::construct_filter() {
+    printf("constructing filter\n");
+    
+}
+
+void ODCSC::destruct_filter() {
+    
+}
+ 
+void ODCSC::populate() {
+    
+}    
+
+void ODCSC::walk() {
+    
+}   
+
+
+void ODCSC::construct_vectors_degree() {
+
+}
+
+void ODCSC::destruct_vectors_degree() {
+
+}
+
+void ODCSC::construct_vectors_pagerank() {
+
+}
+
+void ODCSC::destruct_vectors_pagerank() {
+    
+}
+
+void ODCSC::message() {
+
+}
+
+uint64_t ODCSC::spmv() {
+
+}
+
+void ODCSC::update() {
+
+}
+
+void ODCSC::space() {
+    total_size += odcsc->size;
+}
+
+double ODCSC::checksum() {
+    double value = 0.0;
+    for(uint32_t i = 0; i < nrows; i++)
+        value += v[i];
+    return(value);
+}
+
+void ODCSC::display(uint64_t nums) {
+    for(uint32_t i = 0; i < nums; i++)
+        std::cout << "V[" << i << "]=" << v[i] << std::endl;
+}
+
+void ODCSC::stats(double time, std::string type) {
+    std::cout << type << " kernel unit test stats:" << std::endl;
+    std::cout << "Utilized Memory: " << total_size / 1e9 << " GB" << std::endl;
+    std::cout << "Elapsed time   : " << time / 1e6 << " Sec" << std::endl;
+    std::cout << "Num Operations : " << noperations << std::endl;
+    std::cout << "Final value    : " << checksum() << std::endl;
+}
+
+#endif
+ 
+/* 
+ 
 #include <iostream>
 #include <cstdlib> 
 #include <fstream>
@@ -520,3 +711,4 @@ void done_odcsc()
     for(uint32_t i = 0; i < num_vertices; i++)
         value += values[i];   
 }
+*/
