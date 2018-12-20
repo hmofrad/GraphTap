@@ -63,7 +63,7 @@ ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
     }
     memset(JC, 0, nnzcols * sizeof(uint32_t));
 
-    size = (nnz * sizeof(CSCEntry)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
+    size = (nnz * sizeof(CSCEntry)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
 ODCSC_BASE::~ODCSC_BASE() {
