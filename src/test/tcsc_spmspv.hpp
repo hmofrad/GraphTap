@@ -139,7 +139,6 @@ void TCSC::run_pagerank() {
         message_nnzcols();
         noperations += spmv_nnzcols_regular_rows();
         update();
-        
         for(uint32_t i = 1; i < niters - 1; i++)
         {
             std::fill(x_r.begin(), x_r.end(), 0);
@@ -474,7 +473,6 @@ uint64_t TCSC::spmv_nnzcols_regular_rows() {
     }
     return(noperations);
 }
-
 
 void TCSC::message_nnzcols_regular_rows() {
     uint32_t *JC_REG_C = (uint32_t *) tcsc->JC_REG_C;
