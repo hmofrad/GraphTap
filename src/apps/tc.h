@@ -38,11 +38,11 @@ class TC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
 {
     public: 
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, TC_State>::Vertex_Program;
-        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) {
+        virtual bool initializer(Fractional_Type& v1, Fractional_Type& v2) {
             v1 = v2;
             return(true);
         }
-        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) {
+        virtual bool applicator(Fractional_Type& v, Fractional_Type& y) {
             return(true);
         }      
 };
