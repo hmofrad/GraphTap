@@ -29,24 +29,24 @@ class Deg_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
     public: 
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, Deg_State>::Vertex_Program;
         
-        virtual bool initializer(ip vid, Deg_State &state) {
+        virtual bool initializer(ip vid, Deg_State& state) {
             state.degree = 0; // Not necessary
             return(true);
         }
 
-        virtual Fractional_Type messenger(Deg_State &state) {
+        virtual Fractional_Type messenger(Deg_State& state) {
             return(1);
         }
         
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2, const Fractional_Type& w) {
             y1 += (y2 * w);
         }
         
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2) {
             y1 += y2;
         }
         
-        virtual bool applicator(Deg_State &state, const Fractional_Type &y) {
+        virtual bool applicator(Deg_State& state, const Fractional_Type& y) {
             state.degree = y;
             return(false);
         }   
