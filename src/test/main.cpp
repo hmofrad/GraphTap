@@ -1,5 +1,5 @@
 /*
- * main.cpp: Unit test kernels 
+ * main.cpp: Kernels
                    Compressed Sparse Column (CSC)   SpMV/SpMSpV
             Double Compressed Sparse Column (DCSC)  SpMV/SpMSpV
    Optmized Double Compressed Sparse Column (ODCSC) SpMSpV (LA3)
@@ -21,6 +21,7 @@
 
 int main(int argc, char** argv) { 
     if(argc != 5) {
+        std::cout << "PageRank benchmark for testing compression algorithms" << std::endl;
         std::cout << "\"Usage: " << argv[0] << " <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC SpMSpV(LA3)|TCSC SpMSpV(GraphTap)|> <file> <nvertices> <niters>\"" << std::endl;
         exit(1);
     }
