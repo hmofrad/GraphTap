@@ -11,25 +11,16 @@
 
 #define INF 2147483647
 
-/* HAS_WEIGHT macro will be defined by compiler. 
-   make MACROS=-DHAS_WEIGHT */ 
-using em = Empty; // Weight (default is Empty)
-#ifdef HAS_WEIGHT
-using wp = uint32_t;
+using em = Empty;
+#ifdef HAS_WEIGHT 
+using wp = uint32_t; // Weight of type uint32_t 
 #else
-using wp = em;
+using wp = em;       // Weight of type empty (default)
 #endif
+using ip = uint32_t; // Integer precision for number of vertices
+using fp = uint32_t; // Fractional precision for precision of values.
 
-/*  Integer precision controls the number of vertices
-    the engine can possibly process. */
-using ip = uint32_t;
-
-/* Fractional precision controls the precision of values.
-   E.g. vertex rank in PageRank. */
-using fp = uint32_t;
-
-struct BFS_State
-{
+struct BFS_State {
     ip parent = 0;
     ip hops = INF;
     ip vid = 0;
@@ -38,53 +29,42 @@ struct BFS_State
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
-class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, BFS_State>
-{
+class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, BFS_State> {
     public:  
         Integer_Type root = 0;
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, BFS_State>::Vertex_Program;  // inherit constructors
-        virtual bool initializer(Integer_Type vid, BFS_State &state) 
-        {
-            if(vid == root)
-            {
+        virtual bool initializer(Integer_Type vid, BFS_State& state) {
+            if(vid == root) {
                 state.vid = vid;
                 state.parent = vid;
                 state.hops = 0;
                 return(true);
             }
-            else
-            {
+            else {
                 state.vid = vid;
                 state.hops = INF; // Not necessary
                 return(false);
             }
         }
         
-        virtual Fractional_Type messenger(BFS_State &state) 
-        {
+        virtual Fractional_Type messenger(BFS_State& state) {
             return(state.vid);
         }
         
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) 
-        {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2, const Fractional_Type& w) {
             Fractional_Type tmp = y2 + w;
             y1 = (y1 < tmp) ? y1 : tmp;
         }
 
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) 
-        {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2) {
             y1 = (y1 < y2) ? y1 : y2;
         }
         
-        virtual bool applicator(BFS_State &state, const Fractional_Type &y, Integer_Type iteration)
-        {
-            
+        virtual bool applicator(BFS_State& state, const Fractional_Type& y, Integer_Type iteration) {
             if(state.hops != INF)
                 return(false); // already visited
-            else
-            {
-                if(y != INF)
-                {
+            else {
+                if(y != INF) {
                     state.hops = iteration + 1;
                     state.parent = y;
                     return(true);
@@ -94,8 +74,7 @@ class BFS_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type,
             }
         }
         
-        virtual Fractional_Type infinity()
-        {
+        virtual Fractional_Type infinity() {
             return(INF);
         }        
 };
