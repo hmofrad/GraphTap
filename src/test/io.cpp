@@ -9,12 +9,10 @@
 
 #include <fstream>
 
-uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pairs, bool transpose = false)
-{
+uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pairs, bool transpose = false) {
     // Open graph file.
     std::ifstream fin(file_path.c_str(), std::ios_base::binary);
-    if(!fin.is_open())
-    {
+    if(!fin.is_open()) {
         fprintf(stderr, "Unable to open input file");
         exit(1); 
     }
@@ -26,12 +24,10 @@ uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pair
     fin.seekg(0, std::ios_base::beg);
     
     struct Pair pair;
-    while (offset < filesize)
-    {
+    while (offset < filesize) {
         fin.read(reinterpret_cast<char *>(&pair), sizeof(struct Pair));
         
-        if(fin.gcount() != sizeof(struct Pair))
-        {
+        if(fin.gcount() != sizeof(struct Pair)) {
             fprintf(stderr, "read() failure\n");
             exit(1);
         }        
@@ -44,8 +40,7 @@ uint64_t read_binary(const std::string file_path, std::vector<struct Pair> *pair
         pairs->push_back(pair);
     }
     fin.close();
-    if(offset != filesize)
-    {
+    if(offset != filesize) {
         fprintf(stderr, "read() failure\n");
         exit(1);
     }
