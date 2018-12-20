@@ -1,5 +1,5 @@
 /*
- * cc.cpp: Connected component benchmark
+ * cc.cpp: Connected Component (CC) benchmark main
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -17,9 +17,7 @@ int main(int argc, char **argv)
     bool comm_split = true;
     Env::init(comm_split);    
     double time1 = Env::clock();   
-    
-    if(argc != 3 and argc != 4)
-    {
+    if(argc != 3 and argc != 4) {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
