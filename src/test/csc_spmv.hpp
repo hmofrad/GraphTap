@@ -26,8 +26,8 @@ class CSC {
         uint32_t niters = 0;
         uint64_t nedges = 0;
         uint32_t nrows = 0;
-        std::vector<struct Pair> *pairs = nullptr;
-        struct CSC_BASE *csc = nullptr;
+        std::vector<struct Pair>* pairs = nullptr;
+        struct CSC_BASE* csc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -122,14 +122,14 @@ void CSC::destruct_filter() {
 }
 
 void CSC::populate() {
-    uint32_t *A  = (uint32_t *) csc->A;  // WEIGHT      
-    uint32_t *IA = (uint32_t *) csc->IA; // ROW_IDX
-    uint32_t *JA = (uint32_t *) csc->JA; // COL_PTR
+    uint32_t* A  = (uint32_t*) csc->A;  // WEIGHT      
+    uint32_t* IA = (uint32_t*) csc->IA; // ROW_IDX
+    uint32_t* JA = (uint32_t*) csc->JA; // COL_PTR
     uint32_t ncols = csc-> ncols - 1;
     uint32_t i = 0;
     uint32_t j = 1;
     JA[0] = 0;
-    for(auto &pair: *pairs) {
+    for(auto& pair : *pairs) {
         while((j - 1) != pair.col) {
             j++;
             JA[j] = JA[j - 1];
@@ -146,9 +146,9 @@ void CSC::populate() {
 }
 
 void CSC::walk() {
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
+    uint32_t* A  = (uint32_t*) csc->A;
+    uint32_t* IA = (uint32_t*) csc->IA;
+    uint32_t* JA = (uint32_t*) csc->JA;
     uint32_t ncols = csc->ncols;
     for(uint32_t j = 0; j < ncols; j++) {
         printf("j=%d\n", j);
@@ -183,9 +183,9 @@ void CSC::message() {
 
 uint64_t CSC::spmv() {
     uint64_t noperations = 0;
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
+    uint32_t* A  = (uint32_t*) csc->A;
+    uint32_t* IA = (uint32_t*) csc->IA;
+    uint32_t* JA = (uint32_t*) csc->JA;
     uint32_t ncols = csc->ncols;
     for(uint32_t j = 0; j < ncols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
