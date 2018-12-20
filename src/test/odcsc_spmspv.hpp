@@ -66,6 +66,9 @@ class ODCSC {
         std::vector<char> cols_sinks;
         std::vector<uint32_t> cols_sinks_all;
         std::vector<uint32_t> cols_sinks_nnz;
+        std::vector<uint32_t> regulars_rows_nnzcols_to_cols_regulars;
+        std::vector<uint32_t> sources_rows_nnzcols_to_cols_regulars;
+
         /*
         uint32_t nnzrows_isolates_ = 0;
         std::vector<char> rows_isolates;
@@ -81,10 +84,14 @@ class ODCSC {
         void destruct_vectors_degree();
         void construct_vectors_pagerank();
         void destruct_vectors_pagerank();
-        virtual void message_nnzcols();        
-        virtual uint64_t spmv_nnzrows_nnzcols();
-        virtual void update();
-        virtual void space();
+        void message_nnzcols();    
+        void message_nnzcols_regulars_nnzrows();        
+        uint64_t spmv_nnzrows_nnzcols();
+        uint64_t spmv_nnzrows_regulars();
+        uint64_t spmv_nnzrows_nnzcols_regulars();
+        uint64_t spmv_nnzrows_regulars_nnzcols_regulars();
+        void update();
+        void space();
         void display(uint64_t nums = 10);
         double checksum();
         void stats(double elapsed_time, std::string type);
@@ -156,10 +163,33 @@ void ODCSC::run_pagerank() {
         message_nnzcols();
         noperations += spmv_nnzrows_nnzcols();
         update();
+        
     }
     else
     {
-        ;
+        std::fill(x_regulars.begin(), x_regulars.end(), 0);
+        std::fill(x_sources.begin(), x_sources.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message_nnzcols();
+        noperations += spmv_nnzrows_regulars();
+        update();
+        printf("1. ops=%lu v=%f\n", noperations, checksum());
+        for(uint32_t i = 1; i < niters - 1; i++)
+        {
+            std::fill(x_regulars.begin(), x_regulars.end(), 0);
+            std::fill(y.begin(), y.end(), 0);
+            message_nnzcols_regulars_nnzrows();
+            noperations += spmv_nnzrows_regulars_nnzcols_regulars();
+            update();
+            printf("%d %f\n", i, checksum());
+        }
+        std::fill(x_regulars.begin(), x_regulars.end(), 0);
+        std::fill(x_sources.begin(),  x_sources.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message_nnzcols_regulars_nnzrows();
+        noperations += spmv_nnzrows_nnzcols_regulars();
+        update();
+        printf("%f\n", checksum());
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
@@ -171,42 +201,6 @@ void ODCSC::run_pagerank() {
     odcsc_regulars = nullptr;
     delete odcsc_sources;
     odcsc_sources = nullptr;
-    
-    /*
-    column_sort(pairs);
-    construct_filter();
-    dcsc = new struct ODCSC_BASE(nedges, nnzcols_);
-    populate();        
-    space();
-    pairs->clear();
-    pairs->shrink_to_fit();
-    pairs = nullptr;
-    construct_vectors_pagerank(); 
-    for(uint32_t i = 0; i < nrows; i++) {
-        if(rows[i] == 1)
-            d[i] = v[i];
-    }
-    //d = v;
-    std::fill(v.begin(), v.end(), alpha);
-    std::chrono::steady_clock::time_point t1, t2;
-    t1 = std::chrono::steady_clock::now();
-    for(uint32_t i = 0; i < niters; i++)
-    {
-        std::fill(x.begin(), x.end(), 0);
-        std::fill(y.begin(), y.end(), 0);
-        message();
-        noperations += spmv();
-        update();
-    }
-    t2 = std::chrono::steady_clock::now();
-    auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "DCSC SpMV");
-    display();
-    destruct_vectors_pagerank();
-    destruct_filter();
-    delete dcsc;
-    dcsc = nullptr;
-    */
 }
 
 
@@ -253,17 +247,35 @@ void ODCSC::construct_filter() {
         if(cols[i] == 1) {
             nnzcols_++;
             if(rows[i] == 0) {
+                cols_sinks[i] = 1;
                 cols_sinks_nnz.push_back(i);
                 cols_sinks_all[i] = nnzcols_sinks_;
                 nnzcols_sinks_++;
             }
             if(rows[i] == 1) {
+                cols_regulars[i] = 1;
                 cols_regulars_nnz.push_back(i);
                 cols_regulars_all[i] = nnzcols_regulars_;
                 nnzcols_regulars_++;
             }
         }
-    } 
+    }
+    /*
+    for(uint32_t i = 0; i < nnzcols_; i++) {
+        if(cols_regulars[i] == 1)
+            regulars_rows_nnzcols_to_cols_regulars.push_back(i);
+        //if(cols_sinks[i] == 1)
+         //   sources_rows_nnzcols_to_cols_regulars.push_back(i);
+    }
+    */
+    /*
+    for(uint32_t i = 0; i < nnzrows_; i++) {
+       // if(rows_regulars[i]) 
+         //   regulars_rows_nnzcols_to_cols_regulars.push_back(i);
+        if(rows_sources[i]) 
+            sources_rows_nnzcols_to_cols_regulars.push_back(i);
+    }
+    */
 }
 
 void ODCSC::destruct_filter() {
@@ -296,11 +308,19 @@ void ODCSC::destruct_filter() {
     cols_regulars.shrink_to_fit();
     cols_regulars_all.clear();    
     cols_regulars_all.shrink_to_fit();    
+    cols_regulars_nnz.clear();    
+    cols_regulars_nnz.shrink_to_fit();    
     nnzcols_sinks_ = 0;
     cols_sinks.clear();
     cols_sinks.shrink_to_fit();
+    cols_sinks_nnz.clear();
+    cols_sinks_nnz.shrink_to_fit();
     cols_sinks_all.clear();
     cols_sinks_all.shrink_to_fit();
+    regulars_rows_nnzcols_to_cols_regulars.clear();
+    regulars_rows_nnzcols_to_cols_regulars.shrink_to_fit();
+    sources_rows_nnzcols_to_cols_regulars.clear();
+    sources_rows_nnzcols_to_cols_regulars.shrink_to_fit();
 }
  
 void ODCSC::populate() {
@@ -342,6 +362,14 @@ void ODCSC::populate() {
         JA[j]++;
         i++;
     }
+    uint32_t nnzcols =  odcsc_regulars->nnzcols;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        if((JA[j + 1] - JA[j]) > 0) {
+            if(cols_regulars[JC[j]])
+                regulars_rows_nnzcols_to_cols_regulars.push_back(j);
+        }
+    }
+    
     // Sources
     column_sort(pairs_sources);
     ENTRIES  = (CSCEntry*) odcsc_sources->ENTRIES; // ENTRIES  
@@ -363,6 +391,12 @@ void ODCSC::populate() {
         ENTRIES[i].weight = 1;        
         JA[j]++;
         i++;
+    }
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        if((JA[j + 1] - JA[j]) > 0) {
+            if(cols_regulars[JC[j]])
+                sources_rows_nnzcols_to_cols_regulars.push_back(j);
+        }
     }
     //printf("nnzrows_regulars_=%d nnzrows_sources_=%d %d\n", nnzrows_regulars_, nnzrows_sources_, rows_sources_nnz[10]);
 }    
@@ -443,6 +477,28 @@ void ODCSC::message_nnzcols() {
     }
 }
 
+void ODCSC::message_nnzcols_regulars_nnzrows() {
+    uint32_t* JC_R = (uint32_t*) odcsc_regulars->JC;
+    uint32_t* JC_S = (uint32_t*) odcsc_sources->JC;
+    //uint32_t nnzcols = odcsc_regulars->nnzcols;
+    //for(uint32_t i = 0; i < nnzcols; i++) {
+    for(uint32_t i : regulars_rows_nnzcols_to_cols_regulars) {
+        if(d[JC_R[i]])
+            x_regulars[i] = v[JC_R[i]]/d[JC_R[i]];
+    }
+    
+    for(uint32_t i : sources_rows_nnzcols_to_cols_regulars) {
+        if(d[JC_S[i]]) 
+            x_sources[i] = v[JC_S[i]]/d[JC_S[i]];
+    }
+    
+    
+    //uint32_t *JC_REG_C = (uint32_t *) tcsc->JC_REG_C;
+    //uint32_t nnzcols_regulars = tcsc->nnzcols_regulars;
+    //for(uint32_t i = 0; i < nnzcols_regulars; i++)
+    //    x_r[i] = d[JC_REG_C[i]] ? (v[JC_REG_C[i]]/d[JC_REG_C[i]]) : 0;   
+}
+
 uint64_t ODCSC::spmv_nnzrows_nnzcols() {
     // Regulars
     uint64_t noperations = 0;
@@ -450,10 +506,8 @@ uint64_t ODCSC::spmv_nnzrows_nnzcols() {
     uint32_t* JA = (uint32_t*) odcsc_regulars->JA;
     uint32_t* JC = (uint32_t*) odcsc_regulars->JC;
     uint32_t nnzcols =  odcsc_regulars->nnzcols;
-    for(uint32_t j = 0; j < nnzcols; j++)
-    {
-        for (uint32_t i = JA[j]; i < JA[j + 1]; i++)
-        {
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             auto& entry = ENTRIES[i];
             y[entry.global_idx] += (entry.weight * x_regulars[j]);
             noperations++;
@@ -464,10 +518,8 @@ uint64_t ODCSC::spmv_nnzrows_nnzcols() {
     JA = (uint32_t*) odcsc_sources->JA;
     JC = (uint32_t*) odcsc_sources->JC;
     nnzcols =  odcsc_sources->nnzcols;
-    for(uint32_t j = 0; j < nnzcols; j++)
-    {
-        for (uint32_t i = JA[j]; i < JA[j + 1]; i++)
-        {
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
             auto& entry = ENTRIES[i];
             y[entry.global_idx] += (entry.weight * x_sources[j]);
             noperations++;
@@ -475,6 +527,77 @@ uint64_t ODCSC::spmv_nnzrows_nnzcols() {
     }
     return(noperations);
 }
+
+uint64_t ODCSC::spmv_nnzrows_regulars() {
+    // Regulars
+    uint64_t noperations = 0;
+    CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES;
+    uint32_t* JA = (uint32_t*) odcsc_regulars->JA;
+    uint32_t* JC = (uint32_t*) odcsc_regulars->JC;
+    uint32_t nnzcols =  odcsc_regulars->nnzcols;
+    for(uint32_t j = 0; j < nnzcols; j++) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            auto& entry = ENTRIES[i];
+            y[entry.global_idx] += (entry.weight * x_regulars[j]);
+            noperations++;
+        }
+    }
+    return(noperations);
+}
+
+uint64_t ODCSC::spmv_nnzrows_regulars_nnzcols_regulars() {
+    // Regulars
+    uint64_t noperations = 0;
+    CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES;
+    uint32_t* JA = (uint32_t*) odcsc_regulars->JA;
+    uint32_t* JC = (uint32_t*) odcsc_regulars->JC;
+    //uint32_t nnzcols =  odcsc_regulars->nnzcols;
+    //for(uint32_t j = 0; j < nnzcols; j++)
+    //uint32_t nnzcols_regulars = regulars_rows_nnzcols_to_cols_regulars.size();
+    for(uint32_t j: regulars_rows_nnzcols_to_cols_regulars) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            auto& entry = ENTRIES[i];
+            y[entry.global_idx] += (entry.weight * x_regulars[j]);
+            noperations++;
+        }
+    }
+    return(noperations);
+}
+
+uint64_t ODCSC::spmv_nnzrows_nnzcols_regulars() {
+    // Regulars
+    uint64_t noperations = 0;
+    CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES;
+    uint32_t* JA = (uint32_t*) odcsc_regulars->JA;
+    uint32_t* JC = (uint32_t*) odcsc_regulars->JC;
+    //uint32_t nnzcols =  odcsc_regulars->nnzcols;
+    //for(uint32_t j = 0; j < nnzcols; j++)
+    //uint32_t nnzcols_regulars = regulars_rows_nnzcols_to_cols_regulars.size();
+    for(uint32_t j: regulars_rows_nnzcols_to_cols_regulars) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            auto& entry = ENTRIES[i];
+            y[entry.global_idx] += (entry.weight * x_regulars[j]);
+            noperations++;
+        }
+    }
+    // Sources
+    ENTRIES  = (CSCEntry*) odcsc_sources->ENTRIES;
+    JA = (uint32_t*) odcsc_sources->JA;
+    JC = (uint32_t*) odcsc_sources->JC;
+    //nnzcols =  odcsc_sources->nnzcols;
+    //for(uint32_t j = 0; j < nnzcols; j++)
+    //nnzcols_regulars = regulars_rows_nnzcols_to_cols_regulars.size();
+    for(uint32_t j: sources_rows_nnzcols_to_cols_regulars) {
+        for (uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            auto& entry = ENTRIES[i];
+            y[entry.global_idx] += (entry.weight * x_sources[j]);
+            noperations++;
+        }
+    }
+    return(noperations);
+}
+
+
 
 void ODCSC::update() {
     for(uint32_t i = 0; i < nnzrows_; i++)
