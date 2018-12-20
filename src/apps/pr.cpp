@@ -1,5 +1,5 @@
 /*
- * pr.cpp: PageRank benchmark
+ * pr.cpp: PageRank benchmark main
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -17,14 +17,11 @@ int main(int argc, char **argv)
     bool comm_split = true;
     Env::init(comm_split);    
     double time1 = Env::clock();
-    
-    if(argc != 3 and argc != 4)
-    {
+    if(argc != 3 and argc != 4) {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> [<num_iterations=INF>]\"" << std::endl;
         Env::exit(1);
     }
-    
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     ip num_iterations = (argc > 3) ? (uint32_t) atoi(argv[3]) : 0;
