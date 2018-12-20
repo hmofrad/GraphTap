@@ -19,15 +19,15 @@ struct TCSC_BASE {
         uint32_t nnzcols_regulars;
         uint32_t nnzrows;
         uint64_t size;
-        void *A;     // WEIGHT
-        void *IA;    // ROW_IDX
-        void *JA;    // COL_PTR
-        void *JC;    // COL_IDX
-        void *IR;    // ROW_PTR
-        void *JA_REG_C;  // COL_PTR_REG_COL
-        void *JC_REG_C;  // COL_IDX_REG_COL
-        void *JA_REG_R;  // COL_PTR_REG_ROW
-        void *JA_REG_RC; // COL_PTR_REG_COL_REG_ROW
+        void* A;     // WEIGHT
+        void* IA;    // ROW_IDX
+        void* JA;    // COL_PTR
+        void* JC;    // COL_IDX
+        void* IR;    // ROW_PTR
+        void* JA_REG_C;  // COL_PTR_REG_COL
+        void* JC_REG_C;  // COL_IDX_REG_COL
+        void* JA_REG_R;  // COL_PTR_REG_ROW
+        void* JA_REG_RC; // COL_PTR_REG_COL_REG_ROW
 };
 
 TCSC_BASE::TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32_t nnzcols_regulars_) {
