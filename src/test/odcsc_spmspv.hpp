@@ -29,7 +29,6 @@ class ODCSC {
         std::vector<struct Pair> *pairs = nullptr;
         std::vector<struct Pair> *pairs_regulars = nullptr;
         std::vector<struct Pair> *pairs_sources = nullptr;
-        //std::vector<struct Pair> *pairs_sinks = nullptr;
         struct ODCSC_BASE *odcsc_regulars = nullptr;
         struct ODCSC_BASE *odcsc_sources = nullptr;
         std::vector<double> v;
@@ -296,7 +295,7 @@ void ODCSC::destruct_filter() {
 }
  
 void ODCSC::populate() {
-    for(auto& pair: *pairs) {
+    for(auto& pair : *pairs) {
         if(rows_regulars[pair.row])
             pairs_regulars->push_back(pair);
         else if(rows_sources[pair.row]) 
@@ -319,7 +318,7 @@ void ODCSC::populate() {
     JA[0] = 0;
     auto& p = pairs_regulars->front();
     JC[0] = p.col;
-    for(auto& pair:* pairs_regulars) {
+    for(auto& pair: *pairs_regulars) {
         if(JC[j - 1] != pair.col) {
             JC[j] = pair.col;
             j++;
@@ -348,7 +347,7 @@ void ODCSC::populate() {
     JA[0] = 0;
     p = pairs_sources->front();
     JC[0] = p.col;
-    for(auto& pair:* pairs_sources) {
+    for(auto& pair: *pairs_sources) {
         if(JC[j - 1] != pair.col) {
             JC[j] = pair.col;
             j++;
