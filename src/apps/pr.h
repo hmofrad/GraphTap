@@ -46,5 +46,4 @@ class PR_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
             return (fabs(state.rank - tmp) > tol);         
         }
 };
-
 #endif
