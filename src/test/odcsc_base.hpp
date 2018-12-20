@@ -36,9 +36,9 @@ struct ODCSC_BASE {
         uint64_t nnz;
         uint32_t nnzcols;
         uint64_t size;
-        void *ENTRIES;  // ENTRIES
-        void *JA; // COL_PTR
-        void *JC; // COL_IDX
+        void* ENTRIES;  // ENTRIES
+        void* JA; // COL_PTR
+        void* JC; // COL_IDX
 };
 
 ODCSC_BASE::ODCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
