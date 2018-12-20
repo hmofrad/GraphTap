@@ -17,19 +17,24 @@ CXX_FLAGS = -std=c++14 -fpermissive $(SKIPPED_CXX_WARNINGS)
 #DEBUG = -g -fsanitize=undefined,address -lasan -lubsan
 
 # Definitely Turn this on for faster binaries
-OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 #THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 
 .PHONY: all clean
 
-objs  = deg pr tc cc bfs sssp
+objs  = pr# deg pr tc cc bfs sssp
 
 all: $(objs)
 
 $(objs): %: src/apps/%.cpp
 	@mkdir -p bin
 	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING)           -o bin/$@   -I src $<
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING) $(MACROS) -o bin/$@_w -I src $<
+	#$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING) $(MACROS) -o bin/$@_w -I src $<
+test:
+	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/main src/test/main.cpp
+
+misc:
+	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/converter src/misc/converter.cpp
 
 clean:
 	rm -rf bin
