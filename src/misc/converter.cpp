@@ -1,9 +1,9 @@
 /*
- * edge2bin.cpp: Edge list to binary converter
+ * converter.cpp: Graph converter (Edge list <--> binary)
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Standalone compile commnad:
- * g++ -o edge2bin edge2bin.cpp  -std=c++14
+ * g++ -o converter converter.cpp  -std=c++14 -DNDEBUG -O3 -flto -fwhole-program -march=native
  */
  
 #include <iostream>
@@ -14,17 +14,13 @@
 #include <cassert>
 
 int main(int argc, char **argv) {
-  	
     /* 0 0: in.bin/txt   --> out.bin
        0 1: in.bin/txt   --> out.w.bin
        1 0: in.w.bin/txt --> out.bin
        1 1: in.w.bin/txt --> out.w.bin
     */
-	
 	if (argc != 7 and argc != 8) {
         std::cout << "Usage: " << argv[0] << " <filepath_in> <filepath_in is [0(txt)|1(bin)]> <filepath_in is weighted [0|1]>  <filepath_out> <Want filepath_out be [0(txt)|1(bin)]> <Want filepath_out be weighted [0|1]> [<offsetted by ?>]"  << std::endl;
-        std::cout << "Converts graph from edge list pairs (uint32_t i, uint32_t j, [uint32_t w]) "
-	             "to bianry pairs (uint32_t i, uint32_t j, [uint32_t w])" << std::endl;
     	exit(1);
 	}
 
@@ -42,8 +38,7 @@ int main(int argc, char **argv) {
     else
         fin.open(filepath_in.c_str(),   std::ios_base::in);
     
-    if(!fin.is_open())
-    {
+    if(!fin.is_open()) {
         fprintf(stderr, "Unable to open input file\n");
         exit(1); 
     }
@@ -63,16 +58,14 @@ int main(int argc, char **argv) {
     uint32_t num_vertices = 0;
     bool is_comment = false;
     uint32_t i, j, w;
-    if(in_is_binary)
-    {
+    if(in_is_binary) {
         // Obtain filesize
         uint64_t filesize, offset = 0;
         fin.seekg (0, std::ios_base::end);
         filesize = (uint64_t) fin.tellg();
         fin.seekg(0, std::ios_base::beg);
 
-        while (offset < filesize)
-        {
+        while (offset < filesize) {
             fin.read(reinterpret_cast<char*>(&i), sizeof(uint32_t));
             i = i + displacement;
             offset += sizeof(uint32_t);
@@ -80,24 +73,21 @@ int main(int argc, char **argv) {
             j = j + displacement;
             offset += sizeof(uint32_t);
             
-            if(in_is_weighted)
-            {
+            if(in_is_weighted) {
                 fin.read(reinterpret_cast<char*>(&w), sizeof(uint32_t));
                 offset += sizeof(uint32_t);
             }
             else
                 w = 1 + (std::rand() % (127 + 1));
             
-            if(out_be_binary)
-            {
+            if(out_be_binary) {
                 fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
                 fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
             }
             else
                 fout << i << " " << j;
             
-            if(out_be_weighted)
-            {
+            if(out_be_weighted) {
                 if(out_be_binary)
                     fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
                 else
@@ -129,30 +119,28 @@ int main(int argc, char **argv) {
                 }
                 std::cout << line << std::endl; //NoOP
                 num_comments++;
-            } else {
+            } 
+            else {
                 iss.clear();
                 iss.str(line);
                 //std::cout << "i=" << i << "j=" << j << std::endl;
                 if(in_is_weighted)
                     iss >> i >> j >> w;
-                else
-                {
+                else {
                     w = 1 + (std::rand() % (127 + 1));
                     iss >> i >> j;
                 }
                 i = i + displacement;
                 j = j + displacement;
                 
-                if(out_be_binary)
-                {
+                if(out_be_binary) {
                     fout.write(reinterpret_cast<const char*>(&i), sizeof(uint32_t));
                     fout.write(reinterpret_cast<const char*>(&j), sizeof(uint32_t));
                 }
                 else
                     fout << i << " " << j;
                 
-                if(out_be_weighted)
-                {
+                if(out_be_weighted) {
                     if(out_be_binary)
                         fout.write(reinterpret_cast<const char*>(&w), sizeof(uint32_t));
                     else
@@ -170,8 +158,6 @@ int main(int argc, char **argv) {
         fout.close();
         fin.close();
     }
-	
-
 	std::cout << "########################################" << std::endl;
 	std::cout << "Read/write stats:" << std::endl;
 	std::cout << num_comments << " line comments" << std::endl;
