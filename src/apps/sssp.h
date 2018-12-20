@@ -31,7 +31,7 @@ class SSSP_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type
     public:  
         Integer_Type root = 0;
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, SSSP_State>::Vertex_Program;  // inherit constructors
-        virtual bool initializer(Integer_Type vid, SSSP_State &state) {
+        virtual bool initializer(Integer_Type vid, SSSP_State& state) {
             if(vid == root) {
                 state.distance = 0;
                 return(true);
@@ -42,20 +42,20 @@ class SSSP_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type
             }
         }
         
-        virtual Fractional_Type messenger(SSSP_State &state) {
+        virtual Fractional_Type messenger(SSSP_State& state) {
             return(state.distance);
         }
 
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2, const Fractional_Type& w) {
             Fractional_Type tmp = y2 + w;
             y1 = (y1 < tmp) ? y1 : tmp;
         }
             
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2) {
             y1 = (y1 < y2) ? y1 : y2;
         }
 
-        virtual bool applicator(SSSP_State &state, const Fractional_Type &y) {
+        virtual bool applicator(SSSP_State& state, const Fractional_Type& y) {
             Fractional_Type tmp = state.distance;
             #ifdef HAS_WEIGHT
             state.distance = (y < state.distance) ? y : state.distance;
