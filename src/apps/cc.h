@@ -30,25 +30,25 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 class CC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, CC_State> {
     public:  
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, CC_State>::Vertex_Program;
-        virtual bool initializer(Integer_Type vid, CC_State &state) {
+        virtual bool initializer(Integer_Type vid, CC_State& state) {
             state.label = vid;
             return(true);
         }
         
-        virtual Fractional_Type messenger(CC_State &state) {
+        virtual Fractional_Type messenger(CC_State& state) {
             return(state.label);
         }
         
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2, const Fractional_Type &w) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2, const Fractional_Type& w) {
             Fractional_Type tmp = y2 + w;
             y1 = (y1 < tmp) ? y1 : tmp;
         }
 
-        virtual void combiner(Fractional_Type &y1, const Fractional_Type &y2) {
+        virtual void combiner(Fractional_Type& y1, const Fractional_Type& y2) {
             y1 = (y1 < y2) ? y1 : y2;
         }
 
-        virtual bool applicator(CC_State &state, const Fractional_Type &y) {
+        virtual bool applicator(CC_State& state, const Fractional_Type& y) {
             Fractional_Type tmp = state.label;
             state.label = (y < state.label) ? y : state.label;
             return(tmp != state.label);
