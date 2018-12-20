@@ -26,8 +26,8 @@ class DCSC {
         uint32_t niters = 0;
         uint64_t nedges = 0;
         uint32_t nrows = 0;
-        std::vector<struct Pair> *pairs = nullptr;
-        struct DCSC_BASE *dcsc = nullptr;
+        std::vector<struct Pair>* pairs = nullptr;
+        struct DCSC_BASE* dcsc = nullptr;
         std::vector<double> v;
         std::vector<double> d;
         std::vector<double> x;
@@ -139,17 +139,17 @@ void DCSC::destruct_filter() {
 }
 
 void DCSC::populate() {
-    uint32_t *A  = (uint32_t *) dcsc->A;  // WEIGHT      
-    uint32_t *IA = (uint32_t *) dcsc->IA; // ROW_IDX
-    uint32_t *JA = (uint32_t *) dcsc->JA; // COL_PTR
-    uint32_t *JC = (uint32_t *) dcsc->JC; // COL_IDX
+    uint32_t* A  = (uint32_t*) dcsc->A;  // WEIGHT      
+    uint32_t* IA = (uint32_t*) dcsc->IA; // ROW_IDX
+    uint32_t* JA = (uint32_t*) dcsc->JA; // COL_PTR
+    uint32_t* JC = (uint32_t*) dcsc->JC; // COL_IDX
     uint32_t i = 0;
     uint32_t j = 1;
     uint32_t k = 1;
     JA[0] = 0;
     auto &p = pairs->front();
     JC[0] = p.col;
-    for(auto &pair: *pairs) {
+    for(auto &pair : *pairs) {
         if(JC[j - 1] != pair.col) {
             JC[j] = pair.col;
             j++;
@@ -163,10 +163,10 @@ void DCSC::populate() {
 }
 
 void DCSC::walk() {
-    uint32_t *A  = (uint32_t *) dcsc->A;
-    uint32_t *IA = (uint32_t *) dcsc->IA;
-    uint32_t *JA = (uint32_t *) dcsc->JA;
-    uint32_t *JC = (uint32_t *) dcsc->JC;
+    uint32_t* A  = (uint32_t*) dcsc->A;
+    uint32_t* IA = (uint32_t*) dcsc->IA;
+    uint32_t* JA = (uint32_t*) dcsc->JA;
+    uint32_t* JC = (uint32_t*) dcsc->JC;
     uint32_t nnzcols = dcsc->nnzcols;
     for(uint32_t j = 0; j < nnzcols; j++) {
         printf("j=%d\n", j);
@@ -207,7 +207,7 @@ void DCSC::destruct_vectors_pagerank() {
 }
 
 void DCSC::message() {
-    uint32_t *JC = (uint32_t *) dcsc->JC;
+    uint32_t* JC = (uint32_t*) dcsc->JC;
     uint32_t nnzcols = dcsc->nnzcols;
     for(uint32_t i = 0; i < nnzcols; i++)
         x[i] = d[JC[i]] ? (v[JC[i]]/d[JC[i]]) : 0;   
@@ -215,9 +215,9 @@ void DCSC::message() {
 
 uint64_t DCSC::spmv() {
     uint64_t noperations = 0;
-    uint32_t *A  = (uint32_t *) dcsc->A;
-    uint32_t *IA = (uint32_t *) dcsc->IA;
-    uint32_t *JA = (uint32_t *) dcsc->JA;
+    uint32_t* A  = (uint32_t*) dcsc->A;
+    uint32_t* IA = (uint32_t*) dcsc->IA;
+    uint32_t* JA = (uint32_t*) dcsc->JA;
     uint32_t nnzcols = dcsc->nnzcols;
     for(uint32_t j = 0; j < nnzcols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
