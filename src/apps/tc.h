@@ -9,31 +9,21 @@
 
 #include "vp/vertex_program.hpp"
 
-/* HAS_WEIGHT macro will be defined by compiler. 
-   make MACROS=-DHAS_WEIGHT */   
-using em = Empty; // Weight (default is Empty)
-#ifdef HAS_WEIGHT
-using wp = uint32_t;
+using em = Empty;
+#ifdef HAS_WEIGHT 
+using wp = uint32_t; // Weight of type uint32_t 
 #else
-using wp = em;
+using wp = em;       // Weight of type empty (default)
 #endif
+using ip = uint32_t; // Integer precision for number of vertices
+using fp = double;   // Fractional precision for precision of values.
 
-/*  Integer precision controls the number of vertices
-    the engine can possibly process. */
-using ip = uint32_t;
-
-/* Fractional precision controls the precision of values.
-   E.g. vertex rank in PageRank. */
-using fp = double;
-
-struct TC_State
-{
+struct TC_State {
     ip vid;
     ip get_state(){return(vid);};
     std::vector<ip> neighbors;
     std::vector<ip> get_neighbors(){return(neighbors);};
-    std::string print_state()
-    {
+    std::string print_state() {
         std::string str = "neighbors=";
         for(auto vid : neighbors)
         {
@@ -48,13 +38,11 @@ class TC_Program : public Vertex_Program<Weight, Integer_Type, Fractional_Type, 
 {
     public: 
         using Vertex_Program<Weight, Integer_Type, Fractional_Type, TC_State>::Vertex_Program;
-        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) 
-        {
+        virtual bool initializer(Fractional_Type &v1, Fractional_Type &v2) {
             v1 = v2;
             return(true);
         }
-        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) 
-        {
+        virtual bool applicator(Fractional_Type &v, Fractional_Type &y) {
             return(true);
         }      
 };
