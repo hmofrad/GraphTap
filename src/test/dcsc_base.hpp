@@ -17,10 +17,10 @@ struct DCSC_BASE {
         uint64_t nnz;
         uint32_t nnzcols;
         uint64_t size;
-        void *A;  // WEIGHT
-        void *IA; // ROW_IDX
-        void *JA; // COL_PTR
-        void *JC; // COL_IDX
+        void* A;  // WEIGHT
+        void* IA; // ROW_IDX
+        void* JA; // COL_PTR
+        void* JC; // COL_IDX
 };
 
 DCSC_BASE::DCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
