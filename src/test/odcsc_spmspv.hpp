@@ -552,6 +552,8 @@ void ODCSC::update() {
 
 void ODCSC::space() {
     total_size += odcsc_regulars->size + odcsc_sources->size;
+    total_size += sizeof(uint32_t) * regulars_rows_nnzcols_to_cols_regulars.size();
+    total_size += sizeof(uint32_t) * sources_rows_nnzcols_to_cols_regulars.size();
     total_size += sizeof(uint32_t) * rows_nnz.size();
 }
 
