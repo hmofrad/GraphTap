@@ -17,9 +17,9 @@ struct CSC_BASE {
         uint64_t nnz;
         uint32_t ncols;
         uint64_t size;    
-        void *A;  // WEIGHT
-        void *IA; // ROW_IDX
-        void *JA; // COL_PTR
+        void* A;  // WEIGHT
+        void* IA; // ROW_IDX
+        void* JA; // COL_PTR
 };
 
 CSC_BASE::CSC_BASE(uint64_t nnz_, uint32_t ncols_) {
