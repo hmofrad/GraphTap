@@ -1,5 +1,5 @@
 /*
- * Degree.cpp: Outgoing degree benchmark
+ * deg.cpp: Degree benchmark main
  * (c) Mohammad Mofrad, 2018
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
@@ -11,13 +11,11 @@
 #include "mat/graph.hpp"
 #include "deg.h"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     bool comm_split = true;
     Env::init(comm_split);
     double time1 = Env::clock();
-    if(argc != 3 and argc != 4)
-    {
+    if(argc != 3 and argc != 4) {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices>\"" << std::endl;
         Env::exit(1);
@@ -25,7 +23,6 @@ int main(int argc, char **argv)
     std::string file_path = argv[1]; 
     ip num_vertices = std::atoi(argv[2]);
     ip num_iterations = 1;
-    
     bool directed = true;
     bool transpose = false;
     bool self_loops = true;
