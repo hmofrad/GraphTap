@@ -105,7 +105,7 @@ void DCSC_::construct_filter() {
     rows.resize(nvertices);
     nnzcols_ = 0;
     cols.resize(nvertices);
-    for(auto &pair: *pairs) {
+    for(auto &pair : *pairs) {
         rows[pair.row] = 1;
         cols[pair.col] = 1;
     }
@@ -167,9 +167,9 @@ void DCSC_::destruct_vectors_pagerank() {
 
 uint64_t DCSC_::spmv() {
     uint64_t noperations = 0;
-    uint32_t *A  = (uint32_t *) dcsc->A;
-    uint32_t *IA = (uint32_t *) dcsc->IA;
-    uint32_t *JA = (uint32_t *) dcsc->JA;
+    uint32_t* A  = (uint32_t*) dcsc->A;
+    uint32_t* IA = (uint32_t*) dcsc->IA;
+    uint32_t* JA = (uint32_t*) dcsc->JA;
     uint32_t nnzcols = dcsc->nnzcols;
     for(uint32_t j = 0; j < nnzcols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
