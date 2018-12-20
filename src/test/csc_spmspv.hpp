@@ -106,7 +106,7 @@ void CSC_::construct_filter() {
     rows.resize(nvertices);
     nnzcols_ = 0;
     cols.resize(nvertices);
-    for(auto &pair: *pairs) {
+    for(auto& pair : *pairs) {
         rows[pair.row] = 1;
         cols[pair.col] = 1;
     }
@@ -183,9 +183,9 @@ void CSC_::message() {
 
 uint64_t CSC_::spmv() {
     uint64_t num_operations = 0;
-    uint32_t *A  = (uint32_t *) csc->A;
-    uint32_t *IA = (uint32_t *) csc->IA;
-    uint32_t *JA = (uint32_t *) csc->JA;
+    uint32_t* A  = (uint32_t*) csc->A;
+    uint32_t* IA = (uint32_t*) csc->IA;
+    uint32_t* JA = (uint32_t*) csc->JA;
     uint32_t ncols = csc->ncols;
     for(uint32_t j = 0; j < ncols; j++) {
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
