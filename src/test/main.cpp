@@ -19,10 +19,8 @@
 #include "odcsc_spmspv.hpp"
 #include "tcsc_spmspv.hpp"
 
-int main(int argc, char **argv)
-{ 
-    if(argc != 5)
-    {
+int main(int argc, char** argv) { 
+    if(argc != 5) {
         std::cout << "\"Usage: " << argv[0] << " <CSC SpMV|DCSC SpMV|CSC SpMSpV|DCSC SpMSpV|ODCSC SpMSpV(LA3)|TCSC SpMSpV(GraphTap)|> <file> <nvertices> <niters>\"" << std::endl;
         exit(1);
     }
@@ -30,33 +28,27 @@ int main(int argc, char **argv)
     std::string file_path = argv[2];
     uint32_t nvertices = std::atoi(argv[3]) + 1; // For vertex id 0
     uint32_t niters = std::atoi(argv[4]);
-    if(which == 0)
-    {
+    if(which == 0) {
         CSC csc(file_path, nvertices, niters);
         csc.run_pagerank();
     }
-    else if(which == 1)
-    {
+    else if(which == 1) {
         DCSC dcsc(file_path, nvertices, niters);
         dcsc.run_pagerank();
     }
-    else if(which == 2)
-    {
+    else if(which == 2) {
         CSC_ csc(file_path, nvertices, niters);
         csc.run_pagerank();
     }
-    else if(which == 3)
-    {
+    else if(which == 3) {
         DCSC_ dcsc(file_path, nvertices, niters);
         dcsc.run_pagerank();
     }
-    else if(which == 4)
-    {
+    else if(which == 4) {
         ODCSC odcsc(file_path, nvertices, niters);
         odcsc.run_pagerank();
     }
-    else if(which == 5)
-    {
+    else if(which == 5) {
         TCSC tcsc(file_path, nvertices, niters);
         tcsc.run_pagerank();
     }
