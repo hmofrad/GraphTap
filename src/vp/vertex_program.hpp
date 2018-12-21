@@ -1291,64 +1291,56 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
 {
     if(tile.allocated)
     {
-        if(compression_type == Compression_type::_CSR_)
+        #ifdef HAS_WEIGHT
+        Weight *A = (Weight *) tile.csc->A;
+        #endif
+        Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
+        Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
+        Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
+        if(ordering_type == _ROW_)
         {
-            fprintf(stderr, "Invalid compression type for nonstationary algorithms\n");
-            Env::exit(1);
-        }
-        else if(compression_type == Compression_type::_CSC_)    
-        {
-            #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csc->A;
-            #endif
-            Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
-            Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
-            Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
-            if(ordering_type == _ROW_)
+            //if(activity_filtering and msgs_activity_statuses[tile.jth])
+            if(activity_filtering and activity_statuses[tile.cg])
             {
-                //if(activity_filtering and msgs_activity_statuses[tile.jth])
-                if(activity_filtering and activity_statuses[tile.cg])
+                Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
+                Integer_Type j = 0;
+                for(Integer_Type k = 0; k < s_nitems; k++)
                 {
-                    Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
-                    Integer_Type j = 0;
-                    for(Integer_Type k = 0; k < s_nitems; k++)
+                    j = xi_data[k];
+                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                     {
-                        j = xi_data[k];
+                        #ifdef HAS_WEIGHT
+                        combiner(y_data[IA[i]], xv_data[k], A[i]);
+                        #else
+                        combiner(y_data[IA[i]], xv_data[k]);
+                        #endif
+                        t_data[IA[i]] = 1;
+                    }
+                }
+            }
+            else
+            {
+                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                {
+                    if(x_data[j] != infinity())
+                    {
                         for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                         {
                             #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], xv_data[k], A[i]);
+                            combiner(y_data[IA[i]], x_data[j], A[i]);
                             #else
-                            combiner(y_data[IA[i]], xv_data[k]);
+                            combiner(y_data[IA[i]], x_data[j]);
                             #endif
                             t_data[IA[i]] = 1;
                         }
                     }
                 }
-                else
-                {
-                    for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
-                    {
-                        if(x_data[j] != infinity())
-                        {
-                            for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-                            {
-                                #ifdef HAS_WEIGHT
-                                combiner(y_data[IA[i]], x_data[j], A[i]);
-                                #else
-                                combiner(y_data[IA[i]], x_data[j]);
-                                #endif
-                                t_data[IA[i]] = 1;
-                            }
-                        }
-                    }
-                }
             }
-            else if(ordering_type == _COL_)
-            {
-                fprintf(stderr, "Invalid compression type for nonstationary algorithms\n");
-                Env::exit(1);
-            }
+        }
+        else if(ordering_type == _COL_)
+        {
+            fprintf(stderr, "Invalid compression type for nonstationary algorithms\n");
+            Env::exit(1);
         }
     }
 }
@@ -1362,83 +1354,42 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv(
 {
     if(tile.allocated)
     {
-        if(compression_type == Compression_type::_CSR_)
+        #ifdef HAS_WEIGHT
+        Weight *A = (Weight *) tile.csc->A;
+        #endif
+        Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
+        Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
+        Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
+        if(ordering_type == _ROW_)
         {
-            #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csr->A;
-            #endif
-            Integer_Type *IA = (Integer_Type *) tile.csr->IA;
-            Integer_Type *JA = (Integer_Type *) tile.csr->JA;
-            Integer_Type nrows_plus_one_minus_one = tile.csr->nrows_plus_one - 1;
-            
-            if(ordering_type == _ROW_)
+
+            for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
             {
-                for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
+                for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                 {
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[i], x_data[JA[j]], A[j]);
-                        #else
-                        combiner(y_data[i], x_data[JA[j]]);
-                        #endif   
-                    }
-                }
-            }
-            else if(ordering_type == _COL_)
-            {
-                for(uint32_t i = 0; i < nrows_plus_one_minus_one; i++)
-                {
-                    for(uint32_t j = IA[i]; j < IA[i + 1]; j++)
-                    {       
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[JA[j]], x_data[i], A[j]);
-                        #else
-                        combiner(y_data[JA[j]], x_data[i]);
-                        #endif                        
-                    }
+                    #ifdef HAS_WEIGHT
+                    combiner(y_data[IA[i]], x_data[j], A[i]);
+                    #else
+                    combiner(y_data[IA[i]], x_data[j]);
+                    #endif
                 }
             }
         }
-        else if(compression_type == Compression_type::_CSC_)    
+        else if(ordering_type == _COL_)
         {
-            #ifdef HAS_WEIGHT
-            Weight *A = (Weight *) tile.csc->A;
-            #endif
-            Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
-            Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
-            Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
-            if(ordering_type == _ROW_)
+            for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
             {
-
-                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
+                for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
                 {
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-                    {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[j], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[j]);
-                        #endif
-                    }
+                    #ifdef HAS_WEIGHT
+                    combiner(y_data[j], x_data[IA[i]], A[i]);   
+                    #else
+                    combiner(y_data[j], x_data[IA[i]]);
+                    #endif
                 }
             }
-            else if(ordering_type == _COL_)
-            {
-                for(uint32_t j = 0; j < ncols_plus_one_minus_one; j++)
-                {
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++)
-                    {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[j], x_data[IA[i]], A[i]);   
-                        #else
-                        combiner(y_data[j], x_data[IA[i]]);
-                        #endif
-                    }
-                }
-            }
-        }            
-    }    
+        }
+    }
 }
 
 
