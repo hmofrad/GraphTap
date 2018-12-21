@@ -29,9 +29,7 @@ struct Tile2D {
     template <typename Weight_, typename Integer_Type_, typename Fractional_Type_>
     friend class Matrix;
     std::vector<struct Triple<Weight, Integer_Type>>* triples;
-    struct CSR<Weight, Integer_Type>* csr;
     struct CSC<Weight, Integer_Type>* csc;
-    struct CSR<Weight, Integer_Type>* tcsr;
     struct CSC<Weight, Integer_Type>* tcsc;
     uint32_t rg, cg; // Row group, Column group
     uint32_t ith, jth, nth; // ith row, jth column, nth local row order tile,
@@ -70,7 +68,7 @@ class Matrix {
     
     public:    
         Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_,
-               Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_);
+               Tiling_type tiling_type_, Compression_type compression_type_);
         ~Matrix();
         
     private:
@@ -80,6 +78,7 @@ class Matrix {
         uint64_t nedges = 0;
         Tiling* tiling;
         Compression_type compression_type;
+        Compressed_column<Weight, Integer_Type>* compressor = nullptr;
         Filtering_type filtering_type;
         bool directed;
         bool transpose;
@@ -145,16 +144,16 @@ class Matrix {
         void del_triples();
         void init_tiles();
         void init_compression();
-        void init_csr();
+        //void init_csr();
         void init_csc();
-        void init_tcsr();
+        //void init_tcsr();
         void init_tcsc();
-        void init_dcsr();
+        //void init_dcsr();
         void init_dcsc();
-        void init_bv();
-        void del_csr();
+        //void init_bv();
+        //void del_csr();
         void del_csc();
-        void del_dcsr();
+        //void del_dcsr();
         void del_compression();
         void del_filtering();
         void del_filtering_indices();
@@ -180,7 +179,7 @@ class Matrix {
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
     Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_, Tiling_type tiling_type_, 
-    Compression_type compression_type_, Filtering_type filtering_type_) {
+    Compression_type compression_type_) {
     nrows = nrows_;
     ncols = ncols_;
     ntiles = ntiles_;
@@ -194,7 +193,6 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type_);
     compression_type = compression_type_;
-    filtering_type = filtering_type_;
     init_matrix();
 }
 
@@ -538,7 +536,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles() {
     distribute();
     
     Triple<Weight, Integer_Type> pair;
-    RowSort<Weight, Integer_Type> f_row;
+    //RowSort<Weight, Integer_Type> f_row;
     ColSort<Weight, Integer_Type> f_col;
     auto f_comp = [] (const Triple<Weight, Integer_Type> &a, const Triple<Weight, Integer_Type> &b) {return (a.row == b.row and a.col == b.col);};    
     for(uint32_t t: local_tiles_row_order) {
@@ -546,9 +544,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles() {
         auto& tile = tiles[pair.row][pair.col];
         if(tile.triples->size()) {
             tile.allocated = true;
-            if(compression_type == Compression_type::_CSR_)
-                std::sort(tile.triples->begin(), tile.triples->end(), f_row);
-            if(compression_type == Compression_type::_CSC_)
+            //if(compression_type == Compression_type::_CSR_)
+            //    std::sort(tile.triples->begin(), tile.triples->end(), f_row);
+            //if(compression_type == Compression_type::_CSC_)
                 std::sort(tile.triples->begin(), tile.triples->end(), f_col);
             /* remove parallel edges (duplicates), necessary for triangle couting */
             if(not parallel_edges) {
@@ -698,6 +696,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
 {
+    /*
     if(compression_type == Compression_type::_CSR_)
     {
         if(Env::is_master)
@@ -717,8 +716,25 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
     }
     else if(compression_type == Compression_type::_CSC_)
     {
+        */
+    if(compression_type == _CSC_) {
         if(Env::is_master)
-            printf("Edge compression: CSC\n");
+            printf("Edge compression: CSC\n");     
+        //compressor = new NullHasher();
+        //init_csc();
+    } 
+    else if(compression_type == _DCSC_) {
+        if(Env::is_master)
+            printf("Edge compression: DCSC\n");
+       // init_dcsc();
+    }   
+    else if(compression_type == _TCSC_) {
+        if(Env::is_master)
+            printf("Edge compression: TCSC\n");
+     //   init_tcsc();
+    }
+        Env::exit(0);
+        /*
         if(filtering_type == _NONE_)
             init_csc();
         else if(filtering_type == _SNKS_)
@@ -730,12 +746,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression()
             fprintf(stderr, "Invalid compression type\n");
             Env::exit(1);
         }
-    }
-    else
-    {
-        fprintf(stderr, "Invalid compression type\n");
-        Env::exit(1);
-    }
+       */ 
+    //}
+    //else
+   // {
+     //   fprintf(stderr, "Invalid compression type\n");
+       // Env::exit(1);
+    //}
 }
 
 
@@ -959,6 +976,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         nnz_sizes_loc.push_back(nnz_sizes_all[this_segment]);
     }
     
+    /*
     if(!Env::rank)
     {
         int32_t skip = 15;
@@ -991,6 +1009,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
         printf("Average number of enteris per group[%d]=%f\n", filtering_type_, avg);
         
     }
+    */
 
     if(nnz_sizes_all[owned_segment])
     {
@@ -1134,12 +1153,12 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
         }
     }
 }
-
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
 {
-    /* Create the the csr format by allocating the csr data structure
-       and then Sorting triples and populating the csr */
+    // Create the the csr format by allocating the csr data structure
+       and then Sorting triples and populating the csr 
     struct Triple<Weight, Integer_Type> pair;
     for(uint32_t t: local_tiles_row_order)
     {
@@ -1150,9 +1169,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
             tile.csr = new struct CSR<Weight, Integer_Type>(tile.triples->size(), tile_height + 1);
             uint32_t i = 0; // CSR Index
             uint32_t j = 1; // Row index
-            /* A hack over partial specialization because 
+            /// A hack over partial specialization because 
                we didn't want to duplicate the code for 
-               Empty weights though! */
+               Empty weights though! 
             #ifdef HAS_WEIGHT
             Weight *A = (Weight *) tile.csr->A;
             #endif
@@ -1186,7 +1205,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csr()
         }
     }
 }
-
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
@@ -1234,7 +1253,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc()
     }
 }
 
-
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
 {
@@ -1304,6 +1323,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsr()
         }
     }
 }
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
@@ -1381,7 +1401,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
     }    
 }
 
-
+/*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsr()
 {
@@ -1451,6 +1471,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsr()
         }
     }
 }
+*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsc()
@@ -1586,6 +1607,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
         auto& tile = tiles[pair.row][pair.col];
         if(tile.allocated)
         {
+            delete tile.csc;
+            /*
             if(compression_type == Compression_type::_CSR_)
             {
                 delete tile.csr;
@@ -1594,6 +1617,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_compression()
             {
                 delete tile.csc;
             }
+            */
         }
     }
 }
