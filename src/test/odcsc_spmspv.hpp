@@ -25,6 +25,8 @@ class ODCSC {
         uint32_t nvertices = 0;
         uint32_t niters = 0;
         uint64_t nedges = 0;
+        uint64_t nedges_regulars = 0;
+        uint64_t nedges_sources = 0;
         uint32_t nrows = 0;
         std::vector<struct Pair> *pairs = nullptr;
         std::vector<struct Pair> *pairs_regulars = nullptr;
@@ -70,6 +72,7 @@ class ODCSC {
         void construct_filter();
         void destruct_filter();
         
+        void prepopulate();
         void populate();
         void walk();
         void construct_vectors_degree();
@@ -97,8 +100,9 @@ void ODCSC::run_pagerank() {
     pairs_sources = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs);
     construct_filter();
-    odcsc_regulars = new struct ODCSC_BASE(nedges, nnzcols_);
-    odcsc_sources = new struct ODCSC_BASE(nedges, nnzcols_);
+    prepopulate();
+    odcsc_regulars = new struct ODCSC_BASE(nedges_regulars, nnzcols_);
+    odcsc_sources = new struct ODCSC_BASE(nedges_sources, nnzcols_);
     populate();
     pairs_regulars->clear();
     pairs_regulars->shrink_to_fit();
@@ -127,8 +131,9 @@ void ODCSC::run_pagerank() {
     pairs_sources = new std::vector<struct Pair>;
     nedges = read_binary(file_path, pairs, true);
     construct_filter();
-    odcsc_regulars = new struct ODCSC_BASE(nedges, nnzcols_);
-    odcsc_sources = new struct ODCSC_BASE(nedges, nnzcols_);
+    prepopulate();
+    odcsc_regulars = new struct ODCSC_BASE(nedges_regulars, nnzcols_);
+    odcsc_sources = new struct ODCSC_BASE(nedges_sources, nnzcols_);
     populate();
     space();
     pairs_regulars->clear();
@@ -293,8 +298,8 @@ void ODCSC::destruct_filter() {
     sources_rows_nnzcols_to_cols_regulars.clear();
     sources_rows_nnzcols_to_cols_regulars.shrink_to_fit();
 }
- 
-void ODCSC::populate() {
+
+void ODCSC::prepopulate() {
     for(auto& pair : *pairs) {
         if(rows_regulars[pair.row])
             pairs_regulars->push_back(pair);
@@ -308,6 +313,11 @@ void ODCSC::populate() {
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
+    nedges_regulars = pairs_regulars->size();
+    nedges_sources = pairs_sources->size();
+}
+ 
+void ODCSC::populate() {
     // Regulars
     column_sort(pairs_regulars);
     CSCEntry* ENTRIES  = (CSCEntry*) odcsc_regulars->ENTRIES; // ENTRIES  
