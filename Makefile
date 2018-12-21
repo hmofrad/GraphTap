@@ -1,12 +1,9 @@
 #!/usr/bin/make
 # Makefile
 # (c) Mohammad Mofrad, 2018
-# (e) m.hasanzadeh.mofrad@gmail.com 
-# make MACROS=-DHAS_WEIGHT to enable weights
-# make TIMING=-DTIMING to enable timing
-
-MACROS = -DHAS_WEIGHT
-#TIMING = -DTIMING
+# (e) m.hasanzadeh.mofrad@gmail.com
+# make TIMING=-DTIMING to enable time counters
+# TIMING = -DTIMING
 
 CXX = g++
 MPI_CXX = mpicxx
@@ -18,22 +15,27 @@ CXX_FLAGS = -std=c++14 -fpermissive $(SKIPPED_CXX_WARNINGS)
 
 # Definitely Turn this on for faster binaries
 #OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
-#THREADED = -fopenmp -D_GLIBCXX_PARALLEL
 
-.PHONY: all clean
+.PHONY: dir all test misc clean
 
-objs  = pr# deg pr tc cc bfs sssp
+objs   = pr #deg pr tc cc bfs sssp
+#objs_w = sssp 
 
-all: $(objs)
+all: dir $(objs) $(objs_w)
+
+dir:
+	@mkdir -p bin
 
 $(objs): %: src/apps/%.cpp
-	@mkdir -p bin
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING)           -o bin/$@   -I src $<
-	#$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(THREADED) $(TIMING) $(MACROS) -o bin/$@_w -I src $<
-test:
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(TIMING)           -o bin/$@   -I src $<
+
+$(objs_w): %: src/apps/%.cpp
+	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(TIMING) -DHAS_WEIGHT -o bin/$@ -I src $<
+
+test: dir
 	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/main src/test/main.cpp
 
-misc:
+misc: dir
 	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/converter src/misc/converter.cpp
 
 clean:
