@@ -15,32 +15,88 @@
  
 enum Compression_type
 {
-    _CSR_,
   _CSC_, // Compressed Sparse Col
  _DCSC_, // Compressed Sparse Col
  _TCSC_, // Compressed Sparse Col
 };
 
 template<typename Weight, typename Integer_Type>
-class Compressed_column
-{
+struct Compressed_column {
     public:
-        Compressed_column() {}
-        ~Compressed_column() {}
-        virtual void populate();
+        //Compressed_column() {}
+        virtual ~Compressed_column() {}
+        virtual void populate(std::vector<struct Triple<Weight, Integer_Type>>* triples){};
 };
 
-/*
-class NullHasher : public ReversibleHasher
-{
+
+template<typename Weight, typename Integer_Type>
+struct CSC_BASE : public Compressed_column<Weight, Integer_Type> {
     public:
-        NullHasher() {}
-        long hash(long v) const { return v; }
-        long unhash(long v) const { return v; }
+        CSC_BASE(uint64_t nnz_, Integer_Type ncols_);
+        ~CSC_BASE();
+        virtual void populate(std::vector<struct Triple<Weight, Integer_Type>>* triples);
+        uint64_t nnz;
+        Integer_Type ncols;
+        uint64_t size;
+        void* A;  // WEIGHT
+        void* IA; // ROW_IDX
+        void* JA; // COL_PTR
 };
-*/
 
+template<typename Weight, typename Integer_Type>
+CSC_BASE<Weight, Integer_Type>::CSC_BASE(uint64_t nnz_, Integer_Type ncols_) {
+    nnz = nnz_;
+    ncols = ncols_;
+    
+    if((A = mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(A, 0, nnz * sizeof(Integer_Type));
+    
+    if((IA = mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(IA, 0, nnz * sizeof(Integer_Type));
+    
+    if((JA = mmap(nullptr, (ncols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JA, 0, (ncols + 1) * sizeof(Integer_Type));
+    
+    size = (nnz * sizeof(Integer_Type)) + (nnz * sizeof(Integer_Type)) + ((ncols + 1) * sizeof(Integer_Type));
+    printf("allocating\n");
+}
 
+template<typename Weight, typename Integer_Type>
+CSC_BASE<Weight, Integer_Type>::~CSC_BASE() {
+    if(munmap(A, nnz * sizeof(Integer_Type)) == -1) {
+        fprintf(stderr, "Error unmapping memory\n");
+        exit(1);
+    }
+    
+    if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
+        fprintf(stderr, "Error unmapping memory\n");
+        exit(1);
+    }
+    
+    if(munmap(JA, (ncols + 1) * sizeof(Integer_Type)) == -1) {
+        fprintf(stderr, "Error unmapping memory\n");
+        exit(1);
+    }
+    printf("deleting\n");
+}
+
+template<typename Weight, typename Integer_Type>
+void CSC_BASE<Weight, Integer_Type>::populate(std::vector<struct Triple<Weight, Integer_Type>>* triples) {
+   for (auto& triple : *triples) {
+      // printf("%d %d\n", triple.row, triple.col);
+   }
+       
+    
+}
 
 
 template<typename Weight, typename Integer_Type>
@@ -51,9 +107,9 @@ struct CSC
     Integer_Type nnz;
     Integer_Type ncols_plus_one;
     
-    void *A;  // VAL
-    void *IA; // ROW_INDEX
-    void *JA; //COL_PTR
+    void* A;  // WEIGHT
+    void* IA; // ROW_IDX
+    void* JA; // COL_PTR
 };
 
 template<typename Weight, typename Integer_Type>
