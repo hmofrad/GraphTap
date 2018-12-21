@@ -15,12 +15,12 @@ struct Pair {
 };
 
 struct ColSort {
-    bool operator()(const struct Pair &a, const struct Pair &b) {
+    bool operator()(const struct Pair& a, const struct Pair& b) {
         return((a.col == b.col) ? (a.row < b.row) : (a.col < b.col));
     }
 };
 
-void column_sort(std::vector<struct Pair> *pairs) {
+void column_sort(std::vector<struct Pair>* pairs) {
     ColSort f_col;
     std::sort(pairs->begin(), pairs->end(), f_col);
 }
