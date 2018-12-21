@@ -38,8 +38,6 @@ class Vertex_Program
         virtual bool applicator(Vertex_State &state){ return(false); }
         virtual bool applicator(Vertex_State &state, const Fractional_Type &y, const Integer_Type iteration_) { return(true); }
         virtual Fractional_Type infinity() { return(0); }
-        
-        
         virtual bool initializer(Vertex_State &state, const Fractional_Type &v2) { return(stationary);}
         virtual bool initializer(Fractional_Type &v1, const Fractional_Type &v2) { return(stationary);}
         virtual Fractional_Type messenger(Fractional_Type &v, Fractional_Type &s) { return(1);}
@@ -81,8 +79,6 @@ class Vertex_Program
         void bcast_stationary();
         void bcast_nonstationary();
         void combine();
-        void combine_1d_row_stationary();
-        void combine_1d_col_stationary();
         void combine_2d_stationary();
         void combine_2d_nonstationary();
         void combine_postprocess();
@@ -130,9 +126,9 @@ class Vertex_Program
         int32_t owned_segment, accu_segment_rg, accu_segment_cg, accu_segment_row, accu_segment_col;
         std::vector<int32_t> local_col_segments;
         std::vector<int32_t> accu_segment_col_vec;
-        std::vector<int32_t> accu_segment_row_vec;
+        //std::vector<int32_t> accu_segment_row_vec;
         std::vector<int32_t> all_rowgrp_ranks_accu_seg;
-        std::vector<int32_t> accu_segment_rg_vec;
+        //std::vector<int32_t> accu_segment_rg_vec;
         std::vector<int32_t> local_row_segments;
         std::vector<int32_t> all_rowgrp_ranks;
         std::vector<int32_t> follower_rowgrp_ranks_rg;
@@ -247,10 +243,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         local_col_segments = A->local_col_segments;
         accu_segment_col = A->accu_segment_col;
         accu_segment_row = A->accu_segment_row;
-        accu_segment_row_vec = A->accu_segment_row_vec;
-        accu_segment_col_vec = A->accu_segment_col_vec;
+        //accu_segment_row_vec = A->accu_segment_row_vec;
+        //accu_segment_col_vec = A->accu_segment_col_vec;
         all_rowgrp_ranks_accu_seg = A->all_rowgrp_ranks_accu_seg;
-        accu_segment_rg_vec = A->accu_segment_rg_vec;
+        //accu_segment_rg_vec = A->accu_segment_rg_vec;
         accu_segment_rg = A->accu_segment_rg;
         accu_segment_cg = A->accu_segment_cg;
         follower_rowgrp_ranks_rg = A->follower_rowgrp_ranks_rg;
@@ -295,10 +291,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         local_col_segments = A->local_row_segments;
         accu_segment_col = A->accu_segment_row;
         accu_segment_row = A->accu_segment_col;
-        accu_segment_col_vec = A->accu_segment_row_vec;
-        accu_segment_row_vec = A->accu_segment_col_vec;
+        //accu_segment_col_vec = A->accu_segment_row_vec;
+        ///accu_segment_row_vec = A->accu_segment_col_vec;
         all_rowgrp_ranks_accu_seg = A->all_colgrp_ranks_accu_seg;
-        accu_segment_rg_vec = A->accu_segment_cg_vec;
+        //accu_segment_rg_vec = A->accu_segment_cg_vec;
         accu_segment_rg = A->accu_segment_cg;
         accu_segment_cg = A->accu_segment_rg;
         follower_rowgrp_ranks_rg = A->follower_colgrp_ranks_cg;
@@ -1003,95 +999,65 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     
     MPI_Request request;
     uint32_t follower;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW)
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
+    for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
     {
-        for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
+        if(Env::comm_split)
         {
-            if(Env::comm_split)
-            {
-               follower = follower_colgrp_ranks_cg[i];
-               //printf("scatter:r=%d leader=%d --> follower=%d %d\n", Env::rank, Env::rank, follower, follower_rowgrp_ranks_rg.size());
-               MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
-               out_requests.push_back(request);
-            }
-            else
-            {
-                follower = follower_colgrp_ranks[i];
-                //printf("scatter:r=%d leader=%d --> follower=%d\n", Env::rank, Env::rank, follower);
-                MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
-                out_requests.push_back(request);
-            }
-            
+           follower = follower_colgrp_ranks_cg[i];
+           //printf("scatter:r=%d leader=%d --> follower=%d %d\n", Env::rank, Env::rank, follower, follower_rowgrp_ranks_rg.size());
+           MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
+           out_requests.push_back(request);
         }
-    }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
+        else
+        {
+            follower = follower_colgrp_ranks[i];
+            //printf("scatter:r=%d leader=%d --> follower=%d\n", Env::rank, Env::rank, follower);
+            MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
+            out_requests.push_back(request);
+        }       
     }
 }
-
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather_stationary()
 {  
    // printf("GATHER:r=%d rank_ncolgrps=%d rank_nrowgrps=%d\n", Env::rank, rank_ncolgrps, rank_nrowgrps);
     int32_t leader, my_rank;
     MPI_Request request;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW)
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
-    {    
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+    for(uint32_t i = 0; i < rank_ncolgrps; i++)
+    {
+        std::vector<Fractional_Type> &xj_data = X[i];
+        Integer_Type xj_nitems = xj_data.size();
+        int32_t col_group = local_col_segments[i];
+        if(Env::comm_split)
         {
-            std::vector<Fractional_Type> &xj_data = X[i];
-            Integer_Type xj_nitems = xj_data.size();
-            int32_t col_group = local_col_segments[i];
-            if(Env::comm_split)
-            {
-                leader = leader_ranks_cg[col_group];
-                if(ordering_type == _ROW_)
-                    my_rank = Env::rank_cg;
-                else
-                    my_rank = Env::rank_rg;
-                    
-                if(leader != my_rank)
-                {
-                    MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
-                    in_requests.push_back(request);
-                    //printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
-                }
-            }
+            leader = leader_ranks_cg[col_group];
+            if(ordering_type == _ROW_)
+                my_rank = Env::rank_cg;
             else
+                my_rank = Env::rank_rg;
+                
+            if(leader != my_rank)
             {
-                leader = leader_ranks[col_group];
-                if(leader != Env::rank)
-                {
-                    MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
-                    in_requests.push_back(request);
-                 //   printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
-                }
+                MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
+                in_requests.push_back(request);
+                //printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
             }
         }
-        MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-        in_requests.clear();
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
+        else
+        {
+            leader = leader_ranks[col_group];
+            if(leader != Env::rank)
+            {
+                MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
+                in_requests.push_back(request);
+             //   printf("gather:i=%d r=%d follower=%d <-- leader=%d\n", i, Env::rank, Env::rank, leader);
+            }
+        }
     }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
-    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    //out_requests.clear();
 }
 
 
@@ -1100,41 +1066,27 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 {
     MPI_Request request;
     int32_t leader;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW) 
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
+    for(uint32_t i = 0; i < rank_ncolgrps; i++)
     {
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+        int32_t col_group = local_col_segments[i];
+        leader = leader_ranks_cg[col_group];
+        //leader = leader_ranks_cg[local_col_segments[i]];
+        std::vector<Fractional_Type> &xj_data = X[i];
+        Integer_Type xj_nitems = xj_data.size();
+        if(Env::comm_split)
         {
-            int32_t col_group = local_col_segments[i];
-            leader = leader_ranks_cg[col_group];
-            //leader = leader_ranks_cg[local_col_segments[i]];
-            std::vector<Fractional_Type> &xj_data = X[i];
-            Integer_Type xj_nitems = xj_data.size();
-            if(Env::comm_split)
-            {
-                //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator);
-                MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator, &request);
-                out_requests.push_back(request);
-            }
-            else
-            {
-                fprintf(stderr, "Invalid communicator\n");
-                Env::exit(1);
-            }
+            //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator);
+            MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, colgrps_communicator, &request);
+            out_requests.push_back(request);
         }
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();        
+        else
+        {
+            fprintf(stderr, "Invalid communicator\n");
+            Env::exit(1);
+        }
     }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
-    }
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();        
 } 
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1150,63 +1102,49 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     
     MPI_Request request;
     uint32_t follower;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW)
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
+    for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
     {
-        for(uint32_t i = 0; i < colgrp_nranks - 1; i++)
+        if(Env::comm_split)
         {
-            if(Env::comm_split)
+            follower = follower_colgrp_ranks_cg[i];
+            MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, colgrps_communicator);
+            if(activity_filtering and nitems)
             {
-                follower = follower_colgrp_ranks_cg[i];
-                MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, colgrps_communicator);
-                if(activity_filtering and nitems)
+                if(nitems > 1)
                 {
-                    if(nitems > 1)
-                    {
-                        MPI_Isend(xi_data.data(), nitems - 1, TYPE_INT, follower, col_group, colgrps_communicator, &request);
-                        out_requests.push_back(request);
-                       
-                        MPI_Isend(xv_data.data(), nitems - 1, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
-                        out_requests.push_back(request);
-                    }
-                }
-                else
-                {
-                    MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
+                    MPI_Isend(xi_data.data(), nitems - 1, TYPE_INT, follower, col_group, colgrps_communicator, &request);
+                    out_requests.push_back(request);
+                   
+                    MPI_Isend(xv_data.data(), nitems - 1, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
                     out_requests.push_back(request);
                 }
             }
             else
             {
-                follower = follower_colgrp_ranks[i];
-                MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, Env::MPI_WORLD);
-                if(activity_filtering and nitems)
+                MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, colgrps_communicator, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else
+        {
+            follower = follower_colgrp_ranks[i];
+            MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, Env::MPI_WORLD);
+            if(activity_filtering and nitems)
+            {
+                if(nitems > 1)
                 {
-                    if(nitems > 1)
-                    {
-                        MPI_Isend(xi_data.data(), nitems - 1, TYPE_INT, follower, col_group, Env::MPI_WORLD, &request);
-                        out_requests.push_back(request);
-                        MPI_Isend(xv_data.data(), nitems - 1, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
-                        out_requests.push_back(request);
-                    }
-                }
-                else
-                {
-                    MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
+                    MPI_Isend(xi_data.data(), nitems - 1, TYPE_INT, follower, col_group, Env::MPI_WORLD, &request);
+                    out_requests.push_back(request);
+                    MPI_Isend(xv_data.data(), nitems - 1, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
                     out_requests.push_back(request);
                 }
             }
+            else
+            {
+                MPI_Isend(x_data.data(), x_nitems, TYPE_DOUBLE, follower, col_group, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
+            }
         }
-    }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
     }
 }
 
@@ -1216,82 +1154,68 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::gather
     int32_t leader;
     MPI_Request request;
     MPI_Status status;
-    int nitems = 0;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW)
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
-    {    
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+    int nitems = 0;    
+    for(uint32_t i = 0; i < rank_ncolgrps; i++)
+    {
+        std::vector<Fractional_Type> &xj_data = X[i];
+        Integer_Type xj_nitems = xj_data.size();
+        std::vector<Integer_Type> &xij_data = XI[i];
+        std::vector<Fractional_Type> &xvj_data = XV[i];
+        int32_t col_group = local_col_segments[i];
+        if(Env::comm_split)
         {
-            std::vector<Fractional_Type> &xj_data = X[i];
-            Integer_Type xj_nitems = xj_data.size();
-            std::vector<Integer_Type> &xij_data = XI[i];
-            std::vector<Fractional_Type> &xvj_data = XV[i];
-            int32_t col_group = local_col_segments[i];
-            if(Env::comm_split)
+            leader = leader_ranks_cg[col_group];
+            if(leader != Env::rank_cg)
             {
-                leader = leader_ranks_cg[col_group];
-                if(leader != Env::rank_cg)
+                
+                MPI_Recv(&nitems, 1, TYPE_INT, leader, col_group, colgrps_communicator, &status);
+                msgs_activity_statuses[i] = nitems;
+                if(activity_filtering and nitems)
                 {
-                    
-                    MPI_Recv(&nitems, 1, TYPE_INT, leader, col_group, colgrps_communicator, &status);
-                    msgs_activity_statuses[i] = nitems;
-                    if(activity_filtering and nitems)
+                    if(nitems > 1)
                     {
-                        if(nitems > 1)
-                        {
-                            MPI_Irecv(xij_data.data(), nitems - 1, TYPE_INT, leader, col_group, colgrps_communicator, &request);
-                            in_requests.push_back(request);
-                            MPI_Irecv(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
-                            in_requests.push_back(request);
-                        }    
-                    }
-                    else
-                    {
-                        MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
+                        MPI_Irecv(xij_data.data(), nitems - 1, TYPE_INT, leader, col_group, colgrps_communicator, &request);
                         in_requests.push_back(request);
-                    }
+                        MPI_Irecv(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
+                        in_requests.push_back(request);
+                    }    
                 }
-            }
-            else
-            {
-                leader = leader_ranks[col_group];
-                if(leader != Env::rank)
+                else
                 {
-                    MPI_Recv(&nitems, 1, TYPE_INT, leader, col_group, Env::MPI_WORLD, &status);
-                    msgs_activity_statuses[i] = nitems;
-                    if(activity_filtering and nitems)
-                    {
-                        if(nitems > 1)
-                        {
-                            MPI_Irecv(xij_data.data(), nitems - 1, TYPE_INT, leader, col_group, Env::MPI_WORLD, &request);
-                            in_requests.push_back(request);
-                            MPI_Irecv(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
-                            in_requests.push_back(request);
-                        }
-                    }
-                    else
-                    {
-                        MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
-                        in_requests.push_back(request);
-                    }
+                    MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
+                    in_requests.push_back(request);
                 }
             }
         }
-        MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-        in_requests.clear();
-        //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        //out_requests.clear();
+        else
+        {
+            leader = leader_ranks[col_group];
+            if(leader != Env::rank)
+            {
+                MPI_Recv(&nitems, 1, TYPE_INT, leader, col_group, Env::MPI_WORLD, &status);
+                msgs_activity_statuses[i] = nitems;
+                if(activity_filtering and nitems)
+                {
+                    if(nitems > 1)
+                    {
+                        MPI_Irecv(xij_data.data(), nitems - 1, TYPE_INT, leader, col_group, Env::MPI_WORLD, &request);
+                        in_requests.push_back(request);
+                        MPI_Irecv(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
+                        in_requests.push_back(request);
+                    }
+                }
+                else
+                {
+                    MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
+                    in_requests.push_back(request);
+                }
+            }
+        }
     }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
-    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    //MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    //out_requests.clear();
 }
 
 
@@ -1300,75 +1224,61 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 {
     MPI_Request request;
     int32_t leader_cg;
-    if(((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        or (tiling_type == Tiling_type::_1D_ROW) 
-        or (tiling_type == Tiling_type::_1D_COL and ordering_type == _COL_))
+    for(uint32_t i = 0; i < rank_ncolgrps; i++)
     {
-        for(uint32_t i = 0; i < rank_ncolgrps; i++)
+        leader_cg = leader_ranks_cg[local_col_segments[i]]; 
+        std::vector<Fractional_Type> &xj_data = X[i];
+        Integer_Type xj_nitems = xj_data.size();
+        std::vector<Integer_Type> &xij_data = XI[i];
+        std::vector<Fractional_Type> &xvj_data = XV[i];
+        int nitems = 0;
+        if(Env::rank_cg == leader_cg)
+            nitems = msgs_activity_statuses[i];
+        //MPI_Bcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator);
+        MPI_Ibcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
+        MPI_Wait(&request, MPI_STATUSES_IGNORE);
+        
+        if(Env::rank_cg != leader_cg)
+            msgs_activity_statuses[i] = nitems;
+        
+        if(activity_filtering and nitems)
         {
-            leader_cg = leader_ranks_cg[local_col_segments[i]]; 
-            std::vector<Fractional_Type> &xj_data = X[i];
-            Integer_Type xj_nitems = xj_data.size();
-            std::vector<Integer_Type> &xij_data = XI[i];
-            std::vector<Fractional_Type> &xvj_data = XV[i];
-            int nitems = 0;
-            if(Env::rank_cg == leader_cg)
-                nitems = msgs_activity_statuses[i];
-            //MPI_Bcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator);
-            MPI_Ibcast(&nitems, 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
-            MPI_Wait(&request, MPI_STATUSES_IGNORE);
-            
-            if(Env::rank_cg != leader_cg)
-                msgs_activity_statuses[i] = nitems;
-            
-            if(activity_filtering and nitems)
+            if(Env::comm_split)
             {
-                if(Env::comm_split)
+                if(nitems > 1)
                 {
-                    if(nitems > 1)
-                    {
-                        //MPI_Bcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator);
-                        //MPI_Bcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
-                        
-                        MPI_Ibcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
-                        out_requests.push_back(request);
-                        MPI_Ibcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
-                        out_requests.push_back(request);
-                    }
-                }
-                else
-                {
-                    fprintf(stderr, "Invalid communicator\n");
-                    Env::exit(1);
+                    //MPI_Bcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator);
+                    //MPI_Bcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                    
+                    MPI_Ibcast(xij_data.data(), nitems - 1, TYPE_INT, leader_cg, colgrps_communicator, &request);
+                    out_requests.push_back(request);
+                    MPI_Ibcast(xvj_data.data(), nitems - 1, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
+                    out_requests.push_back(request);
                 }
             }
             else
             {
-                if(Env::comm_split)
-                {
-                    //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
-                    MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
-                    out_requests.push_back(request);
-                }
-                else
-                {
-                    fprintf(stderr, "Invalid communicator\n");
-                    Env::exit(1);
-                }
+                fprintf(stderr, "Invalid communicator\n");
+                Env::exit(1);
             }
         }
-        MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-        out_requests.clear();     
+        else
+        {
+            if(Env::comm_split)
+            {
+                //MPI_Bcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator);
+                MPI_Ibcast(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader_cg, colgrps_communicator, &request);
+                out_requests.push_back(request);
+            }
+            else
+            {
+                fprintf(stderr, "Invalid communicator\n");
+                Env::exit(1);
+            }
+        }
     }
-    else if(tiling_type == Tiling_type::_1D_COL)
-    {
-        ;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid tiling\n");
-        Env::exit(1);
-    }
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();     
 }   
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1542,45 +1452,13 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     
     if(stationary)
     {
-        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        {
-            combine_2d_stationary();
-        }
-        else if(tiling_type == Tiling_type::_1D_ROW)
-        {  
-            if(ordering_type == _ROW_)
-                combine_1d_row_stationary();
-            else if(ordering_type == _COL_)
-                combine_1d_col_stationary();
-        }
-        else if(tiling_type == Tiling_type::_1D_COL)
-        {
-            if(ordering_type == _ROW_)
-                combine_1d_col_stationary();    
-            else if(ordering_type == _COL_)
-                combine_1d_row_stationary();
-        }
-        else
-        {
-            fprintf(stderr, "Invalid combine configuration for a stationary algorithm\n");
-            Env::exit(1);
-        }
-        
-        if(not tiling_type == Tiling_type::_1D_ROW)
-            combine_postprocess();
+        combine_2d_stationary();
+        combine_postprocess();
     }
     else
     {    
-        if((tiling_type == Tiling_type::_2D_) or (tiling_type == Tiling_type::_2DT_))
-        {
-            combine_2d_nonstationary();
-            combine_postprocess();
-        }
-        else
-        {
-            fprintf(stderr, "Invalid combine configuration for a nonstationary algorithm\n");
-            Env::exit(1);
-        }
+        combine_2d_nonstationary();
+        combine_postprocess();
     }
 
     #ifdef TIMING    
@@ -1591,109 +1469,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
     Env::print_time("Combine all", elapsed_time);
     combine_time.push_back(elapsed_time);
     #endif
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_1d_row_stationary()
-{
-    uint32_t yi = accu_segment_row;
-    uint32_t xi = 0;
-    uint32_t yo = accu_segment_rg;
-  
-    for(uint32_t t: local_tiles_row_order)
-    {
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        std::vector<Fractional_Type> &y_data = Y[yi][yo];
-        std::vector<Fractional_Type> &x_data = X[xi];
-        spmv(tile, y_data, x_data);
-        xi++;
-    }
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine_1d_col_stationary()
-{
-    MPI_Request request;
-    uint32_t tile_th, pair_idx;
-    int32_t leader, follower, my_rank, accu;
-    bool vec_owner, communication;
-    uint32_t xi= 0, yi = 0, yo = 0;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        auto pair1 = tile_info(tile, pair); 
-        tile_th = pair1.row;
-        pair_idx = pair1.col;
-        
-        vec_owner = leader_ranks[pair_idx] == Env::rank;
-        if(vec_owner)
-            yo = accu_segment_rg;
-        else
-            yo = 0;
-        
-        std::vector<Fractional_Type> &y_data = Y[yi][yo];
-        std::vector<Fractional_Type> &x_data = X[xi];
-        spmv(tile, y_data, x_data);
-        yi++;
-    }
-    
-    yi = 0, xi = 0, yo = 0;
-    for(uint32_t t: local_tiles_row_order)
-    {
-        auto pair = A->tile_of_local_tile(t);
-        auto &tile = A->tiles[pair.row][pair.col];
-        auto pair1 = tile_info(tile, pair); 
-        tile_th = pair1.row;
-        pair_idx = pair1.col;
-        
-        vec_owner = leader_ranks[pair_idx] == Env::rank;
-        if(vec_owner)
-            yo = accu_segment_rg;
-        else
-            yo = 0;
-        
-        std::vector<Fractional_Type> &y_data = Y[yi][yo];
-        Integer_Type y_nitems = y_data.size();
-        communication = (((tile_th + 1) % rank_ncolgrps) == 0);
-        if(communication)
-        {
-            auto pair2 = leader_info(tile);
-            MPI_Comm communicator = communicator_info();
-            leader = pair2.row;
-            my_rank = pair2.col;
-            if(leader == my_rank)
-            {
-                for(uint32_t j = 0; j < rowgrp_nranks - 1; j++)
-                {
-                    if(Env::comm_split)
-                    {
-                        follower = follower_rowgrp_ranks_rg[j];
-                        accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                    }
-                    else
-                    {
-                        follower = follower_rowgrp_ranks[j];
-                        accu = follower_rowgrp_ranks_accu_seg[j];
-                    }
-                    
-                    std::vector<Fractional_Type> &yj_data = Y[yi][accu];
-                    Integer_Type yj_nitems = yj_data.size();
-                    MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
-                    in_requests.push_back(request);                   
-                }
-            }
-            else
-            {
-                MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
-                out_requests.push_back(request);
-                
-            }
-            yi++;
-        }
-    }
-    //wait_for_all();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
