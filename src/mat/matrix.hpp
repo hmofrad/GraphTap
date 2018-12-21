@@ -12,8 +12,6 @@
 #include <vector>
 #include "mpi/types.hpp" 
 #include "mat/tiling.hpp" 
-#include "mat/hashers.hpp" 
-#include "ds/vector.hpp" 
 #include "ds/indexed_sort.hpp"
 
 #define NA 0
@@ -79,7 +77,7 @@ class Matrix
     
     public:    
         Matrix(Integer_Type nrows_, Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_,
-               Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_);
+               Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_);
         ~Matrix();
     private:
         Integer_Type nrows, ncols;
@@ -92,9 +90,6 @@ class Matrix
         bool directed;
         bool transpose;
         bool parallel_edges;
-        Hashing_type hashing_type;
-        ReversibleHasher *hasher = nullptr;
-        bool parread;
 
         std::vector<std::vector<char>> I;          // Filtered indices (from tile height)
         std::vector<std::vector<Integer_Type>> IV; // Filtered values  (from tile height)
@@ -162,7 +157,6 @@ class Matrix
         std::vector<Integer_Type> nnz_col_sizes_loc;
         
         void free_tiling();
-        void free_hasher();
         void init_matrix();
         void del_triples();
         void init_tiles();
@@ -204,7 +198,7 @@ class Matrix
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_, 
     Integer_Type ncols_, uint32_t ntiles_, bool directed_, bool transpose_, bool parallel_edges_, Tiling_type tiling_type_, 
-    Compression_type compression_type_, Filtering_type filtering_type_, Hashing_type hashing_type_, bool parread_)
+    Compression_type compression_type_, Filtering_type filtering_type_)
 {
     nrows = nrows_;
     ncols = ncols_;
@@ -216,13 +210,6 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     directed = directed_;
     transpose = transpose_;
     parallel_edges = parallel_edges_;
-    parread = parread_;
-    
-    hashing_type = hashing_type_;
-    if (hashing_type == NONE)
-        hasher = new NullHasher();
-    else if (hashing_type == BUCKET)
-        hasher = new SimpleBucketHasher(nrows, Env::nranks);
     
     // Initialize tiling 
     tiling = new Tiling(Env::nranks, ntiles, nrowgrps, ncolgrps, tiling_type_);
@@ -238,12 +225,6 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::free_tiling()
 {
     delete tiling;
-}
-
-template<typename Weight, typename Integer_Type, typename Fractional_Type>
-void Matrix<Weight, Integer_Type, Fractional_Type>::free_hasher()
-{
-    delete hasher;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
@@ -808,12 +789,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::print(std::string element)
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles()
 {
-    if(parread)
-    {
-        if(Env::is_master)
-            printf("Edge distribution: Distributing edges among %d ranks\n", Env::nranks);     
-        distribute();
-    }
+    if(Env::is_master)
+        printf("Edge distribution: Distributing edges among %d ranks\n", Env::nranks);     
+    distribute();
     
     Triple<Weight, Integer_Type> pair;
     RowSort<Weight, Integer_Type> f_row;
@@ -2039,26 +2017,12 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::del_triples()
 {
     // Delete triples
-    if(parread)
+    Triple<Weight, Integer_Type> pair;
+    for(uint32_t t: local_tiles_row_order)
     {
-        Triple<Weight, Integer_Type> pair;
-        for(uint32_t t: local_tiles_row_order)
-        {
-            pair = tile_of_local_tile(t);
-            auto& tile = tiles[pair.row][pair.col];
-            tile.free_triples();
-        }
+        pair = tile_of_local_tile(t);
+        auto& tile = tiles[pair.row][pair.col];
+        tile.free_triples();
     }
-    else
-    {
-        for (uint32_t i = 0; i < nrowgrps; i++)
-        {
-            for (uint32_t j = 0; j < ncolgrps; j++)  
-            {
-                auto &tile = tiles[i][j];
-                tile.free_triples();
-            }
-        }
-    } 
 }
 #endif
