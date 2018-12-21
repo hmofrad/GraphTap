@@ -13,7 +13,7 @@
 #include <algorithm>
 
 #include "ds/triple.hpp"
-#include "ds/compressed_storage.hpp"
+#include "ds/compressed_column.hpp"
 #include "mat/matrix.hpp"
 
 /* Class template specialization for Weight
@@ -40,14 +40,13 @@ class Graph {
         
         void load(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_ = true, bool transpose_ = false, bool self_loops_ = true, bool acyclic_ = false,
-            bool parallel_edges_ = true, Tiling_type tiling_type_ = _2DT_, Compression_type compression_type_ = _CSC_, 
-            Filtering_type filtering_type_ = _SOME_);
+            bool parallel_edges_ = true, Tiling_type tiling_type_ = _2DT_, Compression_type compression_type_ = _CSC_);
         void load_binary(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-            Compression_type compression_type_, Filtering_type filtering_type_);
+            Compression_type compression_type_);
         void load_text(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_,
             bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-            Compression_type compression_type_, Filtering_type filtering_type_);   
+            Compression_type compression_type_);   
         void free();
 
     private:
@@ -62,8 +61,7 @@ class Graph {
         Matrix<Weight, Integer_Type, Fractional_Type>* A;
         void init_graph(std::string filepath_, Integer_Type nrows_, Integer_Type ncols_, 
                bool directed_, bool transpose_, bool self_loops_, bool acyclic_,
-               bool parallel_edges_, Tiling_type tiling_type, Compression_type compression_type_, 
-               Filtering_type filtering_type_);
+               bool parallel_edges_, Tiling_type tiling_type, Compression_type compression_type_);
         void parread_text();
         void parread_binary();
 };
@@ -86,7 +84,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepath_, 
            Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
            bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_,
-           Compression_type compression_type_, Filtering_type filtering_type_) {
+           Compression_type compression_type_) {
     filepath  = filepath_;
     nrows = nrows_ + 1; // In favor of vertex id 0
     ncols = ncols_ + 1; // In favor of vertex id 0
@@ -97,8 +95,8 @@ void Graph<Weight, Integer_Type, Fractional_Type>::init_graph(std::string filepa
     acyclic = acyclic_;
     parallel_edges = parallel_edges_;
     // Initialize matrix
-    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, directed_, transpose_, 
-                                                          parallel_edges_, tiling_type_, compression_type_, filtering_type_);
+    A = new Matrix<Weight, Integer_Type, Fractional_Type>(nrows, ncols, Env::nranks * Env::nranks, directed_, 
+                                               transpose_, parallel_edges_, tiling_type_, compression_type_);
 }
 
 /* The read_text and read_binary functions can be called indivdually from the user program.
@@ -107,7 +105,7 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_,
         bool self_loops_, bool acyclic_, bool parallel_edges_, Tiling_type tiling_type_, 
-        Compression_type compression_type_, Filtering_type filtering_type_) {
+        Compression_type compression_type_) {
     double t1, t2;
     t1 = Env::clock();
     int buffer_len = 100;
@@ -134,11 +132,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* data1 = "Hitachi";
     if(!strcmp(token, text)) {
         load_text(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
-        tiling_type_, compression_type_, filtering_type_);
+        tiling_type_, compression_type_);
     }
     else if(!strcmp(token, data) or !strcmp(token, data1)) {
         load_binary(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
-        tiling_type_, compression_type_, filtering_type_);
+        tiling_type_, compression_type_);
     }
     else {
         fprintf(stderr, "Undefined file type %s\n", token);
@@ -151,11 +149,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_,
-        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_) {
+        Tiling_type tiling_type_, Compression_type compression_type_) {
     // Initialize graph
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_,
                self_loops_, acyclic_, parallel_edges_,
-               tiling_type_, compression_type_, filtering_type_);
+               tiling_type_, compression_type_);
     // Read graph
     if(Env::is_master)
         printf("%s: Distributed read using %d ranks\n", filepath_.c_str(), Env::nranks);
@@ -173,11 +171,11 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filepath_,
         Integer_Type nrows_, Integer_Type ncols_, bool directed_, bool transpose_, bool self_loops_, bool acyclic_, bool parallel_edges_,
-        Tiling_type tiling_type_, Compression_type compression_type_, Filtering_type filtering_type_) {
+        Tiling_type tiling_type_, Compression_type compression_type_) {
     // Initialize graph
     init_graph(filepath_, nrows_, ncols_, directed_, transpose_, 
                self_loops_, acyclic_, parallel_edges_, 
-               tiling_type_, compression_type_, filtering_type_);
+               tiling_type_, compression_type_);
     // Read graph
     if(Env::is_master)
         printf("%s: Distributed read using %d ranks\n", filepath_.c_str(), Env::nranks);
@@ -300,7 +298,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text() {
     MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     if(Env::is_master)
-        printf("\n%s: Read %lu edges\n", filepath.c_str(), nedges);
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
 }
 
 
@@ -367,6 +365,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary() {
     MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     if(Env::is_master)
-        printf("\n%s: Read %lu edges\n", filepath.c_str(), nedges);
+        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
 }
 #endif
