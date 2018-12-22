@@ -12,10 +12,8 @@
 
 #include "bfs.h"
 
-int main(int argc, char **argv)
-{ 
-    bool comm_split = true;
-    Env::init(comm_split);    
+int main(int argc, char** argv) { 
+    Env::init();    
     double time1 = Env::clock();   
     if(argc != 3 and argc != 4) {
         if(Env::is_master)
@@ -33,9 +31,6 @@ int main(int argc, char **argv)
     Tiling_type TT = _2DT_;
     // Only CSC is supported for nonstationary algorithms
     Compression_type CT = _CSC_; 
-    Filtering_type FT = _SOME_;
-    Hashing_type HT = NONE;
-    bool parread = true;
     
     /* Breadth First Search (BFS) execution */
     bool stationary = false;
@@ -43,13 +38,11 @@ int main(int argc, char **argv)
     if(not stationary and directed)
         transpose = not transpose; 
     Graph<wp, ip, fp> G;    
-    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT, FT, HT, parread);
-    bool activity_filtering = true;
-    bool tc_family  = false;
+    G.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT);
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = true;
     Ordering_type OT = _ROW_;
-    BFS_Program<wp, ip, fp> V(G, stationary, activity_filtering, gather_depends_on_apply, apply_depends_on_iter, tc_family, OT);   
+    BFS_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);   
     V.root = root;
     V.execute();
     V.checksum();
