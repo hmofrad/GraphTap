@@ -25,7 +25,7 @@ struct Compressed_column {
     public:
         //Compressed_column() {}
         virtual ~Compressed_column() {}
-        virtual void populate(std::vector<struct Triple<Weight, Integer_Type>>* triples){};
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, Integer_Type tile_height, Integer_Type tile_width){};
 };
 
 
@@ -34,48 +34,49 @@ struct CSC_BASE : public Compressed_column<Weight, Integer_Type> {
     public:
         CSC_BASE(uint64_t nnz_, Integer_Type ncols_);
         ~CSC_BASE();
-        virtual void populate(std::vector<struct Triple<Weight, Integer_Type>>* triples);
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, Integer_Type tile_height, Integer_Type tile_width);
         uint64_t nnz;
         Integer_Type ncols;
-        uint64_t size;
-        void* A;  // WEIGHT
-        void* IA; // ROW_IDX
-        void* JA; // COL_PTR
+        #ifdef HAS_WEIGHT
+        Weight* A;  // WEIGHT
+        #endif
+        Integer_Type* IA; // ROW_IDX
+        Integer_Type* JA; // COL_PTR
 };
 
 template<typename Weight, typename Integer_Type>
 CSC_BASE<Weight, Integer_Type>::CSC_BASE(uint64_t nnz_, Integer_Type ncols_) {
     nnz = nnz_;
     ncols = ncols_;
-    
-    if((A = mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+    #ifdef HAS_WEIGHT
+    if((A = (Weight*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
     memset(A, 0, nnz * sizeof(Integer_Type));
+    #endif
     
-    if((IA = mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+    if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
     memset(IA, 0, nnz * sizeof(Integer_Type));
     
-    if((JA = mmap(nullptr, (ncols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+    if((JA = (Integer_Type*) mmap(nullptr, (ncols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
     memset(JA, 0, (ncols + 1) * sizeof(Integer_Type));
-    
-    size = (nnz * sizeof(Integer_Type)) + (nnz * sizeof(Integer_Type)) + ((ncols + 1) * sizeof(Integer_Type));
-    printf("allocating\n");
 }
 
 template<typename Weight, typename Integer_Type>
 CSC_BASE<Weight, Integer_Type>::~CSC_BASE() {
+    #ifdef HAS_WEIGHT
     if(munmap(A, nnz * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
+    #endif
     
     if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
@@ -86,16 +87,35 @@ CSC_BASE<Weight, Integer_Type>::~CSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
-    printf("deleting\n");
 }
 
 template<typename Weight, typename Integer_Type>
-void CSC_BASE<Weight, Integer_Type>::populate(std::vector<struct Triple<Weight, Integer_Type>>* triples) {
-   for (auto& triple : *triples) {
-      // printf("%d %d\n", triple.row, triple.col);
-   }
-       
-    
+void CSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, Integer_Type tile_height, Integer_Type tile_width) {
+    struct Triple<Weight, Integer_Type> pair;
+    uint32_t i = 0; // Row Index
+    uint32_t j = 1; // Col index
+    JA[0] = 0;
+    for (auto& triple : *triples)
+    {
+        pair  = {(triple.row % tile_height), (triple.col % tile_width)};
+        while((j - 1) != pair.col)
+        {
+            j++;
+            JA[j] = JA[j - 1];
+        }            
+        #ifdef HAS_WEIGHT
+        A[i] = triple.weight;
+        #endif
+        
+        JA[j]++;
+        IA[i] = pair.row;
+        i++;
+    }
+    while((j + 1) < (ncols + 1))
+    {
+        j++;
+        JA[j] = JA[j - 1];
+    }
 }
 
 
