@@ -23,7 +23,7 @@ using fp = uint32_t; // Fractional precision for precision of values.
 struct SSSP_State {
     ip distance = INF;
     ip get_state(){return(distance);};
-    std::string print_state(){return("Distance=" + std::to_string(distance));};
+    std::string print_state(){return((distance == INF) ? "Distance=INF" : "Distance=" + std::to_string(distance));};
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
