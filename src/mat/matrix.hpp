@@ -1499,25 +1499,33 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filtering()
             I[i].clear();
             I[i].shrink_to_fit();
         }
+        I.shrink_to_fit();
         I.clear();
         for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {
             J[i].clear();
             J[i].shrink_to_fit();
         }
+        J.shrink_to_fit();
         J.clear();
         for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {   
             IV[i].clear();
             IV[i].shrink_to_fit();
         }
+        IV.shrink_to_fit();
         IV.clear();
         for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {   
             JV[i].clear();
             JV[i].shrink_to_fit();
         }
+        JV.shrink_to_fit();
         JV.clear();
+        V2J.shrink_to_fit();
         V2J.clear();
+        J2V.shrink_to_fit();
         J2V.clear();
+        I2V.shrink_to_fit();
         I2V.clear();
+        V2I.shrink_to_fit();
         V2I.clear();
    // }    
 }
