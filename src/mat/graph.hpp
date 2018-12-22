@@ -298,7 +298,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_text() {
     MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     if(Env::is_master)
-        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
+        printf("\n%s: Read %lu edges\n", filepath.c_str(), nedges);
 }
 
 
@@ -365,6 +365,6 @@ void Graph<Weight, Integer_Type, Fractional_Type>::parread_binary() {
     MPI_Allreduce(&nedges_local, &nedges_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
     assert(nedges == nedges_global);
     if(Env::is_master)
-        printf("%s: Read %lu edges\n", filepath.c_str(), nedges);
+        printf("\n%s: Read %lu edges\n", filepath.c_str(), nedges);
 }
 #endif
