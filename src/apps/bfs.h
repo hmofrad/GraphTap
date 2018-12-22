@@ -25,7 +25,9 @@ struct BFS_State {
     ip hops = INF;
     ip vid = 0;
     ip get_state(){return(hops);};
-    std::string print_state(){return("Parent=" + std::to_string(parent) + ",Hops=" + std::to_string(hops));};
+    //std::string print_state(){return("Parent=" + std::to_string(parent) + ",Hops=" + std::to_string(hops));};
+    std::string print_state(){return((hops == INF) ? ("Parent=" + std::to_string(parent) + ",Hops=INF")
+                                                   : ("Parent=" + std::to_string(parent) + ",Hops=" + std::to_string(hops)));};
 };
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
