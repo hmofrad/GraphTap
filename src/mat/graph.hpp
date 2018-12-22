@@ -161,7 +161,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_text(std::string filepat
     // Initialize tiles
     A->init_tiles();
     // Filter the graph
-    //A->init_filtering();
+    A->init_filtering();
     // Compress the graph
     A->init_compression();
     // Delete triples
@@ -183,7 +183,7 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load_binary(std::string filep
     // Initialize tiles
     A->init_tiles();
     // Filter the graph
-    //A->init_filtering();
+    A->init_filtering();
     // Compress the graph
     A->init_compression();
     // Delete triples
