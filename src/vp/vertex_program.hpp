@@ -416,6 +416,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         initialize();
     if(!num_iterations)
         check_for_convergence = true; 
+    Env::exit(0);
     while(true) {
         scatter_gather();
         combine();
@@ -510,11 +511,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
         Vertex_State &state = V[i]; 
         C[i] = initializer(get_vid(i), state);
     }
-    
     // Initialize messages
     std::vector<Integer_Type> x_sizes;
     if(compression_type == _CSC_)
         x_sizes.resize(rank_ncolgrps, tile_height);
+    else if(compression_type == _DCSC_)
+        x_sizes = nnz_col_sizes_loc;
     
     //if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     //    x_sizes.resize(rank_ncolgrps, tile_height);
@@ -529,6 +531,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     std::vector<Integer_Type> y_sizes;
     if(compression_type == _CSC_)
         y_sizes.resize(rank_nrowgrps, tile_height);
+    else if(compression_type == _DCSC_)
+        y_sizes = nnz_row_sizes_loc;
     
     //if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
         //y_sizes.resize(rank_nrowgrps, tile_height);
@@ -616,6 +620,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     std::vector<Integer_Type> x_sizes;    
     if(compression_type == _CSC_)
         x_sizes.resize(rank_ncolgrps, tile_height);
+    else if(compression_type == _DCSC_)
+        x_sizes = nnz_col_sizes_loc;
+    
     /*
 
     if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
@@ -638,7 +645,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     std::vector<Integer_Type> y_sizes;
     if(compression_type == _CSC_)
         y_sizes.resize(rank_nrowgrps, tile_height);
-        
+    if(compression_type == _DCSC_)    
+        y_sizes = nnz_row_sizes_loc;
     /*
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
         y_sizes.resize(rank_nrowgrps, tile_height);
