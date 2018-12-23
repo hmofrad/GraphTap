@@ -416,6 +416,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         initialize();
     if(!num_iterations)
         check_for_convergence = true; 
+    printf("Init done\n");
     Env::exit(0);
     while(true) {
         scatter_gather();
