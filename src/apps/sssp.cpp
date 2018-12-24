@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2DT_;
-    Compression_type CT = _CSC_; // Only CSC is supported
+    Compression_type CT = _DCSC_; // Only CSC is supported
     
     /* Single Source Shortest Path (SSSP) execution*/
     bool stationary = false;
