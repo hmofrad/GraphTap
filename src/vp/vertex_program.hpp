@@ -166,16 +166,18 @@ class Vertex_Program
         std::vector<Integer_Type> accus_activity_statuses;
         std::vector<Integer_Type> activity_statuses;
         /* Row/Col Filtering indices */
-        std::vector<std::vector<char>> *I;
-        std::vector<std::vector<Integer_Type>> *IV;
-        std::vector<std::vector<char>> *J;
-        std::vector<std::vector<Integer_Type>> *JV;
-        std::vector<Integer_Type> *V2J;
-        std::vector<Integer_Type> *J2V;
-        std::vector<Integer_Type> *Y2V;
-        std::vector<Integer_Type> *V2Y;
-        std::vector<Integer_Type> *I2V;
-        std::vector<Integer_Type> *V2I;
+        std::vector<std::vector<char>>* I;
+        std::vector<std::vector<Integer_Type>>* IV;
+        std::vector<std::vector<char>>* J;
+        std::vector<std::vector<Integer_Type>>* JV;
+        std::vector<Integer_Type>* rowgrp_IR;
+        std::vector<Integer_Type>* colgrp_JC;
+        std::vector<Integer_Type>* V2J;
+        std::vector<Integer_Type>* J2V;
+        std::vector<Integer_Type>* Y2V;
+        std::vector<Integer_Type>* V2Y;
+        std::vector<Integer_Type>* I2V;
+        std::vector<Integer_Type>* V2I;
 
         std::vector<Integer_Type> nnz_row_sizes_loc;
         std::vector<Integer_Type> nnz_col_sizes_loc;
@@ -264,9 +266,12 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         nnz_row_sizes_all = A->nnz_row_sizes_all;
         nnz_col_sizes_all = A->nnz_col_sizes_all;
         I = &(Graph.A->I);
-        IV= &(Graph.A->IV);
+        IV = &(Graph.A->IV);
         J = &(Graph.A->J);
-        JV= &(Graph.A->JV);
+        JV = &(Graph.A->JV);
+        rowgrp_IR = &(Graph.A->rowgrp_IR);
+        colgrp_JC = &(Graph.A->colgrp_JC);
+        JV = &(Graph.A->JV);
         V2J = &(Graph.A->V2J);
         J2V = &(Graph.A->J2V);
         Y2V = &(Graph.A->Y2V);
@@ -315,6 +320,8 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         IV= &(Graph.A->JV);
         J = &(Graph.A->I);
         JV= &(Graph.A->IV);
+        rowgrp_IR = &(Graph.A->colgrp_JC);
+        colgrp_JC = &(Graph.A->rowgrp_IR);
         V2J = &(Graph.A->J2V);
         J2V = &(Graph.A->V2J);
         Y2V = &(Graph.A->V2Y);
@@ -416,8 +423,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         initialize();
     if(!num_iterations)
         check_for_convergence = true; 
-    printf("Init done\n");
-    Env::exit(0);
+
     while(true) {
         scatter_gather();
         combine();
@@ -516,7 +522,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     std::vector<Integer_Type> x_sizes;
     if(compression_type == _CSC_)
         x_sizes.resize(rank_ncolgrps, tile_height);
-    else if(compression_type == _DCSC_)
+    else if((compression_type == _DCSC_) or (compression_type == _TCSC_))
         x_sizes = nnz_col_sizes_loc;
     
     //if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
@@ -530,9 +536,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
 
     // Initialiaze accumulators
     std::vector<Integer_Type> y_sizes;
-    if(compression_type == _CSC_)
+    if((compression_type == _CSC_) or (compression_type == _DCSC_))
         y_sizes.resize(rank_nrowgrps, tile_height);
-    else if(compression_type == _DCSC_)
+    else if(compression_type == _TCSC_)
         y_sizes = nnz_row_sizes_loc;
     
     //if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
@@ -621,7 +627,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     std::vector<Integer_Type> x_sizes;    
     if(compression_type == _CSC_)
         x_sizes.resize(rank_ncolgrps, tile_height);
-    else if(compression_type == _DCSC_)
+    else if((compression_type == _DCSC_) or (compression_type == _TCSC_))
         x_sizes = nnz_col_sizes_loc;
     
     /*
@@ -644,9 +650,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     msgs_activity_statuses.resize(colgrp_nranks);
     
     std::vector<Integer_Type> y_sizes;
-    if(compression_type == _CSC_)
+    if((compression_type == _CSC_) or (compression_type == _DCSC_))
         y_sizes.resize(rank_nrowgrps, tile_height);
-    if(compression_type == _DCSC_)    
+    else if(compression_type == _TCSC_)    
         y_sizes = nnz_row_sizes_loc;
     /*
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
@@ -817,6 +823,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     double t1, t2, elapsed_time;
     t1 = Env::clock();
     #endif
+        
     if(stationary) {
         //if(iteration > 0)
         scatter_gather_stationary();
@@ -865,13 +872,19 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     std::vector<Fractional_Type> &x_data = X[xo];
     Integer_Type v_nitems = V.size();
     if(compression_type == _CSC_) {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
+        for(uint32_t i = 0; i < v_nitems; i++) {
             Vertex_State &state = V[i];
             x_data[i] = messenger(state);
         }
     }
-    
+    else if((compression_type == _DCSC_) or (compression_type == _TCSC_)) {
+        auto& JC = (*colgrp_JC);
+        Integer_Type JC_nitems = JC.size();
+        for(uint32_t j = 0; j < JC_nitems; j++) {
+            Vertex_State &state = V[JC[j]];
+            x_data[j] = messenger(state);
+        }
+    }
     /*
         if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
@@ -907,11 +920,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     Integer_Type v_nitems = V.size();
     Integer_Type k = 0;
     if(compression_type == _CSC_) {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
+        for(uint32_t i = 0; i < v_nitems; i++) {
             Vertex_State &state = V[i];
-            if(C[i])
-            {
+            if(C[i]) {
                 x_data[i] = messenger(state);
                 xv_data[k] = x_data[i];
                 xi_data[k] = i;
@@ -921,6 +932,45 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 x_data[i] = infinity();
         }        
     }
+    else if((compression_type == _DCSC_) or (compression_type == _TCSC_)) {
+        auto &v2j_data = (*V2J);
+        auto &j2v_data = (*J2V);
+        Integer_Type v2j_nitems = v2j_data.size();
+        //if(not directed) {
+            auto& JC = (*colgrp_JC);
+            Integer_Type JC_nitems = JC.size();
+            for(uint32_t j = 0; j < JC_nitems; j++) {
+                Vertex_State &state = V[JC[j]];
+                if(C[JC[j]]) {
+                    x_data[j] = messenger(state);    
+                    xv_data[k] = x_data[j];
+                    xi_data[k] = j;
+                    k++;
+                }
+                else
+                    x_data[j] = infinity();
+            }
+        /*    
+        }
+        else {
+            auto& IR = (*rowgrp_IR);
+            Integer_Type IR_nitems = IR.size();
+            for(uint32_t i = 0; i < IR_nitems; i++) {
+                Vertex_State &state = V[IR[i]];
+                if(C[IR[i]]) {
+                    x_data[i] = messenger(state);    
+                    xv_data[k] = x_data[i];
+                    xi_data[k] = i;
+                    k++;
+                }
+                else
+                    x_data[i] = infinity();
+                
+            }
+        }
+        */
+    }
+    
     /*
     if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
     {
@@ -1245,8 +1295,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 }   
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine()
-{
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine() {
     #ifdef TIMING
     double t1, t2, elapsed_time;
     t1 = Env::clock();
@@ -1255,9 +1304,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
         combine_2d_stationary();
         combine_postprocess();
     }
-    else {    
+    else {
         combine_2d_nonstationary();
+        //printf("combine_2d_nonstationary all\n\n");
         combine_postprocess();
+        //printf("combine_postprocess\n\n");
     }
     #ifdef TIMING    
     t2 = Env::clock();
@@ -1330,8 +1381,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
             struct Tile2D<Weight, Integer_Type, Fractional_Type> &tile,
             std::vector<Fractional_Type> &y_data,
             std::vector<Fractional_Type> &x_data) {
-
+    #ifdef HAS_WEIGHT
     Weight* A;
+    #endif
     Integer_Type* IA;
     Integer_Type* JA;
     Integer_Type ncols;
@@ -1342,6 +1394,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
         IA   = static_cast<CSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
         JA   = static_cast<CSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
         ncols = static_cast<CSC_BASE<Weight, Integer_Type>*>(tile.compressor)->ncols;
+    }
+    else if(compression_type == _DCSC_) {
+        #ifdef HAS_WEIGHT
+        A = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
+        #endif
+        IA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
+        JA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
+        ncols = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
     
     if(ordering_type == _ROW_) {
@@ -1483,7 +1543,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
             std::vector<Fractional_Type> &x_data,
             std::vector<Fractional_Type> &xv_data, 
             std::vector<Integer_Type> &xi_data, std::vector<char> &t_data) {
+    #ifdef HAS_WEIGHT
     Weight* A;
+    #endif
     Integer_Type* IA;
     Integer_Type* JA;
     Integer_Type ncols;
@@ -1495,16 +1557,18 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
         JA   = static_cast<CSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
         ncols = static_cast<CSC_BASE<Weight, Integer_Type>*>(tile.compressor)->ncols;
     }
-    /*
-    #ifdef HAS_WEIGHT
-    Weight *A = (Weight *) tile.csc->A;
-    #endif
-    Integer_Type *IA = (Integer_Type *) tile.csc->IA; // ROW_INDEX
-    Integer_Type *JA   = (Integer_Type *) tile.csc->JA; // COL_PTR
-    Integer_Type ncols_plus_one_minus_one = tile.csc->ncols_plus_one - 1;
-    */
+    else if(compression_type == _DCSC_) {
+        #ifdef HAS_WEIGHT
+        A = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
+        #endif
+        IA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
+        JA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
+        ncols = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
+    }
+    
     if(ordering_type == _ROW_)
     {
+        
         //if(activity_filtering and msgs_activity_statuses[tile.jth])
         if(activity_filtering and activity_statuses[tile.cg]) {
             Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
@@ -1524,7 +1588,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
         else
         {
             for(uint32_t j = 0; j < ncols; j++) {
+                //printf("1.%d %d %lu %d\n", Env::rank, ncols, x_data.size(), j);
+                //if(!Env::rank)
+                
                 if(x_data[j] != infinity()) {
+                    //printf("j=%d x=%d %d\n", j, x_data[j], JA[j + 1] - JA[j]);
                     for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
                         #ifdef HAS_WEIGHT
                         combiner(y_data[IA[i]], x_data[j], A[i]);
@@ -1536,6 +1604,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
                 }
             }
         }
+        
     }
 }
 
@@ -1666,7 +1735,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     uint32_t yo = accu_segment_rg;
     std::vector<Fractional_Type> &y_data = Y[yi][yo];
     Integer_Type v_nitems = V.size();
-    if(compression_type == _CSC_) {
+    if((compression_type == _CSC_) or (compression_type == _DCSC_)){
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             Vertex_State &state = V[i];
@@ -1759,19 +1828,15 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
 
     Integer_Type v_nitems = V.size();
     
-    if(compression_type == _CSC_) {
-        if(apply_depends_on_iter)
-        {
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
+    if((compression_type == _CSC_) or (compression_type == _DCSC_)) {
+        if(apply_depends_on_iter) {
+            for(uint32_t i = 0; i < v_nitems; i++) {
                 Vertex_State &state = V[i];
                 C[i] = applicator(state, y_data[i], iteration);
             }
         }
-        else
-        {
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
+        else {
+            for(uint32_t i = 0; i < v_nitems; i++) {
                 Vertex_State &state = V[i];
                 C[i] = applicator(state, y_data[i]);
             }
