@@ -87,6 +87,10 @@ class Matrix {
         std::vector<std::vector<char>> J;
         std::vector<std::vector<Integer_Type>> JV;
         
+        std::vector<Integer_Type> rowgrp_IR; // Row    group row    indices         
+        std::vector<Integer_Type> colgrp_JC; // Column group column indices
+
+        
         std::vector<Integer_Type> V2J; // all rows to nnz cols
         std::vector<Integer_Type> J2V; // nnz rows to all rows
         
@@ -703,6 +707,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         IV[i].resize(tile_height);
     filter(_SRCS_);
+    
+    uint32_t io = accu_segment_row;
+    auto &i_data = I[io];
+    rowgrp_IR.resize(nnz_row_sizes_loc[io]);
+    Integer_Type k = 0;
+    for(Integer_Type i = 0; i < tile_height; i++) {
+        if(i_data[i]) {
+            rowgrp_IR[k] = i;
+            k++;
+        }
+    }    
+
     J.resize(tiling->rank_ncolgrps);
     for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         J[i].resize(tile_width);
@@ -710,6 +726,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     for (uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         JV[i].resize(tile_width);    
     filter(_SNKS_);
+    
+    uint32_t jo = accu_segment_col;
+    auto& j_data = J[jo];
+    colgrp_JC.resize(nnz_col_sizes_loc[jo]);
+    k = 0;
+    for(Integer_Type j = 0; j < tile_width; j++) {
+        if(j_data[j]) {
+            colgrp_JC[k] = j;
+            k++;
+        }
+    }
+    
     
     //filter_postprocess();
     //for(int i = 0; i < I[0].size(); i++)
