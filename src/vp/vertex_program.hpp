@@ -117,7 +117,7 @@ class Vertex_Program
         Ordering_type ordering_type;
         Tiling_type tiling_type;
         Compression_type compression_type;
-        Filtering_type filtering_type;
+        //Filtering_type filtering_type;
         Integer_Type nrows, ncols;
         uint32_t nrowgrps, ncolgrps;
         uint32_t rowgrp_nranks, colgrp_nranks;
@@ -224,7 +224,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
     ordering_type = ordering_type_;
     tiling_type = A->tiling->tiling_type;
     compression_type = A->compression_type;
-    filtering_type = A->filtering_type;
+    //filtering_type = A->filtering_type;
     owned_segment = A->owned_segment;
     leader_ranks = A->leader_ranks;
 
@@ -328,10 +328,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         V2Y = &(Graph.A->Y2V);
         I2V = &(Graph.A->V2I);
         V2I = &(Graph.A->I2V);
-        if(filtering_type == _SNKS_)
-            filtering_type = _SRCS_;
-        else if(filtering_type == _SRCS_)
-            filtering_type = _SNKS_;
+        //if(filtering_type == _SNKS_)
+        //    filtering_type = _SRCS_;
+        ///else if(filtering_type == _SRCS_)
+        //    filtering_type = _SNKS_;
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
@@ -869,11 +869,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather_stationary() {
     uint32_t xo = accu_segment_col;    
-    std::vector<Fractional_Type> &x_data = X[xo];
+    std::vector<Fractional_Type>& x_data = X[xo];
     Integer_Type v_nitems = V.size();
     if(compression_type == _CSC_) {
         for(uint32_t i = 0; i < v_nitems; i++) {
-            Vertex_State &state = V[i];
+            Vertex_State& state = V[i];
             x_data[i] = messenger(state);
         }
     }
@@ -881,10 +881,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         auto& JC = (*colgrp_JC);
         Integer_Type JC_nitems = JC.size();
         for(uint32_t j = 0; j < JC_nitems; j++) {
-            Vertex_State &state = V[JC[j]];
+            Vertex_State& state = V[JC[j]];
             x_data[j] = messenger(state);
         }
     }
+    
     /*
         if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
         {
@@ -1403,6 +1404,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
         JA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
         ncols = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
+    else if(compression_type == _TCSC_) {
+        #ifdef HAS_WEIGHT
+        A = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
+        #endif
+        IA   = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
+        JA   = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
+        ncols = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
+    }
     
     if(ordering_type == _ROW_) {
         for(uint32_t j = 0; j < ncols; j++) {
@@ -1741,6 +1750,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             Vertex_State &state = V[i];
             C[i] = applicator(state, y_data[i]);
         }        
+    }
+    else if(compression_type == _TCSC_) {
+        auto& IR = (*rowgrp_IR);
+        Integer_Type IR_nitems = IR.size();
+        for(uint32_t i = 0; i < IR_nitems; i++) {
+            Vertex_State &state = V[IR[i]];
+            C[IR[i]] = applicator(state, y_data[i]);
+        }
     }
     /*        
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
