@@ -278,9 +278,11 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
                               const std::vector<char>& nnzrows_sources_bitvector,
                               const Integer_Type tile_height, 
                               const Integer_Type tile_width);
+        void allocate_local(Integer_Type nnzcols_regulars_local_);
         uint64_t nnz;
         Integer_Type nnzcols;
         Integer_Type nnzcols_regulars;
+        Integer_Type nnzcols_regulars_local;
         Integer_Type nnzrows;
         #ifdef HAS_WEIGHT
         Weight* A;  // WEIGHT
@@ -333,6 +335,7 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
     }
     memset(IR, 0, nnzrows * sizeof(Integer_Type));
     
+    /*
     if((JA_REG_C = (Integer_Type*) mmap(nullptr, (nnzcols_regulars * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
@@ -344,13 +347,15 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
         exit(1);
     }
     memset(JC_REG_C, 0, nnzcols_regulars * sizeof(Integer_Type));
-
+    */
+    
     if((JA_REG_R = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
     memset(JA_REG_R, 0, (nnzcols * 2) * sizeof(Integer_Type));
     
+    /*
     if((JA_REG_RC = (Integer_Type*) mmap(nullptr, (nnzcols_regulars * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
@@ -362,6 +367,7 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
         exit(1);
     }
     memset(JC_NNZ_REG_C, 0, nnzcols_regulars * sizeof(Integer_Type));
+    */
 }
 
 template<typename Weight, typename Integer_Type>
@@ -392,12 +398,12 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
     }
     
-    if(munmap(JA_REG_C, (nnzcols_regulars * 2) * sizeof(Integer_Type)) == -1) {
+    if(munmap(JA_REG_C, (nnzcols_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
     
-    if(munmap(JC_REG_C, nnzcols_regulars * sizeof(Integer_Type)) == -1) {
+    if(munmap(JC_REG_C, nnzcols_regulars_local * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
@@ -407,15 +413,43 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
     }
     
-    if(munmap(JA_REG_RC, (nnzcols_regulars * 2) * sizeof(Integer_Type)) == -1) {
+    if(munmap(JA_REG_RC, (nnzcols_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
     
-    if(munmap(JC_NNZ_REG_C, nnzcols_regulars * sizeof(Integer_Type)) == -1) {
+    if(munmap(JC_NNZ_REG_C, nnzcols_regulars_local * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
+}
+
+template<typename Weight, typename Integer_Type>
+void TCSC_BASE<Weight, Integer_Type>::allocate_local(Integer_Type nnzcols_regulars_local_) {
+    nnzcols_regulars_local = nnzcols_regulars_local_;
+    if((JA_REG_C = (Integer_Type*) mmap(nullptr, (nnzcols_regulars_local * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JA_REG_C, 0, (nnzcols_regulars_local * 2) * sizeof(Integer_Type));
+    
+    if((JC_REG_C = (Integer_Type*) mmap(nullptr, nnzcols_regulars_local * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JC_REG_C, 0, nnzcols_regulars_local * sizeof(Integer_Type));
+
+    if((JA_REG_RC = (Integer_Type*) mmap(nullptr, (nnzcols_regulars_local * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JA_REG_RC, 0, (nnzcols_regulars_local * 2) * sizeof(Integer_Type));            
+    
+    if((JC_NNZ_REG_C = (Integer_Type*) mmap(nullptr, nnzcols_regulars_local * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JC_NNZ_REG_C, 0, nnzcols_regulars_local * sizeof(Integer_Type));
 }
 
 template<typename Weight, typename Integer_Type>
@@ -471,16 +505,13 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     if(!Env::rank) {
         //printf("%d, %d\n", nnzcols, tile_width);
         for(uint32_t j = 0; j < nnzcols; j++) {
-            
-            printf("%d, %d, %d\n", j, JC[j], JA[j]);
+            ;
+            //printf("%d, %d, %d\n", j, JC[j], JA[j]);
         }
-        //for(uint32_t j = 0; j < nnzcols; j++) {
-        //    printf("rank=%d JC[%d]=%d\n", Env::rank, j, JC[j]);
+
+        //for(uint32_t j = 0; j < tile_width; j++) {  
+            //printf("%d %d %d\n", j, nnzcols_bitvector[j], nnzcols_indices[j]);
         //}
-        for(uint32_t j = 0; j < tile_width; j++) {
-            
-            printf("%d %d %d\n", j, nnzcols_bitvector[j], nnzcols_indices[j]);
-        }
         
     }
     
@@ -497,35 +528,80 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             k++;
         }
     }
-    /*
+    
     // Regular columns pointers/indices
-    k = 0;
-    Integer_Type i1 = 0;
-    Integer_Type i2 = 0;
-    if(!Env::rank) {
-        while((i1 < nnzcols) and (i2 < nnzcols_regulars) {
-        //for(j = 0; j < nnzcols; j++) {
-            printf("JC[%d]=%d", i1, JC[i1]);
-            if(JC[i1] == nnzcols_regulars_indices[i2]) {
-                printf("%d\n", nnzcols_regulars_indices[k]);
-                i1++;
-                i2++;
-            }
-            else if (JC[i1] < nnzcols_regulars_indices[i2]) {
-                i1++;
-            else if (JC[i1] > nnzcols_regulars_indices[i2]) {    
-                i2++;
-            }
-        }
-            
-    }
-    */
-    Env::barrier();
-    Env::exit(0);
     
-    
+    Integer_Type j1 = 0;
+    Integer_Type j2 = 0;
     k = 0;
     Integer_Type l = 0;
+   // if(!Env::rank) {
+        //while((i1 < nnzcols) and (i2 < nnzcols_regulars) {
+        /*
+        for(j = 0; j < nnzcols; j++) {
+            printf("JC[%d]=%d, ", j, JC[j]);
+            if(j < nnzcols_regulars) 
+                printf("%d\n", nnzcols_regulars_indices[j]); 
+            else
+                printf("\n"); 
+        }
+        */
+        
+        //for(j = 0; j < nnzcols_regulars; j++) {
+       //     printf("JC[%d]=%d\n", j, nnzcols_regulars_indices[j]);
+        //}
+        
+        while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
+            if(JC[j1] == nnzcols_regulars_indices[j2]) {
+                    k++;
+                    j1++;
+                    j2++;
+            }
+            else if (JC[j1] < nnzcols_regulars_indices[j2])
+                j1++;
+            else
+                j2++;
+        }
+        //nnzcols_regulars_local = k;
+        allocate_local(k);
+        
+        j1 = 0;
+        j2 = 0;        
+        k = 0;
+        while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
+            if(JC[j1] == nnzcols_regulars_indices[j2]) {
+                printf("JC[%d]=%d, REG[%d]=%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2]);
+                JC_REG_C[k] = JC[j1];
+                JC_NNZ_REG_C[k] = j1;
+                k++;
+                JA_REG_C[l] = JA[j];
+                JA_REG_C[l + 1] = JA[j + 1];
+                l += 2;
+                j1++;
+                j2++;
+            }
+            else if (JC[j1] < nnzcols_regulars_indices[j2])
+                j1++;
+            else // if (JC[i1] > nnzcols_regulars_indices[i2]) {    
+                j2++;
+        }
+        
+        //printf("%d %d\n", l/2, nnzcols_regulars);
+        
+        for(j = 0; j < nnzcols_regulars_local; j++) {
+            printf("j=%d REG=%d NNZREG=%d\n", j,JC_REG_C[j], JC_NNZ_REG_C[j]);
+            //JC_REG_C[j] = 1;
+        }
+        printf("%d, %d %d %d %d %d\n", tile_height, nnzcols, nnzcols_regulars, l/2, k, nnzcols_regulars_local);
+            
+    //}
+    
+   // Env::barrier();
+   // Env::exit(0);
+ /*   
+    
+    k = 0;
+    
     for(uint32_t j = 0; j < nnzcols; j++) {
         //printf("rank=%d JC[%d]=%d\n", Env::rank, j, JC[j]);
         if(JC[j] ==  nnzcols_regulars_indices[k]) {
@@ -637,6 +713,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             JA_REG_RC[l + 1] = JA_REG_C[k + 1];
             l += 2;  
         }
-    }    
+    }   
+*/    
 }
 #endif
