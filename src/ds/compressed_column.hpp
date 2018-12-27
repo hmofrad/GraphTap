@@ -19,6 +19,7 @@ enum Compression_type
   _CSC_, // Compressed Sparse Col
  _DCSC_, // Compressed Sparse Col
  _TCSC_, // Compressed Sparse Col
+ _TCSC1_, // Compressed Sparse Col
 };
 
 template<typename Weight, typename Integer_Type>
@@ -35,14 +36,14 @@ struct Compressed_column {
                               const Integer_Type tile_height, 
                               const Integer_Type tile_width){};
         virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                              const std::vector<char>& nnzrows_bitvector,
-                              const std::vector<Integer_Type>& nnzrows_indices, 
-                              const std::vector<char>& nnzrows_sources_bitvector,
                               const std::vector<char>& nnzcols_bitvector,
                               const std::vector<Integer_Type>& nnzcols_indices, 
                               const std::vector<Integer_Type>& nnzcols_regulars_indices,   
+                              const std::vector<char>& nnzrows_bitvector,
+                              const std::vector<Integer_Type>& nnzrows_indices, 
+                              const std::vector<char>& nnzrows_sources_bitvector,
                               const Integer_Type tile_height, 
-                              const Integer_Type tile_width){};                              
+                              const Integer_Type tile_width){};
 };
 
 
@@ -221,9 +222,17 @@ void DCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     uint32_t i = 0; // Row Index
     uint32_t j = 1; // Col index
     JA[0] = 0;
+    
+    //while(!nnzcols_bitvector[i])
+        //i++;
+    //JC[0] = i;
+    //i = 0;
+    //printf("0===%d\n", JC[0]);
     for (auto& triple : *triples) {
         pair  = {(triple.row % tile_height), (triple.col % tile_width)};
-        while((j - 1) != nnzcols_indices[pair.col]) {
+        //while(JC[j - 1] != pair.col) {
+        while((j - 1) != nnzcols_indices[pair.col]) {    
+            //JC[j] = pair.col;
             j++;
             JA[j] = JA[j - 1];
         }            
@@ -238,11 +247,18 @@ void DCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         j++;
         JA[j] = JA[j - 1];
     }
+    // Populate JC array
     Integer_Type k = 0;
-    for(Integer_Type j = 0; j < tile_height; j++) {
+    for(j = 0; j < tile_width; j++) {
         if(nnzcols_bitvector[j]) {
             JC[k] = j;
             k++;
+        }
+    }
+    // Refine JC array indices
+    for(j = 1; j < nnzcols + 1; j++) {
+        if(JA[j - 1] == JA[j]) {
+            JC[j] = JC[j-1];
         }
     }
 }
@@ -253,13 +269,13 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
     public:
         TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_, Integer_Type nnzrows_, Integer_Type nnzcols_regulars_);
         ~TCSC_BASE();
-        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
-                              const std::vector<char>& nnzrows_bitvector,
-                              const std::vector<Integer_Type>& nnzrows_indices, 
-                              const std::vector<char>& nnzrows_sources_bitvector,
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
                               const std::vector<char>& nnzcols_bitvector,
                               const std::vector<Integer_Type>& nnzcols_indices, 
                               const std::vector<Integer_Type>& nnzcols_regulars_indices,   
+                              const std::vector<char>& nnzrows_bitvector,
+                              const std::vector<Integer_Type>& nnzrows_indices, 
+                              const std::vector<char>& nnzrows_sources_bitvector,
                               const Integer_Type tile_height, 
                               const Integer_Type tile_width);
         uint64_t nnz;
@@ -277,6 +293,7 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JC_REG_C;  // COL_IDX_REG_COL
         Integer_Type* JA_REG_R;  // COL_PTR_REG_ROW
         Integer_Type* JA_REG_RC; // COL_PTR_REG_COL_REG_ROW
+        Integer_Type* JC_NNZ_REG_C;  // COL_IDX_NNZ_REG_COL
 };
 
 template<typename Weight, typename Integer_Type>
@@ -339,6 +356,12 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
         exit(1);
     }
     memset(JA_REG_RC, 0, (nnzcols_regulars * 2) * sizeof(Integer_Type));            
+    
+    if((JC_NNZ_REG_C = (Integer_Type*) mmap(nullptr, nnzcols_regulars * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JC_NNZ_REG_C, 0, nnzcols_regulars * sizeof(Integer_Type));
 }
 
 template<typename Weight, typename Integer_Type>
@@ -388,16 +411,21 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
+    
+    if(munmap(JC_NNZ_REG_C, nnzcols_regulars * sizeof(Integer_Type)) == -1) {
+        fprintf(stderr, "Error unmapping memory\n");
+        exit(1);
+    }
 }
 
 template<typename Weight, typename Integer_Type>
-void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
+                                               const std::vector<char>& nnzcols_bitvector,
+                                               const std::vector<Integer_Type>& nnzcols_indices, 
+                                               const std::vector<Integer_Type>& nnzcols_regulars_indices,   
                                                const std::vector<char>& nnzrows_bitvector,
                                                const std::vector<Integer_Type>& nnzrows_indices, 
-                                               const std::vector<char>& nnzrows_sources_bitvector, 
-                                               const std::vector<char>& nnzcols_bitvector,
-                                               const std::vector<Integer_Type>& nnzcols_indices,
-                                               const std::vector<Integer_Type>& nnzcols_regulars_indices,                                               
+                                               const std::vector<char>& nnzrows_sources_bitvector,
                                                const Integer_Type tile_height, 
                                                const Integer_Type tile_width) {
     struct Triple<Weight, Integer_Type> pair;
@@ -421,33 +449,101 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         j++;
         JA[j] = JA[j - 1];
     }
+    // Populate JC array
     Integer_Type k = 0;
-    for(Integer_Type j = 0; j < tile_width; j++) {
+    for(j = 0; j < tile_height; j++) {
         if(nnzcols_bitvector[j]) {
             JC[k] = j;
             k++;
+           // if(!Env::rank)
+           // printf("%d, %d\n", j, JC[k-1]);
+        }
+        
+    }
+    // Refine JC array indices
+    for(j = 1; j < nnzcols + 1; j++) {
+        if(JA[j - 1] == JA[j]) {
+            JC[j] = JC[j-1];
         }
     }
+
+    
+    if(!Env::rank) {
+        //printf("%d, %d\n", nnzcols, tile_width);
+        for(uint32_t j = 0; j < nnzcols; j++) {
+            
+            printf("%d, %d, %d\n", j, JC[j], JA[j]);
+        }
+        //for(uint32_t j = 0; j < nnzcols; j++) {
+        //    printf("rank=%d JC[%d]=%d\n", Env::rank, j, JC[j]);
+        //}
+        for(uint32_t j = 0; j < tile_width; j++) {
+            
+            printf("%d %d %d\n", j, nnzcols_bitvector[j], nnzcols_indices[j]);
+        }
+        
+    }
+    
+    
+    
+    
+    
+    
     // Rows indices
     k = 0;
-    for(uint32_t i = 0; i < tile_height; i++) {
+    for(i = 0; i < tile_height; i++) {
         if(nnzrows_bitvector[i]) {
             IR[k] = i;
             k++;
         }
     }
+    /*
     // Regular columns pointers/indices
+    k = 0;
+    Integer_Type i1 = 0;
+    Integer_Type i2 = 0;
+    if(!Env::rank) {
+        while((i1 < nnzcols) and (i2 < nnzcols_regulars) {
+        //for(j = 0; j < nnzcols; j++) {
+            printf("JC[%d]=%d", i1, JC[i1]);
+            if(JC[i1] == nnzcols_regulars_indices[i2]) {
+                printf("%d\n", nnzcols_regulars_indices[k]);
+                i1++;
+                i2++;
+            }
+            else if (JC[i1] < nnzcols_regulars_indices[i2]) {
+                i1++;
+            else if (JC[i1] > nnzcols_regulars_indices[i2]) {    
+                i2++;
+            }
+        }
+            
+    }
+    */
+    Env::barrier();
+    Env::exit(0);
+    
+    
     k = 0;
     Integer_Type l = 0;
     for(uint32_t j = 0; j < nnzcols; j++) {
+        //printf("rank=%d JC[%d]=%d\n", Env::rank, j, JC[j]);
         if(JC[j] ==  nnzcols_regulars_indices[k]) {
             JC_REG_C[k] = JC[j];
+            JC_NNZ_REG_C[k] = j;
             k++;
             JA_REG_C[l] = JA[j];
             JA_REG_C[l + 1] = JA[j + 1];
             l += 2;
+            //if(!Env::rank)
+            //printf("%d %d %d rank=%d\n", JC_REG_C[k-1], JC_NNZ_REG_C[k-1], k-1, Env::rank);
         }
     }
+       // printf("%d %d %d\n", tile_width, nnzcols, nnzcols_regulars);
+        
+
+    
+    
     // Moving source rows to the end of indices
     uint32_t m = 0;
     uint32_t n = 0;
