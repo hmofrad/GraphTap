@@ -779,6 +779,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     r.clear();
     r.shrink_to_fit(); 
     for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
+        if(!Env::rank)
+            printf("%d %d %d\n", nnzcols_regulars_local, JA_REG_C[k], JA_REG_C[k+1]);
         for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
                 m = (JA_REG_C[k+1] - JA_REG_C[k]);
@@ -801,6 +803,9 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             l += 2;  
         }
     }
+    
+    Env::barrier();
+    Env::exit(0);
 
 //printf("%d %d %d\n", Env::rank, l/2, nnzcols_regulars_local);    
     
