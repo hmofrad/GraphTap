@@ -91,8 +91,12 @@ class Matrix {
         std::vector<std::vector<std::vector<Integer_Type>>> REG_V; // Regular rows/cols indices
         std::vector<std::vector<std::vector<char>>> I_SRC;  // Source rows bitvectors (from tile width)
         
-        std::vector<Integer_Type> rowgrp_IR; // Row    group row    indices         
+        std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
         std::vector<Integer_Type> colgrp_JC; // Column group column indices
+        std::vector<Integer_Type> rowgrp_REG;// Row group regular indices
+        std::vector<Integer_Type> rowgrp_SRC;// Row group source indices
+        std::vector<Integer_Type> rowgrp_SNK;// Row group sink indices
+        std::vector<Integer_Type> rowgrp_ZRO;// Row group zero indices
 
         
         std::vector<Integer_Type> V2J; // all rows to nnz cols
@@ -194,7 +198,7 @@ Matrix<Weight, Integer_Type, Fractional_Type>::Matrix(Integer_Type nrows_,
     nrowgrps = sqrt(ntiles_);
     ncolgrps = ntiles_ / nrowgrps;
     tile_height = (nrows_ / nrowgrps) + 1;
-    tile_width = (ncols_ / ncolgrps) + 1;
+    tile_width  = (ncols_ / ncolgrps) + 1;
     directed = directed_;
     transpose = transpose_;
     parallel_edges = parallel_edges_;
@@ -740,7 +744,38 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
     }
     
-    //if(!Env::rank) {
+    for(Integer_Type i = 0; i < tile_height; i++) {
+        if(i_data[i] and j_data[i])
+            rowgrp_REG.push_back(i);
+        if(i_data[i] and !j_data[i])
+            rowgrp_SRC.push_back(i);
+        if(!i_data[i] and j_data[i])
+            rowgrp_SNK.push_back(i);
+        if(!i_data[i] and !j_data[i])
+            rowgrp_ZRO.push_back(i);
+        
+    }
+    
+    if(!Env::rank) {
+    printf("Regular= ");
+    for(uint32_t i:rowgrp_REG)
+        printf("%d ",i);
+    printf("\n");
+    printf("Source= ");
+    for(uint32_t i:rowgrp_SRC)
+        printf("%d ",i);
+    printf("\n");
+    printf("Sink= ");
+    for(uint32_t i:rowgrp_SNK)
+        printf("%d ",i);
+    printf("\n");
+    printf("Zero= ");
+    for(uint32_t i:rowgrp_ZRO)
+        printf("%d ",i);
+    printf("\n");
+    }
+    
+
     REG_V.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         REG_V[i].resize(tiling->rank_ncolgrps);
@@ -825,12 +860,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression() {
             printf("Edge compression: DCSC\n");
         init_dcsc();
     }   
-    else if(compression_type == _TCSC_) {
+    //else if(compression_type == _TCSC_) {
+    else {
         if(Env::is_master)
             printf("Edge compression: TCSC\n");
         init_tcsc();
         
     }
+    //Env::barrier();
     //Env::exit(0);
         //Env::exit(0);
         /*
@@ -1304,8 +1341,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
     {
         auto pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
-        Integer_Type r_nitems = nnz_row_sizes_loc[yi];
         Integer_Type c_nitems = nnz_col_sizes_loc[xi];
+        Integer_Type r_nitems = nnz_row_sizes_loc[yi];
         Integer_Type reg_nitems = REG_V[yi][xi].size();
         auto& i_data = I[yi];
         auto& iv_data = IV[yi];
@@ -1314,7 +1351,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& jv_data = JV[xi];
         auto& regv_data = REG_V[yi][xi];
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
-        tile.compressor->populate(tile.triples, i_data, iv_data, j_data, src_data, jv_data, regv_data, tile_height, tile_width);
+        tile.compressor->populate(tile.triples, j_data, jv_data, regv_data, i_data, iv_data, src_data, tile_height, tile_width);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
