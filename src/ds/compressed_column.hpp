@@ -278,11 +278,13 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
                               const std::vector<char>& nnzrows_sources_bitvector,
                               const Integer_Type tile_height, 
                               const Integer_Type tile_width);
-        void allocate_local(Integer_Type nnzcols_regulars_local_);
+        void allocate_local_reg(Integer_Type nnzcols_regulars_local_);
+        void allocate_local_src(Integer_Type nnzcols_sources_local_);
         uint64_t nnz;
         Integer_Type nnzcols;
         Integer_Type nnzcols_regulars;
         Integer_Type nnzcols_regulars_local;
+        Integer_Type nnzcols_sources_local;
         Integer_Type nnzrows;
         #ifdef HAS_WEIGHT
         Weight* A;  // WEIGHT
@@ -294,6 +296,8 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JA_REG_C;  // COL_PTR_REG_COL
         Integer_Type* JC_REG_C;  // COL_IDX_REG_COL
         Integer_Type* JA_REG_R;  // COL_PTR_REG_ROW
+        Integer_Type* JA_SRC_R;  // COL_PTR_SRC_ROW
+        Integer_Type* J_SRC_C;  // COL_IDX_SRC_COL
         Integer_Type* JA_REG_RC; // COL_PTR_REG_COL_REG_ROW
         Integer_Type* JC_NNZ_REG_C;  // COL_IDX_NNZ_REG_COL
 };
@@ -355,6 +359,8 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
     }
     memset(JA_REG_R, 0, (nnzcols * 2) * sizeof(Integer_Type));
     
+
+    
     /*
     if((JA_REG_RC = (Integer_Type*) mmap(nullptr, (nnzcols_regulars * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
@@ -408,9 +414,21 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
     }
     
-     if(munmap(JA_REG_R, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
+    if(munmap(JA_REG_R, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
+    }
+    
+    if(nnzcols_sources_local) {
+        if(munmap(JA_SRC_R, (nnzcols_sources_local * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(J_SRC_C, nnzcols_sources_local * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
     }
     
     if(munmap(JA_REG_RC, (nnzcols_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
@@ -425,7 +443,7 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
 }
 
 template<typename Weight, typename Integer_Type>
-void TCSC_BASE<Weight, Integer_Type>::allocate_local(Integer_Type nnzcols_regulars_local_) {
+void TCSC_BASE<Weight, Integer_Type>::allocate_local_reg(Integer_Type nnzcols_regulars_local_) {
     nnzcols_regulars_local = nnzcols_regulars_local_;
     if((JA_REG_C = (Integer_Type*) mmap(nullptr, (nnzcols_regulars_local * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
@@ -450,6 +468,25 @@ void TCSC_BASE<Weight, Integer_Type>::allocate_local(Integer_Type nnzcols_regula
         exit(1);
     }
     memset(JC_NNZ_REG_C, 0, nnzcols_regulars_local * sizeof(Integer_Type));
+}
+
+template<typename Weight, typename Integer_Type>
+void TCSC_BASE<Weight, Integer_Type>::allocate_local_src(Integer_Type nnzcols_sources_local_) {
+    nnzcols_sources_local = nnzcols_sources_local_;
+    if(nnzcols_sources_local > 0) {
+        if((JA_SRC_R = (Integer_Type*) mmap(nullptr, (nnzcols_sources_local * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_SRC_R, 0, (nnzcols_sources_local * 2) * sizeof(Integer_Type));
+        
+        if((J_SRC_C = (Integer_Type*) mmap(nullptr, nnzcols_sources_local * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(J_SRC_C, 0, nnzcols_sources_local * sizeof(Integer_Type));
+    }
+    
 }
 
 template<typename Weight, typename Integer_Type>
@@ -501,19 +538,20 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         }
     }
 
-    
-    if(!Env::rank) {
+    //if(!Env::rank) {
         //printf("%d, %d\n", nnzcols, tile_width);
+        /*
         for(uint32_t j = 0; j < nnzcols; j++) {
-            ;
-            //printf("%d, %d, %d\n", j, JC[j], JA[j]);
+            
+            printf("%d, %d, %d\n", j, JC[j], JA[j]);
         }
-
+        */
+        //Env::exit(0);
         //for(uint32_t j = 0; j < tile_width; j++) {  
             //printf("%d %d %d\n", j, nnzcols_bitvector[j], nnzcols_indices[j]);
         //}
         
-    }
+    //}
     
     
     
@@ -524,10 +562,11 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     k = 0;
     for(i = 0; i < tile_height; i++) {
         if(nnzrows_bitvector[i]) {
-            IR[k] = i;
+            IR[k] = nnzrows_indices[i];
             k++;
         }
     }
+    assert(k == nnzrows);
     
     // Regular columns pointers/indices
     
@@ -563,14 +602,14 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
         }
         //nnzcols_regulars_local = k;
-        allocate_local(k);
+        allocate_local_reg(k);
         
         j1 = 0;
         j2 = 0;        
         k = 0;
         while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
             if(JC[j1] == nnzcols_regulars_indices[j2]) {
-                printf("JC[%d]=%d, REG[%d]=%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2]);
+               // printf("JC[%d]=%d, REG[%d]=%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2]);
                 JC_REG_C[k] = JC[j1];
                 JC_NNZ_REG_C[k] = j1;
                 k++;
@@ -588,35 +627,18 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         
         //printf("%d %d\n", l/2, nnzcols_regulars);
         
-        for(j = 0; j < nnzcols_regulars_local; j++) {
-            printf("j=%d REG=%d NNZREG=%d\n", j,JC_REG_C[j], JC_NNZ_REG_C[j]);
+       // for(j = 0; j < nnzcols_regulars_local; j++) {
+         //   printf("j=%d REG=%d NNZREG=%d\n", j,JC_REG_C[j], JC_NNZ_REG_C[j]);
             //JC_REG_C[j] = 1;
-        }
-        printf("%d, %d %d %d %d %d\n", tile_height, nnzcols, nnzcols_regulars, l/2, k, nnzcols_regulars_local);
+        //}
+        //printf("%d, %d %d %d %d %d\n", tile_height, nnzcols, nnzcols_regulars, l/2, k, nnzcols_regulars_local);
             
     //}
     
    // Env::barrier();
    // Env::exit(0);
- /*   
     
-    k = 0;
-    
-    for(uint32_t j = 0; j < nnzcols; j++) {
-        //printf("rank=%d JC[%d]=%d\n", Env::rank, j, JC[j]);
-        if(JC[j] ==  nnzcols_regulars_indices[k]) {
-            JC_REG_C[k] = JC[j];
-            JC_NNZ_REG_C[k] = j;
-            k++;
-            JA_REG_C[l] = JA[j];
-            JA_REG_C[l + 1] = JA[j + 1];
-            l += 2;
-            //if(!Env::rank)
-            //printf("%d %d %d rank=%d\n", JC_REG_C[k-1], JC_NNZ_REG_C[k-1], k-1, Env::rank);
-        }
-    }
-       // printf("%d %d %d\n", tile_width, nnzcols, nnzcols_regulars);
-        
+
 
     
     
@@ -624,8 +646,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     uint32_t m = 0;
     uint32_t n = 0;
     std::vector<uint32_t> r;
-    for(uint32_t j = 0; j < nnzcols; j++) {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
                 m = (JA[j+1] - JA[j]);
                 r.push_back(i);
@@ -656,14 +678,28 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             r.shrink_to_fit();
         }
     }
-    // NNZ columns pointers without source rows
+    /*
+    if(!Env::rank) {
+        for(uint32_t j = 0; j < nnzcols; j++) {
+            printf("j=%d/%d\n", j, JC[j]);
+            for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            printf("   i=%d IA[i]=%d/%d\n", i, IA[i], nnzrows_sources_bitvector[IA[i]]);
+            }
+        }
+    }
+    */
+    // NNZ columns pointers without source rows (1st iteration)
     l = 0;   
     m = 0;
     n = 0;
     r.clear();
     r.shrink_to_fit(); 
-    for(uint32_t j = 0; j < nnzcols; j++) {
-        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+    for(j = 0; j < nnzcols; j++) {
+        //if(!Env::rank)
+          //  printf("%d/%d:\n", j, JC[j]);
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            //if(!Env::rank)
+              //  printf("   %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
                 m = (JA[j+1] - JA[j]);
                 r.push_back(i);
@@ -685,13 +721,64 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             l += 2;  
         }
     }
-    // Regular columns pointers without source rows
+    // NNZ columns pointers for source rows (1st iteration)
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit(); 
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
+                k++;
+                break;
+            }   
+        }
+    }
+    allocate_local_src(k);
+    k = 0;
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
+                m = (JA[j+1] - JA[j]);
+                r.push_back(i);
+            }   
+        }
+        if(m > 0) {
+            n = r.size();
+            JA_SRC_R[l] = JA[j + 1] - n;
+            JA_SRC_R[l + 1] = JA[j + 1]; 
+            l += 2; 
+            J_SRC_C[k] = j;
+            k++;
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+        }
+    }
+    //if(!Env::rank) {
+    //for(j = 0; j < nnzcols_sources_local * 2; j = j + 2)
+    //    printf("%d %d %d %d\n", j, J_SRC_C[j/2], JA_SRC_R[j], JA_SRC_R[j+1]);
+   // }
+    
+    
+    //if(!Env::rank) {
+       // printf("k=%d\n", k);
+    //}
+    
+    //Env::barrier();
+    //Env::exit(0);
+    
+    
+    // Regular columns pointers without source rows (2nd to last iteration)
     l = 0;       
     m = 0;
     n = 0;
     r.clear();
     r.shrink_to_fit(); 
-    for(uint32_t j = 0, k = 0; j < nnzcols_regulars; j++, k = k + 2) {
+    for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
         for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
                 m = (JA_REG_C[k+1] - JA_REG_C[k]);
@@ -713,7 +800,15 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             JA_REG_RC[l + 1] = JA_REG_C[k + 1];
             l += 2;  
         }
-    }   
-*/    
+    }
+
+//printf("%d %d %d\n", Env::rank, l/2, nnzcols_regulars_local);    
+    
+    
+    
+    
+    //Env::barrier();
+    //Env::exit(0);
+       
 }
 #endif
