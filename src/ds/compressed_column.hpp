@@ -526,8 +526,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         if(nnzcols_bitvector[j]) {
             JC[k] = j;
             k++;
-           // if(!Env::rank)
-           // printf("%d, %d\n", j, JC[k-1]);
         }
         
     }
@@ -537,27 +535,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             JC[j] = JC[j-1];
         }
     }
-
-    //if(!Env::rank) {
-        //printf("%d, %d\n", nnzcols, tile_width);
-        /*
-        for(uint32_t j = 0; j < nnzcols; j++) {
-            
-            printf("%d, %d, %d\n", j, JC[j], JA[j]);
-        }
-        */
-        //Env::exit(0);
-        //for(uint32_t j = 0; j < tile_width; j++) {  
-            //printf("%d %d %d\n", j, nnzcols_bitvector[j], nnzcols_indices[j]);
-        //}
-        
-    //}
-    
-    
-    
-    
-    
-    
     // Rows indices
     k = 0;
     for(i = 0; i < tile_height; i++) {
@@ -566,82 +543,45 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             k++;
         }
     }
-    assert(k == nnzrows);
-    
+    // assert(k == nnzrows);
     // Regular columns pointers/indices
-    
     Integer_Type j1 = 0;
     Integer_Type j2 = 0;
     k = 0;
-    Integer_Type l = 0;
-   // if(!Env::rank) {
-        //while((i1 < nnzcols) and (i2 < nnzcols_regulars) {
-        /*
-        for(j = 0; j < nnzcols; j++) {
-            printf("JC[%d]=%d, ", j, JC[j]);
-            if(j < nnzcols_regulars) 
-                printf("%d\n", nnzcols_regulars_indices[j]); 
-            else
-                printf("\n"); 
-        }
-        */
-        
-        //for(j = 0; j < nnzcols_regulars; j++) {
-       //     printf("JC[%d]=%d\n", j, nnzcols_regulars_indices[j]);
-        //}
-        
-        while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
-            if(JC[j1] == nnzcols_regulars_indices[j2]) {
-                    k++;
-                    j1++;
-                    j2++;
-            }
-            else if (JC[j1] < nnzcols_regulars_indices[j2])
-                j1++;
-            else
-                j2++;
-        }
-        //nnzcols_regulars_local = k;
-        allocate_local_reg(k);
-        
-        j1 = 0;
-        j2 = 0;        
-        k = 0;
-        while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
-            if(JC[j1] == nnzcols_regulars_indices[j2]) {
-               // printf("JC[%d]=%d, REG[%d]=%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2]);
-                JC_REG_C[k] = JC[j1];
-                JC_NNZ_REG_C[k] = j1;
+    while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
+        if(JC[j1] == nnzcols_regulars_indices[j2]) {
                 k++;
-                JA_REG_C[l] = JA[j];
-                JA_REG_C[l + 1] = JA[j + 1];
-                l += 2;
                 j1++;
-                j2++;
-            }
-            else if (JC[j1] < nnzcols_regulars_indices[j2])
-                j1++;
-            else // if (JC[i1] > nnzcols_regulars_indices[i2]) {    
                 j2++;
         }
+        else if (JC[j1] < nnzcols_regulars_indices[j2])
+            j1++;
+        else
+            j2++;
+    }
+    allocate_local_reg(k);
         
-        //printf("%d %d\n", l/2, nnzcols_regulars);
-        
-       // for(j = 0; j < nnzcols_regulars_local; j++) {
-         //   printf("j=%d REG=%d NNZREG=%d\n", j,JC_REG_C[j], JC_NNZ_REG_C[j]);
-            //JC_REG_C[j] = 1;
-        //}
-        //printf("%d, %d %d %d %d %d\n", tile_height, nnzcols, nnzcols_regulars, l/2, k, nnzcols_regulars_local);
-            
-    //}
-    
-   // Env::barrier();
-   // Env::exit(0);
-    
-
-
-    
-    
+    j1 = 0;
+    j2 = 0;        
+    k = 0;
+    Integer_Type l = 0;
+    while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
+        if(JC[j1] == nnzcols_regulars_indices[j2]) {
+           // printf("JC[%d]=%d, REG[%d]=%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2]);
+            JC_REG_C[k] = JC[j1];
+            JC_NNZ_REG_C[k] = j1;
+            k++;
+            JA_REG_C[l] = JA[j];
+            JA_REG_C[l + 1] = JA[j + 1];
+            l += 2;
+            j1++;
+            j2++;
+        }
+        else if (JC[j1] < nnzcols_regulars_indices[j2])
+            j1++;
+        else
+            j2++;
+    }    
     // Moving source rows to the end of indices
     uint32_t m = 0;
     uint32_t n = 0;
@@ -782,6 +722,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         if(!Env::rank)
             printf("%d %d %d\n", nnzcols_regulars_local, JA_REG_C[k], JA_REG_C[k+1]);
         for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
+            if(!Env::rank)
+                printf("i=%d\n", i);
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
                 m = (JA_REG_C[k+1] - JA_REG_C[k]);
                 r.push_back(i);
