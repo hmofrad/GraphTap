@@ -1586,6 +1586,9 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& regv_data = REG_V[yi][xi];
         auto& reg_data = J_REG[yi][xi];
         auto& snk_data = J_SNK[yi][xi];
+        auto& regular_vertices_data = regular_vertices[yi];
+        auto& source_rows_data = source_rows[yi];
+        auto& sink_columns_data = sink_columns[yi];        
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
         tile.compressor->populate(tile.triples, j_data, jv_data, regv_data, reg_data, snk_data, i_data, iv_data, src_data, tile_height, tile_width);
         xi++;
