@@ -808,11 +808,94 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
         
     }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
     
-    //if(Env::rank == 0 or Env::ran) {
-        //printf("%d %lu %lu\n", Env::rank, regular_vertices[0].size(), regular_vertices[1].size());
-    //}
+        for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        if(Env::comm_split) {
+            communicator = Env::rowgrps_comm;
+            row_group = local_row_segments[i];
+            leader = leader_ranks_rg[row_group];
+            my_rank = Env::rank_rg;
+        }
+        else {
+            communicator = Env::MPI_WORLD;
+            row_group = local_row_segments[i];
+            leader = leader_ranks[row_group];
+            my_rank = Env::rank;
+        }
+        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
+        
+        if(leader == my_rank) {            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
+                if(Env::comm_split) {   
+                    follower = follower_rowgrp_ranks_rg[j];
+                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                }
+                else {
+                    follower = follower_rowgrp_ranks[j];
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                }
+                nitems = source_rows[io].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
+                MPI_Isend(source_rows[io].data(), source_rows[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
+            source_rows[i].resize(nitems);
+            MPI_Irecv(source_rows[i].data(), source_rows[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            in_requests.push_back(request);
+        }
+        
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
     
+        for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        if(Env::comm_split) {
+            communicator = Env::rowgrps_comm;
+            row_group = local_row_segments[i];
+            leader = leader_ranks_rg[row_group];
+            my_rank = Env::rank_rg;
+        }
+        else {
+            communicator = Env::MPI_WORLD;
+            row_group = local_row_segments[i];
+            leader = leader_ranks[row_group];
+            my_rank = Env::rank;
+        }
+        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
+        
+        if(leader == my_rank) {            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
+                if(Env::comm_split) {   
+                    follower = follower_rowgrp_ranks_rg[j];
+                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                }
+                else {
+                    follower = follower_rowgrp_ranks[j];
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                }
+                nitems = sink_columns[io].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
+                MPI_Isend(sink_columns[io].data(), sink_columns[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
+            sink_columns[i].resize(nitems);
+            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            in_requests.push_back(request);
+        }
+        
+    }
     MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
