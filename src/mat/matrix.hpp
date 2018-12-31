@@ -89,6 +89,9 @@ class Matrix {
         std::vector<std::vector<char>> J;           // Nonzero cols bitvectors (from tile height)
         std::vector<std::vector<Integer_Type>> JV;  // Nonzero cols indices    (from tile height)
         std::vector<std::vector<std::vector<Integer_Type>>> REG_V; // Regular rows/cols indices
+        //std::vector<std::vector<Integer_Type>> REG_V; // Regular rows/cols indices
+        std::vector<std::vector<std::vector<char>>> J_REG; // Regular cols bitvector
+        std::vector<std::vector<std::vector<char>>> J_SNK; // Sink cols indices
         std::vector<std::vector<std::vector<char>>> I_SRC;  // Source rows bitvectors (from tile width)
         
         std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
@@ -756,6 +759,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         
     }
     
+    
     if(!Env::rank) {
     printf("Regular= ");
     for(uint32_t i:rowgrp_REG)
@@ -764,7 +768,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     printf("Source= ");
     for(uint32_t i:rowgrp_SRC)
         printf("%d ",i);
-    printf("\n");
+    printf(" %lu\n", rowgrp_SRC.size());
     printf("Sink= ");
     for(uint32_t i:rowgrp_SNK)
         printf("%d ",i);
@@ -776,11 +780,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     }
     
 
+    
     REG_V.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         REG_V[i].resize(tiling->rank_ncolgrps);
     }
-    
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         auto& i_data = I[i];
         for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
@@ -788,6 +792,57 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
             for(uint32_t k = 0; k < tile_height; k++) {
                 if(i_data[k] and j_data[k])
                     REG_V[i][j].push_back(k);
+            }
+        }
+    }
+    
+    /*
+    REG_V.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        auto& i_data = I[i];
+        for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
+            auto& j_data = J[j];
+            for(uint32_t k = 0; k < tile_height; k++) {
+                if(i_data[k] and j_data[k])
+                    REG_V[i][j].push_back(k);
+            }
+        }
+    }
+    */
+    
+    J_REG.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        J_REG[i].resize(tiling->rank_ncolgrps);
+        for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
+            J_REG[i][j].resize(tile_height);
+        }
+    }
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        auto& i_data = I[i];
+        for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
+            auto& j_data = J[j];
+            for(uint32_t k = 0; k < tile_height; k++) {
+                if(i_data[k] and j_data[k])
+                    J_REG[i][j][k] = 1;
+            }
+        }
+    }
+    
+    
+    J_SNK.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        J_SNK[i].resize(tiling->rank_ncolgrps);
+        for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
+            J_SNK[i][j].resize(tile_height);
+        }
+    }
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        auto& i_data = I[i];
+        for(uint32_t j = 0; j < tiling->rank_ncolgrps; j++) {
+            auto& j_data = J[j];
+            for(uint32_t k = 0; k < tile_height; k++) {
+                if(!i_data[k] and j_data[k])
+                    J_SNK[i][j][k] = 1;
             }
         }
     }
@@ -1350,8 +1405,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& j_data = J[xi];
         auto& jv_data = JV[xi];
         auto& regv_data = REG_V[yi][xi];
+        auto& reg_data = J_REG[yi][xi];
+        auto& snk_data = J_SNK[yi][xi];
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
-        tile.compressor->populate(tile.triples, j_data, jv_data, regv_data, i_data, iv_data, src_data, tile_height, tile_width);
+        tile.compressor->populate(tile.triples, j_data, jv_data, regv_data, reg_data, snk_data, i_data, iv_data, src_data, tile_height, tile_width);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
