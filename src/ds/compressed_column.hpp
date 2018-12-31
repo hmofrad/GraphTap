@@ -661,14 +661,14 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         }
         
     }
-    /*
+    
     // Refine JC array indices
     for(j = 1; j < nnzcols + 1; j++) {
         if(JA[j - 1] == JA[j]) {
             JC[j] = JC[j-1];
         }
     }
-    */
+    
     // Rows indices
     k = 0;
     for(i = 0; i < tile_height; i++) {
@@ -687,7 +687,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             }
         }
     }
-    */                                           
+    */                                         
     
     // Regular columns pointers/indices
     Integer_Type j1 = 0;
@@ -707,7 +707,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     allocate_local_reg(k);
 
     if(!Env::rank)
-        printf("%d %d\n", nnzcols_regulars, nnzcols_regulars_local);
+        printf("nnzcols=%d nnzcols_regulars=%d nnzcols_regulars_local=%d\n", nnzcols, nnzcols_regulars, nnzcols_regulars_local);
     
     j1 = 0;
     j2 = 0;        
@@ -769,8 +769,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             r.shrink_to_fit();
         }
     }
-    /*
-    if(!Env::rank) {
+    
+    if(Env::rank == 0) {
         for(uint32_t j = 0; j < nnzcols; j++) {
             printf("j=%d/%d\n", j, JC[j]);
             for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -778,7 +778,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             }
         }
     }
-    */
+    
     // NNZ columns pointers without source rows (1st iteration)
     l = 0;   
     m = 0;
