@@ -96,10 +96,10 @@ class Matrix {
         
         std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
         std::vector<Integer_Type> colgrp_JC; // Column group column indices
-        std::vector<Integer_Type> rowgrp_REG;// Row group regular indices
-        std::vector<Integer_Type> rowgrp_SRC;// Row group source indices
-        std::vector<Integer_Type> rowgrp_SNK;// Row group sink indices
-        std::vector<Integer_Type> rowgrp_ZRO;// Row group zero indices
+        std::vector<std::vector<Integer_Type>> regular_vertices;// Row group regular indices
+        std::vector<std::vector<Integer_Type>> source_rows;// Row group source indices
+        std::vector<std::vector<Integer_Type>> sink_columns;// Row group sink indices
+        //std::vector<Integer_Type> zero_vertices;// Row group zero indices
 
         
         std::vector<Integer_Type> V2J; // all rows to nnz cols
@@ -747,37 +747,120 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
     }
     
+    regular_vertices.resize(tiling->rank_nrowgrps);
+    source_rows.resize(tiling->rank_nrowgrps);
+    sink_columns.resize(tiling->rank_nrowgrps);
     for(Integer_Type i = 0; i < tile_height; i++) {
         if(i_data[i] and j_data[i])
-            rowgrp_REG.push_back(i);
+            regular_vertices[io].push_back(i);
         if(i_data[i] and !j_data[i])
-            rowgrp_SRC.push_back(i);
+            source_rows[io].push_back(i);
         if(!i_data[i] and j_data[i])
-            rowgrp_SNK.push_back(i);
-        if(!i_data[i] and !j_data[i])
-            rowgrp_ZRO.push_back(i);
+            sink_columns[io].push_back(i);
+        //if(!i_data[i] and !j_data[i])
+        //    zero_vertices.push_back(i);
+    }
+    MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
+    std::vector<MPI_Request> out_requests;
+    std::vector<MPI_Request> in_requests;
+    MPI_Request request;
+    MPI_Status status;
+    MPI_Comm communicator;
+    int32_t leader, my_rank, row_group;
+    int32_t follower, accu;
+    Integer_Type nitems = 0;
+    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        if(Env::comm_split) {
+            communicator = Env::rowgrps_comm;
+            row_group = local_row_segments[i];
+            leader = leader_ranks_rg[row_group];
+            my_rank = Env::rank_rg;
+        }
+        else {
+            communicator = Env::MPI_WORLD;
+            row_group = local_row_segments[i];
+            leader = leader_ranks[row_group];
+            my_rank = Env::rank;
+        }
+        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
+        
+        if(leader == my_rank) {            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
+                if(Env::comm_split) {   
+                    follower = follower_rowgrp_ranks_rg[j];
+                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                }
+                else {
+                    follower = follower_rowgrp_ranks[j];
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                }
+                nitems = regular_vertices[io].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
+                MPI_Isend(regular_vertices[io].data(), regular_vertices[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
+            regular_vertices[i].resize(nitems);
+            MPI_Irecv(regular_vertices[i].data(), regular_vertices[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            in_requests.push_back(request);
+        }
         
     }
     
+    //if(Env::rank == 0 or Env::ran) {
+        //printf("%d %lu %lu\n", Env::rank, regular_vertices[0].size(), regular_vertices[1].size());
+    //}
     
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    
+    /*
+    if(leader == my_rank) {
+                
+                    
+                    std::vector<Fractional_Type> &yj_data = Y[yi][accu];
+                    Integer_Type yj_nitems = yj_data.size();
+                    MPI_Irecv(yj_data.data(), yj_nitems, TYPE_DOUBLE, follower, pair_idx, communicator, &request);
+                    in_requests.push_back(request);
+                }
+            }
+            else {
+                MPI_Isend(y_data.data(), y_nitems, TYPE_DOUBLE, leader, pair_idx, communicator, &request);
+                out_requests.push_back(request);
+            }
+            
+    
+    */
+    //filter_postprocess();
+    
+    /*
     if(!Env::rank) {
     printf("Regular= ");
-    for(uint32_t i:rowgrp_REG)
+    for(uint32_t i:regular_vertices[io])
         printf("%d ",i);
     printf("\n");
     printf("Source= ");
-    for(uint32_t i:rowgrp_SRC)
+    for(uint32_t i:source_rows[io])
         printf("%d ",i);
-    printf(" %lu\n", rowgrp_SRC.size());
+    printf("\n");
     printf("Sink= ");
-    for(uint32_t i:rowgrp_SNK)
+    for(uint32_t i:sink_columns[io])
         printf("%d ",i);
     printf("\n");
     printf("Zero= ");
-    for(uint32_t i:rowgrp_ZRO)
-        printf("%d ",i);
-    printf("\n");
+    //for(uint32_t i:zero_vertices)
+    //    printf("%d ",i);
+    //printf("\n");
     }
+    */
+    
+    
+    
+    
     
 
     
@@ -1203,6 +1286,18 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter(Filtering_type filter
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
 {
+    
+    //for (uint32_t i = 0; i < rank_nrowgrps; i++) {
+        
+    //}
+    
+    //regular_vertices
+    //source_rows
+    //sink_columns
+    
+
+    
+    /*
     uint32_t ii = accu_segment_row;
     auto &i_data = I[ii];
     auto &iv_data = IV[ii];
@@ -1228,6 +1323,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
             V2I.push_back(i);        
         }
     }
+    */
 }
 /*
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
