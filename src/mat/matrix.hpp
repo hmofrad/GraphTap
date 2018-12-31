@@ -97,8 +97,11 @@ class Matrix {
         std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
         std::vector<Integer_Type> colgrp_JC; // Column group column indices
         std::vector<std::vector<Integer_Type>> regular_vertices;// Row group regular indices
+        std::vector<std::vector<char>> regular_vertices_bitvector;// Row group regular indices
         std::vector<std::vector<Integer_Type>> source_rows;// Row group source indices
+        std::vector<std::vector<char>> source_rows_bitvector;// Row group source indices
         std::vector<std::vector<Integer_Type>> sink_columns;// Row group sink indices
+        std::vector<std::vector<char>> sink_columns_bitvector;// Row group sink indices
         //std::vector<Integer_Type> zero_vertices;// Row group zero indices
 
         
@@ -813,7 +816,52 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
     
-        for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        if(Env::comm_split) {
+            communicator = Env::rowgrps_comm;
+            row_group = local_row_segments[i];
+            leader = leader_ranks_rg[row_group];
+            my_rank = Env::rank_rg;
+        }
+        else {
+            communicator = Env::MPI_WORLD;
+            row_group = local_row_segments[i];
+            leader = leader_ranks[row_group];
+            my_rank = Env::rank;
+        }
+        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
+        
+        if(leader == my_rank) {            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
+                if(Env::comm_split) {   
+                    follower = follower_rowgrp_ranks_rg[j];
+                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                }
+                else {
+                    follower = follower_rowgrp_ranks[j];
+                    accu = follower_rowgrp_ranks_accu_seg[j];
+                }
+                nitems = sink_columns[io].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
+                MPI_Isend(sink_columns[io].data(), sink_columns[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
+            sink_columns[i].resize(nitems);
+            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            in_requests.push_back(request);
+        }
+        
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    
+    
+    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         if(Env::comm_split) {
             communicator = Env::rowgrps_comm;
             row_group = local_row_segments[i];
@@ -857,49 +905,47 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
     
-        for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        if(Env::comm_split) {
-            communicator = Env::rowgrps_comm;
-            row_group = local_row_segments[i];
-            leader = leader_ranks_rg[row_group];
-            my_rank = Env::rank_rg;
-        }
-        else {
-            communicator = Env::MPI_WORLD;
-            row_group = local_row_segments[i];
-            leader = leader_ranks[row_group];
-            my_rank = Env::rank;
-        }
-        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
-        
-        if(leader == my_rank) {            
-            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
-                if(Env::comm_split) {   
-                    follower = follower_rowgrp_ranks_rg[j];
-                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                }
-                else {
-                    follower = follower_rowgrp_ranks[j];
-                    accu = follower_rowgrp_ranks_accu_seg[j];
-                }
-                nitems = sink_columns[io].size();
-                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
-                MPI_Isend(sink_columns[io].data(), sink_columns[io].size(), TYPE_INT, follower, row_group, communicator, &request);
-                out_requests.push_back(request);
+
+    
+    k = 0;
+    regular_vertices_bitvector.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        regular_vertices_bitvector[i].resize(tile_height);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        for(uint32_t j = 0; j < tile_height; j++) {
+            if(regular_vertices[i][k] == j) {
+                regular_vertices_bitvector[i][j] = 1;
+                k++;
             }
         }
-        else {
-            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
-            sink_columns[i].resize(nitems);
-            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, row_group, communicator, &request);
-            in_requests.push_back(request);
-        }
-        
     }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
+    
+    k = 0;
+    sink_columns_bitvector.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        sink_columns_bitvector[i].resize(tile_height);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        for(uint32_t j = 0; j < tile_height; j++) {
+            if(sink_columns[i][k] == j) {
+                sink_columns_bitvector[i][j] = 1;
+                k++;
+            }
+        }
+    }
+    
+    k = 0;
+    source_rows_bitvector.resize(tiling->rank_nrowgrps);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
+        source_rows_bitvector[i].resize(tile_height);
+    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        for(uint32_t j = 0; j < tile_height; j++) {
+            if(source_rows[i][k] == j) {
+                source_rows_bitvector[i][j] = 1;
+                k++;
+            }
+        }
+    }
+    
     
     /*
     if(leader == my_rank) {
@@ -1577,20 +1623,24 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& tile = tiles[pair.row][pair.col];
         Integer_Type c_nitems = nnz_col_sizes_loc[xi];
         Integer_Type r_nitems = nnz_row_sizes_loc[yi];
-        Integer_Type reg_nitems = REG_V[yi][xi].size();
+        //Integer_Type reg_nitems = REG_V[yi][xi].size();
         auto& i_data = I[yi];
         auto& iv_data = IV[yi];
-        auto& src_data = I_SRC[yi][xi];
+        //auto& src_data = I_SRC[yi][xi];
         auto& j_data = J[xi];
         auto& jv_data = JV[xi];
-        auto& regv_data = REG_V[yi][xi];
-        auto& reg_data = J_REG[yi][xi];
-        auto& snk_data = J_SNK[yi][xi];
+        //auto& regv_data = REG_V[yi][xi];
+        //auto& reg_data = J_REG[yi][xi];
+        //auto& snk_data = J_SNK[yi][xi];
         auto& regular_vertices_data = regular_vertices[yi];
-        auto& source_rows_data = source_rows[yi];
-        auto& sink_columns_data = sink_columns[yi];        
+        Integer_Type reg_nitems = regular_vertices[yi].size();
+        auto& regular_vertices_bitvector_data = regular_vertices_bitvector[yi];
+        auto& sink_columns_bitvector_data = sink_columns_bitvector[yi];
+        auto& source_rows_bitvector_data = source_rows_bitvector[yi];
+        //auto& source_rows_data = source_rows[yi];
+        //auto& sink_columns_data = sink_columns[yi];        
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
-        tile.compressor->populate(tile.triples, j_data, jv_data, regv_data, reg_data, snk_data, i_data, iv_data, src_data, tile_height, tile_width);
+        tile.compressor->populate(tile.triples, j_data, jv_data, regular_vertices_data, regular_vertices_bitvector_data, sink_columns_bitvector_data, i_data, iv_data, source_rows_bitvector_data, tile_height, tile_width);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
