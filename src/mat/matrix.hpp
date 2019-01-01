@@ -1148,7 +1148,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsc() {
         auto& j_data = J[xi];
         auto& jv_data = JV[xi];
         tile.compressor = new DCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems);
-        tile.compressor->populate(tile.triples, j_data, jv_data, tile_height, tile_width);
+        tile.compressor->populate(tile.triples, tile_height, tile_width, j_data, jv_data);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row)
@@ -1175,12 +1175,13 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& regular_rows_data = regular_rows[yi];
         auto& regular_rows_bv_data = regular_rows_bitvector[yi];
         auto& source_rows_data = source_rows[yi];
-        auto& source_rows_bitvector_data = source_rows_bitvector[yi];
+        auto& source_rows_bv_data = source_rows_bitvector[yi];
+        auto& regular_columns_data = regular_columns[xi];
         auto& regular_columns_bv_data = regular_columns_bitvector[xi];
         auto& sink_columns_data = sink_columns[xi];
-        auto& sink_columns_bitvector_data = sink_columns_bitvector[xi];
+        auto& sink_columns_bv_data = sink_columns_bitvector[xi];
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems);
-        tile.compressor->populate(tile.triples, j_data, jv_data, regular_rows_data, regular_rows_bitvector_data, sink_columns_bitvector_data, i_data, iv_data, source_rows_bitvector_data, tile_height, tile_width);
+        tile.compressor->populate(tile.triples, tile_height, tile_width, i_data, iv_data, j_data, jv_data, regular_rows_data, regular_rows_bv_data, source_rows_data, source_rows_bv_data, regular_columns_data, regular_columns_bv_data, sink_columns_data, sink_columns_bv_data);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
