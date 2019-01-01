@@ -90,9 +90,9 @@ class Matrix {
         std::vector<std::vector<Integer_Type>> JV;  // Nonzero cols indices    (from tile height)
         std::vector<std::vector<std::vector<Integer_Type>>> REG_V; // Regular rows/cols indices
         //std::vector<std::vector<Integer_Type>> REG_V; // Regular rows/cols indices
-        std::vector<std::vector<std::vector<char>>> J_REG; // Regular cols bitvector
-        std::vector<std::vector<std::vector<char>>> J_SNK; // Sink cols indices
-        std::vector<std::vector<std::vector<char>>> I_SRC;  // Source rows bitvectors (from tile width)
+        //std::vector<std::vector<std::vector<char>>> J_REG; // Regular cols bitvector
+        //std::vector<std::vector<std::vector<char>>> J_SNK; // Sink cols indices
+        //std::vector<std::vector<std::vector<char>>> I_SRC;  // Source rows bitvectors (from tile width)
         
         std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
         std::vector<Integer_Type> colgrp_JC; // Column group column indices
@@ -918,6 +918,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
                 k++;
             }
         }
+        k = 0;
     }
     
     k = 0;
@@ -931,6 +932,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
                 k++;
             }
         }
+        k = 0;
     }
     
     k = 0;
@@ -941,10 +943,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         for(uint32_t j = 0; j < tile_height; j++) {
             if(source_rows[i][k] == j) {
                 source_rows_bitvector[i][j] = 1;
+                if(Env::rank == 1)
+                printf("[%d %d %d] ", k, i, io);
                 k++;
             }
         }
+        k = 0;
     }
+    if(Env::rank == 1)
+        printf("\n");
     
     
     /*
@@ -966,15 +973,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     */
     //filter_postprocess();
     
-    /*
-    if(!Env::rank) {
+    
+    if(Env::rank == 1) {
     printf("Regular= ");
     for(uint32_t i:regular_vertices[io])
         printf("%d ",i);
     printf("\n");
     printf("Source= ");
     for(uint32_t i:source_rows[io])
-        printf("%d ",i);
+        printf("[%d %d] ",i, source_rows_bitvector[io][i]);
     printf("\n");
     printf("Sink= ");
     for(uint32_t i:sink_columns[io])
@@ -985,7 +992,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     //    printf("%d ",i);
     //printf("\n");
     }
-    */
+    
     
     
     
@@ -1021,7 +1028,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
     }
     */
-    
+    /*
     J_REG.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         J_REG[i].resize(tiling->rank_ncolgrps);
@@ -1076,7 +1083,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
             }
         }
     }
-    
+    */
     
     //}
         
@@ -1641,6 +1648,20 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         //auto& sink_columns_data = sink_columns[yi];        
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
         tile.compressor->populate(tile.triples, j_data, jv_data, regular_vertices_data, regular_vertices_bitvector_data, sink_columns_bitvector_data, i_data, iv_data, source_rows_bitvector_data, tile_height, tile_width);
+        //if(tile.rg == tile.cg) {
+        if(Env::rank == 1) {            
+            int s1 = 0;
+            for(int j: source_rows_bitvector_data) {
+                if(j == 1)
+                    s1++;
+            }
+            int s2 = 0;
+            for(int j: sink_columns_bitvector_data) {
+                if(j == 1)
+                    s2++;
+            }
+            printf("[%d, %d], rank=%d, yi=%d/%d, nnzc=%d nnzr=%d, reg=%d src=%d snk=%d\n", tile.rg, tile.cg, Env::rank, yi, accu_segment_row, c_nitems, r_nitems, reg_nitems, s1, s2);
+        }
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
