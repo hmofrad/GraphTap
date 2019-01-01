@@ -75,7 +75,7 @@ Graph<Weight, Integer_Type, Fractional_Type>::~Graph(){};
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Graph<Weight, Integer_Type, Fractional_Type>::free() {
     A->del_compression();
-    A->del_filtering();
+    A->del_filter();
     A->free_tiling();    
     delete A;
 }
