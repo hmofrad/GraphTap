@@ -88,7 +88,7 @@ class Matrix {
         std::vector<std::vector<Integer_Type>> IV;  // Nonzero rows indices    (from tile width)
         std::vector<std::vector<char>> J;           // Nonzero cols bitvectors (from tile height)
         std::vector<std::vector<Integer_Type>> JV;  // Nonzero cols indices    (from tile height)
-        std::vector<std::vector<std::vector<Integer_Type>>> REG_V; // Regular rows/cols indices
+        //std::vector<std::vector<std::vector<Integer_Type>>> REG_V; // Regular rows/cols indices
         //std::vector<std::vector<Integer_Type>> REG_V; // Regular rows/cols indices
         //std::vector<std::vector<std::vector<char>>> J_REG; // Regular cols bitvector
         //std::vector<std::vector<std::vector<char>>> J_SNK; // Sink cols indices
@@ -96,8 +96,8 @@ class Matrix {
         
         std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
         std::vector<Integer_Type> colgrp_JC; // Column group column indices
-        std::vector<std::vector<Integer_Type>> regular_vertices;// Row group regular indices
-        std::vector<std::vector<char>> regular_vertices_bitvector;// Row group regular indices
+        std::vector<std::vector<Integer_Type>> regular_rows;// Row group regular indices
+        std::vector<std::vector<char>> regular_rows_bitvector;// Row group regular indices
         std::vector<std::vector<Integer_Type>> source_rows;// Row group source indices
         std::vector<std::vector<char>> source_rows_bitvector;// Row group source indices
         std::vector<std::vector<Integer_Type>> sink_columns;// Row group sink indices
@@ -714,6 +714,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering()
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
+
     I.resize(tiling->rank_nrowgrps);
     for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         I[i].resize(tile_height);
@@ -750,29 +751,31 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
     }
     
-    regular_vertices.resize(tiling->rank_nrowgrps);
+    regular_rows.resize(tiling->rank_nrowgrps);
     source_rows.resize(tiling->rank_nrowgrps);
-    sink_columns.resize(tiling->rank_nrowgrps);
+    sink_columns.resize(tiling->rank_ncolgrps);
     for(Integer_Type i = 0; i < tile_height; i++) {
         if(i_data[i] and j_data[i])
-            regular_vertices[io].push_back(i);
+            regular_rows[io].push_back(i);
         if(i_data[i] and !j_data[i])
             source_rows[io].push_back(i);
         if(!i_data[i] and j_data[i])
-            sink_columns[io].push_back(i);
+            sink_columns[jo].push_back(i);
         //if(!i_data[i] and !j_data[i])
         //    zero_vertices.push_back(i);
     }
+    printf("1.rank=%d\n", Env::rank);
     MPI_Datatype TYPE_INT = Types<Weight, Integer_Type, Integer_Type>::get_data_type();
     std::vector<MPI_Request> out_requests;
     std::vector<MPI_Request> in_requests;
     MPI_Request request;
     MPI_Status status;
-    MPI_Comm communicator;
-    int32_t leader, my_rank, row_group;
-    int32_t follower, accu;
+    //MPI_Comm communicator;
+    int32_t leader, my_rank, row_group, col_group;
+    int32_t follower;//, accu;
     Integer_Type nitems = 0;
     for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        /*
         if(Env::comm_split) {
             communicator = Env::rowgrps_comm;
             row_group = local_row_segments[i];
@@ -780,33 +783,36 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
             my_rank = Env::rank_rg;
         }
         else {
-            communicator = Env::MPI_WORLD;
+         */   
+            //communicator = Env::MPI_WORLD;
             row_group = local_row_segments[i];
             leader = leader_ranks[row_group];
             my_rank = Env::rank;
-        }
-        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
-        
+        //}
         if(leader == my_rank) {            
             for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
-                if(Env::comm_split) {   
-                    follower = follower_rowgrp_ranks_rg[j];
-                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                }
-                else {
+                //if(Env::comm_split) {   
+                  //  follower = follower_rowgrp_ranks_rg[j];
+                    //accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                //}
+                //else {
                     follower = follower_rowgrp_ranks[j];
-                    accu = follower_rowgrp_ranks_accu_seg[j];
-                }
-                nitems = regular_vertices[io].size();
-                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
-                MPI_Isend(regular_vertices[io].data(), regular_vertices[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                    //accu = follower_rowgrp_ranks_accu_seg[j];
+                //}
+                nitems = regular_rows[io].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, Env::MPI_WORLD);
+                MPI_Isend(regular_rows[io].data(), regular_rows[io].size(), TYPE_INT, follower, row_group, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
+                //if(!Env::rank)
+                //    printf("%d, %d --> %d [%d %d]\n", Env::rank, leader, follower, i, io);
             }
         }
         else {
-            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
-            regular_vertices[i].resize(nitems);
-            MPI_Irecv(regular_vertices[i].data(), regular_vertices[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            //if(!Env::rank)
+            //    printf("%d, %d <-- %d [%d %d]\n", Env::rank, my_rank, leader, i, io);
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, Env::MPI_WORLD, &status);
+            regular_rows[i].resize(nitems);
+            MPI_Irecv(regular_rows[i].data(), regular_rows[i].size(), TYPE_INT, leader, row_group, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
         
@@ -815,8 +821,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
+    //Env::barrier();
+    
     
     for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        /*
         if(Env::comm_split) {
             communicator = Env::rowgrps_comm;
             row_group = local_row_segments[i];
@@ -824,78 +833,35 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
             my_rank = Env::rank_rg;
         }
         else {
-            communicator = Env::MPI_WORLD;
+        */
+           // communicator = Env::MPI_WORLD;
             row_group = local_row_segments[i];
             leader = leader_ranks[row_group];
             my_rank = Env::rank;
-        }
+        //}
         //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
         
         if(leader == my_rank) {            
             for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
-                if(Env::comm_split) {   
+                //if(Env::comm_split) {   
                     follower = follower_rowgrp_ranks_rg[j];
-                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                }
-                else {
+                    //accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                //}
+                //else {
                     follower = follower_rowgrp_ranks[j];
-                    accu = follower_rowgrp_ranks_accu_seg[j];
-                }
-                nitems = sink_columns[io].size();
-                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
-                MPI_Isend(sink_columns[io].data(), sink_columns[io].size(), TYPE_INT, follower, row_group, communicator, &request);
-                out_requests.push_back(request);
-            }
-        }
-        else {
-            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
-            sink_columns[i].resize(nitems);
-            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, row_group, communicator, &request);
-            in_requests.push_back(request);
-        }
-        
-    }
-    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
-    in_requests.clear();
-    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
-    out_requests.clear();
-    
-    
-    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        if(Env::comm_split) {
-            communicator = Env::rowgrps_comm;
-            row_group = local_row_segments[i];
-            leader = leader_ranks_rg[row_group];
-            my_rank = Env::rank_rg;
-        }
-        else {
-            communicator = Env::MPI_WORLD;
-            row_group = local_row_segments[i];
-            leader = leader_ranks[row_group];
-            my_rank = Env::rank;
-        }
-        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
-        
-        if(leader == my_rank) {            
-            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
-                if(Env::comm_split) {   
-                    follower = follower_rowgrp_ranks_rg[j];
-                    accu = follower_rowgrp_ranks_accu_seg_rg[j];
-                }
-                else {
-                    follower = follower_rowgrp_ranks[j];
-                    accu = follower_rowgrp_ranks_accu_seg[j];
-                }
+                    //accu = follower_rowgrp_ranks_accu_seg[j];
+                //}
                 nitems = source_rows[io].size();
-                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, communicator);
-                MPI_Isend(source_rows[io].data(), source_rows[io].size(), TYPE_INT, follower, row_group, communicator, &request);
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, Env::MPI_WORLD);
+                MPI_Isend(source_rows[io].data(), source_rows[io].size(), TYPE_INT, follower, row_group, Env::MPI_WORLD, &request);
                 out_requests.push_back(request);
             }
         }
         else {
-            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, communicator, &status);
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, Env::MPI_WORLD, &status);
             source_rows[i].resize(nitems);
-            MPI_Irecv(source_rows[i].data(), source_rows[i].size(), TYPE_INT, leader, row_group, communicator, &request);
+            //printf("%d %d %lu\n", Env::rank, nitems, source_rows[i].size());
+            MPI_Irecv(source_rows[i].data(), source_rows[i].size(), TYPE_INT, leader, row_group, Env::MPI_WORLD, &request);
             in_requests.push_back(request);
         }
         
@@ -904,54 +870,170 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     in_requests.clear();
     MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
     out_requests.clear();
+
+    /*
+    for (uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
+        
+        //if(Env::comm_split) {
+        //    communicator = Env::rowgrps_comm;
+        //    row_group = local_row_segments[i];
+         //   leader = leader_ranks_rg[row_group];
+        //    my_rank = Env::rank_rg;
+        //}
+        //else {
+          
+            //communicator = Env::MPI_WORLD;
+            row_group = local_row_segments[i];
+            leader = leader_ranks[row_group];
+            my_rank = Env::rank;
+        //}
+        //printf("%d %d == %d %d %d\n", Env::rank, leader, my_rank, i, io);
+        
+        if(leader == my_rank) {            
+            for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
+                //if(Env::comm_split) {   
+                 //   follower = follower_rowgrp_ranks_rg[j];
+                    //accu = follower_rowgrp_ranks_accu_seg_rg[j];
+                //}
+                //else {
+                    follower = follower_rowgrp_ranks[j];
+                    //accu = follower_rowgrp_ranks_accu_seg[j];
+                //}
+                nitems = sink_columns[jo].size();
+                MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, Env::MPI_WORLD);
+                MPI_Isend(sink_columns[jo].data(), sink_columns[jo].size(), TYPE_INT, follower, row_group, Env::MPI_WORLD, &request);
+                out_requests.push_back(request);
+            }
+        }
+        else {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, row_group, Env::MPI_WORLD, &status);
+            sink_columns[i].resize(nitems);
+            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, row_group, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
+        
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    //Env::barrier();
+    */
     
+   for(uint32_t i = 0; i < tiling->colgrp_nranks - 1; i++) {
+        col_group = local_col_segments[jo];
+        follower = follower_colgrp_ranks[i];
+        nitems = sink_columns[jo].size();
+        MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, Env::MPI_WORLD);
+        MPI_Isend(sink_columns[jo].data(), nitems, TYPE_INT, follower, col_group, Env::MPI_WORLD, &request);
+        out_requests.push_back(request);
+    }
+    
+    for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {
+        col_group = local_col_segments[i];
+        leader = leader_ranks[col_group];
+        my_rank = Env::rank;
+        if(leader != my_rank) {
+            MPI_Recv(&nitems, 1, TYPE_INT, leader, col_group, Env::MPI_WORLD, &status);
+            sink_columns[i].resize(nitems);
+            MPI_Irecv(sink_columns[i].data(), sink_columns[i].size(), TYPE_INT, leader, col_group, Env::MPI_WORLD, &request);
+            in_requests.push_back(request);
+        }
+        /*
+        std::vector<Fractional_Type> &xj_data = X[i];
+        Integer_Type xj_nitems = xj_data.size();
+        col_group = local_col_segments[i];
+        if(Env::comm_split) {
+            leader = leader_ranks_cg[col_group];
+            if(ordering_type == _ROW_)
+                my_rank = Env::rank_cg;
+            else
+                my_rank = Env::rank_rg;
+            if(leader != my_rank) {
+                MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, colgrps_communicator, &request);
+                in_requests.push_back(request);
+            }
+        }
+        else {
+            leader = leader_ranks[col_group];
+            if(leader != Env::rank) {
+                MPI_Irecv(xj_data.data(), xj_nitems, TYPE_DOUBLE, leader, col_group, Env::MPI_WORLD, &request);
+                in_requests.push_back(request);
+            }
+        }
+        */
+    }
+    MPI_Waitall(in_requests.size(), in_requests.data(), MPI_STATUSES_IGNORE);
+    in_requests.clear();
+    MPI_Waitall(out_requests.size(), out_requests.data(), MPI_STATUSES_IGNORE);
+    out_requests.clear();
+    
+    
+
+    printf("2.rank=%d\n", Env::rank);
+
 
     
     k = 0;
-    regular_vertices_bitvector.resize(tiling->rank_nrowgrps);
+    regular_rows_bitvector.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
-        regular_vertices_bitvector[i].resize(tile_height);
+        regular_rows_bitvector[i].resize(tile_height);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        for(uint32_t j = 0; j < tile_height; j++) {
-            if(regular_vertices[i][k] == j) {
-                regular_vertices_bitvector[i][j] = 1;
-                k++;
-            }
-        }
-        k = 0;
+        for(uint32_t j: regular_rows[i])
+            regular_rows_bitvector[i][j] = 1;
+        //for(uint32_t j = 0; j < tile_height; j++) {
+        //    if(regular_rows[i][k] == j) {
+        //        regular_rows_bitvector[i][j] = 1;
+        //        k++;
+        //    }
+        //}
+        //k = 0;
     }
     
-    k = 0;
-    sink_columns_bitvector.resize(tiling->rank_nrowgrps);
-    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
-        sink_columns_bitvector[i].resize(tile_height);
-    for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        for(uint32_t j = 0; j < tile_height; j++) {
-            if(sink_columns[i][k] == j) {
-                sink_columns_bitvector[i][j] = 1;
-                k++;
-            }
-        }
-        k = 0;
-    }
+    //k = 0;
     
-    k = 0;
+    //k = 0;
     source_rows_bitvector.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         source_rows_bitvector[i].resize(tile_height);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        for(uint32_t j = 0; j < tile_height; j++) {
-            if(source_rows[i][k] == j) {
+        for(uint32_t j: source_rows[i]) //{
+        //for(uint32_t j = 0; j < tile_height; j++) {
+          //  if(source_rows[i][k] == j) {
                 source_rows_bitvector[i][j] = 1;
-                if(Env::rank == 1)
-                printf("[%d %d %d] ", k, i, io);
-                k++;
-            }
-        }
-        k = 0;
+                //if(Env::rank == 1)
+                //printf("[%d %d %d] ", k, i, io);
+                //k++;
+            //}
+        //}
+        //k = 0;
     }
-    if(Env::rank == 1)
-        printf("\n");
+    
+    sink_columns_bitvector.resize(tiling->rank_ncolgrps);
+    for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
+        sink_columns_bitvector[i].resize(tile_height);
+    for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {
+        for(uint32_t j: sink_columns[i])
+            sink_columns_bitvector[i][j] = 1;
+            
+        //for(uint32_t j = 0; j < tile_height; j++) {
+        //    if(sink_columns[i][k] == j) {
+        //        sink_columns_bitvector[i][j] = 1;
+        //        k++;
+        //    }
+        //}
+        //k = 0;
+    }
+
+    
+    
+    
+    //Env::barrier();
+    //Env::exit(0);
+
+    
+    //if(Env::rank == 1)
+    //    printf("\n");
     
     
     /*
@@ -973,10 +1055,10 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     */
     //filter_postprocess();
     
-    
+    /*
     if(Env::rank == 1) {
     printf("Regular= ");
-    for(uint32_t i:regular_vertices[io])
+    for(uint32_t i:regular_rows[io])
         printf("%d ",i);
     printf("\n");
     printf("Source= ");
@@ -992,14 +1074,14 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     //    printf("%d ",i);
     //printf("\n");
     }
-    
+    */
     
     
     
     
     
 
-    
+    /*
     REG_V.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         REG_V[i].resize(tiling->rank_ncolgrps);
@@ -1015,7 +1097,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
         }
     }
     
-    /*
+    
     REG_V.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         auto& i_data = I[i];
@@ -1027,8 +1109,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
             }
         }
     }
-    */
-    /*
     J_REG.resize(tiling->rank_nrowgrps);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
         J_REG[i].resize(tiling->rank_ncolgrps);
@@ -1427,7 +1507,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_postprocess()
         
     //}
     
-    //regular_vertices
+    //regular_rows
     //source_rows
     //sink_columns
     
@@ -1622,7 +1702,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsc()
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
 {
-    
+    printf("Start %d\n", Env::rank);
     uint32_t yi = 0, xi = 0, next_row = 0;
     for(uint32_t t: local_tiles_row_order)
     {
@@ -1639,16 +1719,17 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         //auto& regv_data = REG_V[yi][xi];
         //auto& reg_data = J_REG[yi][xi];
         //auto& snk_data = J_SNK[yi][xi];
-        auto& regular_vertices_data = regular_vertices[yi];
-        Integer_Type reg_nitems = regular_vertices[yi].size();
-        auto& regular_vertices_bitvector_data = regular_vertices_bitvector[yi];
-        auto& sink_columns_bitvector_data = sink_columns_bitvector[yi];
+        auto& regular_rows_data = regular_rows[yi];
+        //Integer_Type reg_nitems = regular_rows[yi].size();
+        auto& regular_rows_bitvector_data = regular_rows_bitvector[yi];
         auto& source_rows_bitvector_data = source_rows_bitvector[yi];
+        auto& sink_columns_bitvector_data = sink_columns_bitvector[xi];
         //auto& source_rows_data = source_rows[yi];
         //auto& sink_columns_data = sink_columns[yi];        
-        tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems, reg_nitems);
-        tile.compressor->populate(tile.triples, j_data, jv_data, regular_vertices_data, regular_vertices_bitvector_data, sink_columns_bitvector_data, i_data, iv_data, source_rows_bitvector_data, tile_height, tile_width);
+        tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems);
+        tile.compressor->populate(tile.triples, j_data, jv_data, regular_rows_data, regular_rows_bitvector_data, sink_columns_bitvector_data, i_data, iv_data, source_rows_bitvector_data, tile_height, tile_width);
         //if(tile.rg == tile.cg) {
+        /*    
         if(Env::rank == 1) {            
             int s1 = 0;
             for(int j: source_rows_bitvector_data) {
@@ -1662,14 +1743,17 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
             }
             printf("[%d, %d], rank=%d, yi=%d/%d, nnzc=%d nnzr=%d, reg=%d src=%d snk=%d\n", tile.rg, tile.cg, Env::rank, yi, accu_segment_row, c_nitems, r_nitems, reg_nitems, s1, s2);
         }
+        */
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
             xi = 0;
             yi++;
         }
-    }   
-    
+    }  
+    printf("Finish %d\n", Env::rank);
+    //Env::barrier();
+    //Env::exit(0);
     
     /*
     struct Triple<Weight, Integer_Type> pair;
