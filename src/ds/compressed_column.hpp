@@ -680,6 +680,15 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     }
     /*
     if(!Env::rank) {
+        for(int i = 0; i < nnzrows; i++) {
+            printf("%d ", IR[i]);
+        }
+        printf(" %d, %d\n", k, nnzrows );
+        
+    }
+    */
+    /*
+    if(!Env::rank) {
         for(j = 0; j < nnzcols; j++) {
             printf("%d:%d\n", j, JC[j]);
             for(i = JA[j]; i < JA[j+1]; i++) {
@@ -687,8 +696,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             }
         }
     }
-    */                                         
-    
+    */ 
     // Regular columns pointers/indices
     Integer_Type j1 = 0;
     Integer_Type j2 = 0;
@@ -706,8 +714,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     }
     allocate_local_reg(k);
 
-    if(!Env::rank)
-        printf("nnzcols=%d nnzcols_regulars=%d nnzcols_regulars_local=%d\n", nnzcols, nnzcols_regulars, nnzcols_regulars_local);
+    //if(Env::rank == 0 or Env::rank == 1)
+    //    printf("rank=%d, nnzcols=%d nnzcols_regulars=%d nnzcols_regulars_local=%d\n", Env::rank, nnzcols, nnzcols_regulars, nnzcols_regulars_local);
     
     j1 = 0;
     j2 = 0;        
@@ -734,9 +742,11 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             j2++;
     }    
     // Moving source rows to the end of indices
-    uint32_t m = 0;
-    uint32_t n = 0;
-    std::vector<uint32_t> r;
+    //Integer_Type l = 0;
+    uint32_t s = 0;
+    Integer_Type m = 0;
+    Integer_Type n = 0;
+    std::vector<Integer_Type> r;
     for(j = 0; j < nnzcols; j++) {
         for(i = JA[j]; i < JA[j + 1]; i++) {
             if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
@@ -746,9 +756,11 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         }
         if(m > 0) {
             n = r.size();
+            s += n;
+            //printf("m=%d n=%d\n", m, n);
             if(m > n) {
-                for(uint32_t p = 0; p < n; p++) {
-                    for(uint32_t q = JA[j+1] - 1; q >= JA[j]; q--) {
+                for(Integer_Type p = 0; p < n; p++) {
+                    for(Integer_Type q = JA[j+1] - 1; q >= JA[j]; q--) {
                         if(nnzrows_sources_bitvector[IR[IA[q]]] != 1) {
                             #ifdef HAS_WEIGHT
                             std::swap(A[r[p]], A[q]);
@@ -769,8 +781,9 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             r.shrink_to_fit();
         }
     }
-    
-    if(Env::rank == 0) {
+    //printf("%d %d\n", Env::rank, s);
+    /*
+    if(Env::rank == 1) {
         for(uint32_t j = 0; j < nnzcols; j++) {
             printf("j=%d/%d\n", j, JC[j]);
             for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -778,7 +791,9 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             }
         }
     }
-    
+    */
+    //Env::barrier();
+    //Env::exit(0);
     // NNZ columns pointers without source rows (1st iteration)
     l = 0;   
     m = 0;
