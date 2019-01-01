@@ -16,36 +16,39 @@
  
 enum Compression_type
 {
-  _CSC_, // Compressed Sparse Col
- _DCSC_, // Compressed Sparse Col
- _TCSC_, // Compressed Sparse Col
+   _CSC_, // Compressed Sparse Col
+  _DCSC_, // Compressed Sparse Col
+  _TCSC_, // Compressed Sparse Col
  _TCSC1_, // Compressed Sparse Col
 };
 
 template<typename Weight, typename Integer_Type>
 struct Compressed_column {
     public:
-        //Compressed_column() {}
         virtual ~Compressed_column() {}
         virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
                               const Integer_Type tile_height,
                               const Integer_Type tile_width){};
         virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                              const std::vector<char>& nnzcols_bitvector,
-                              const std::vector<Integer_Type>& nnzcols_indices, 
                               const Integer_Type tile_height, 
-                              const Integer_Type tile_width){};
-        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                              const std::vector<char>& nnzcols_bitvector,
-                              const std::vector<Integer_Type>& nnzcols_indices, 
-                              const std::vector<Integer_Type>& nnzcols_regulars_indices,   
-                              const std::vector<char>& nnzcols_regulars_bitvector,
-                              const std::vector<char>& nnzcols_sinks_bitvector,
-                              const std::vector<char>& nnzrows_bitvector,
+                              const Integer_Type tile_width,
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices){};
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+                              const Integer_Type tile_height, 
+                              const Integer_Type tile_width,                
+                              const std::vector<char>&         nnzrows_bitvector,
                               const std::vector<Integer_Type>& nnzrows_indices, 
-                              const std::vector<char>& nnzrows_sources_bitvector,
-                              const Integer_Type tile_height, 
-                              const Integer_Type tile_width){};
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices, 
+                              const std::vector<Integer_Type>& regular_rows_indices,
+                              const std::vector<char>&         regular_rows_bitvector,
+                              const std::vector<Integer_Type>& source_rows_indices,
+                              const std::vector<char>&         source_rows_bitvector,
+                              const std::vector<Integer_Type>& regular_columns_indices,
+                              const std::vector<char>&         regular_columns_bitvector,
+                              const std::vector<Integer_Type>& sink_columns_indices,
+                              const std::vector<char>&         sink_columns_bitvector){};
 };
 
 
@@ -143,11 +146,11 @@ struct DCSC_BASE : public Compressed_column<Weight, Integer_Type> {
     public:
         DCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_);
         ~DCSC_BASE();
-        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
-                              const std::vector<char>& nnzcols_bitvector,
-                              const std::vector<Integer_Type>& nnzcols_indices, 
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
                               const Integer_Type tile_height, 
-                              const Integer_Type tile_width);
+                              const Integer_Type tile_width,
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices);
         uint64_t nnz;
         Integer_Type nnzcols;
         #ifdef HAS_WEIGHT
@@ -216,25 +219,17 @@ DCSC_BASE<Weight, Integer_Type>::~DCSC_BASE() {
 
 template<typename Weight, typename Integer_Type>
 void DCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                                               const std::vector<char>& nnzcols_bitvector,
-                                               const std::vector<Integer_Type>& nnzcols_indices, 
                                                const Integer_Type tile_height, 
-                                               const Integer_Type tile_width) {
+                                               const Integer_Type tile_width,
+                                               const std::vector<char>&         nnzcols_bitvector,
+                                               const std::vector<Integer_Type>& nnzcols_indices) {
     struct Triple<Weight, Integer_Type> pair;
     uint32_t i = 0; // Row Index
     uint32_t j = 1; // Col index
     JA[0] = 0;
-    
-    //while(!nnzcols_bitvector[i])
-        //i++;
-    //JC[0] = i;
-    //i = 0;
-    //printf("0===%d\n", JC[0]);
     for (auto& triple : *triples) {
         pair  = {(triple.row % tile_height), (triple.col % tile_width)};
-        //while(JC[j - 1] != pair.col) {
-        while((j - 1) != nnzcols_indices[pair.col]) {    
-            //JC[j] = pair.col;
+        while((j - 1) != nnzcols_indices[pair.col]) {
             j++;
             JA[j] = JA[j - 1];
         }            
@@ -249,18 +244,12 @@ void DCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         j++;
         JA[j] = JA[j - 1];
     }
-    // Populate JC array
+    // Column indices
     Integer_Type k = 0;
     for(j = 0; j < tile_width; j++) {
         if(nnzcols_bitvector[j]) {
             JC[k] = j;
             k++;
-        }
-    }
-    // Refine JC array indices
-    for(j = 1; j < nnzcols + 1; j++) {
-        if(JA[j - 1] == JA[j]) {
-            JC[j] = JC[j-1];
         }
     }
 }
@@ -271,17 +260,22 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
     public:
         TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_, Integer_Type nnzrows_);
         ~TCSC_BASE();
-        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                              const std::vector<char>& nnzcols_bitvector,
-                              const std::vector<Integer_Type>& nnzcols_indices, 
-                              const std::vector<Integer_Type>& nnzcols_regulars_indices,
-                              const std::vector<char>& nnzcols_regulars_bitvector,
-                              const std::vector<char>& nnzcols_sinks_bitvector,                              
-                              const std::vector<char>& nnzrows_bitvector,
-                              const std::vector<Integer_Type>& nnzrows_indices, 
-                              const std::vector<char>& nnzrows_sources_bitvector,
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                               const Integer_Type tile_height, 
-                              const Integer_Type tile_width);
+                              const Integer_Type tile_width,                
+                              const std::vector<char>&         nnzrows_bitvector,
+                              const std::vector<Integer_Type>& nnzrows_indices, 
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices, 
+                              const std::vector<Integer_Type>& regular_rows_indices,
+                              const std::vector<char>&         regular_rows_bitvector,
+                              const std::vector<Integer_Type>& source_rows_indices,
+                              const std::vector<char>&         source_rows_bitvector,
+                              const std::vector<Integer_Type>& regular_columns_indices,
+                              const std::vector<char>&         regular_columns_bitvector,
+                              const std::vector<Integer_Type>& sink_columns_indices,
+                              const std::vector<char>&         sink_columns_bitvector);
+                              
         void allocate_local_reg(Integer_Type nnzcols_regulars_local_);
         void allocate_local_src(Integer_Type nnzcols_sources_local_);
         void allocate_local_src_reg(Integer_Type nnzcols_sources_regulars_local_);
@@ -303,6 +297,13 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JA; // COL_PTR
         Integer_Type* JC; // COL_IDX
         Integer_Type* IR; // ROW_PTR
+        Integer_Type  NC_REG_R_REG_C;
+        Integer_Type* JC_REG_R_REG_C;
+        Integer_Type* JA_REG_R_REG_C;
+        Integer_Type  NC_REG_R_SNK_C;
+        Integer_Type* JC_REG_R_SNK_C;
+        Integer_Type* JA_REG_R_SNK_C;
+        
         Integer_Type* JA_REG_C;  // COL_PTR_REG_COL
         Integer_Type* JC_REG_C;  // COL_IDX_REG_COL
         Integer_Type* JA_REG_R;  // COL_PTR_REG_ROW
@@ -370,13 +371,13 @@ TCSC_BASE<Weight, Integer_Type>::TCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_,
     }
     memset(JC_REG_C, 0, nnzcols_regulars * sizeof(Integer_Type));
     */
-    
+    /*
     if((JA_REG_R = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
     }
     memset(JA_REG_R, 0, (nnzcols * 2) * sizeof(Integer_Type));
-    
+    */
 
     
     /*
@@ -417,17 +418,19 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
             fprintf(stderr, "Error unmapping memory\n");
             exit(1);
         }
-    }
-    
-    if(munmap(IR, nnzrows * sizeof(Integer_Type)) == -1) {
+        
+        if(munmap(IR, nnzrows * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
+        }
     }
-    
+   
+    /*
     if(munmap(JA_REG_C, (nnzcols_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
+    */
     
     if(munmap(JC_REG_C, nnzcols_regulars_local * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
@@ -624,7 +627,24 @@ void TCSC_BASE<Weight, Integer_Type>::allocate_local_src_snk(Integer_Type nnzcol
 }
 
 template<typename Weight, typename Integer_Type>
-void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
+void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+                                               const Integer_Type tile_height, 
+                                               const Integer_Type tile_width,                
+                                               const std::vector<char>&         nnzrows_bitvector,
+                                               const std::vector<Integer_Type>& nnzrows_indices, 
+                                               const std::vector<char>&         nnzcols_bitvector,
+                                               const std::vector<Integer_Type>& nnzcols_indices, 
+                                               const std::vector<Integer_Type>& regular_rows_indices,
+                                               const std::vector<char>&         regular_rows_bitvector,
+                                               const std::vector<Integer_Type>& source_rows_indices,
+                                               const std::vector<char>&         source_rows_bitvector,
+                                               const std::vector<Integer_Type>& regular_columns_indices,
+                                               const std::vector<char>&         regular_columns_bitvector,
+                                               const std::vector<Integer_Type>& sink_columns_indices,
+                                               const std::vector<char>&         sink_columns_bitvector) {
+
+/*
+populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
                                                const std::vector<char>& nnzcols_bitvector,
                                                const std::vector<Integer_Type>& nnzcols_indices, 
                                                const std::vector<Integer_Type>& nnzcols_regulars_indices,
@@ -635,9 +655,10 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                                                const std::vector<char>& nnzrows_sources_bitvector,
                                                const Integer_Type tile_height, 
                                                const Integer_Type tile_width) {
+*/                                                   
     struct Triple<Weight, Integer_Type> pair;
-    uint32_t i = 0; // Row Index
-    uint32_t j = 1; // Col index
+    Integer_Type i = 0; // Row Index
+    Integer_Type j = 1; // Col index
     JA[0] = 0;
     for (auto& triple : *triples) {
         pair  = {(triple.row % tile_height), (triple.col % tile_width)};
@@ -656,22 +677,22 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         j++;
         JA[j] = JA[j - 1];
     }
-    // Populate JC array
+    // Column indices
     Integer_Type k = 0;
     for(j = 0; j < tile_height; j++) {
         if(nnzcols_bitvector[j]) {
             JC[k] = j;
             k++;
         }
-        
     }
-    
+    /*
     // Refine JC array indices
     for(j = 1; j < nnzcols + 1; j++) {
         if(JA[j - 1] == JA[j]) {
             JC[j] = JC[j-1];
         }
     }
+    */
     
     // Rows indices
     k = 0;
@@ -682,6 +703,27 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             k++;
         }
     }
+    
+    
+        /*
+        Integer_Type  NC_REG_R_REG_C;
+        Integer_Type* JC_REG_R_REG_C;
+        Integer_Type* JA_REG_R_REG_C;
+        Integer_Type  NC_REG_R_SNK_C;
+        Integer_Type* JC_REG_R_SNK_C;
+        Integer_Type* JA_REG_R_SNK_C;
+        */
+    
+    
+    if((JA_REG_R = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        fprintf(stderr, "Error mapping memory\n");
+        exit(1);
+    }
+    memset(JA_REG_R, 0, (nnzcols * 2) * sizeof(Integer_Type));
+    
+    
+    
+    
     /*
     if(!Env::rank) {
         for(int i = 0; i < nnzrows; i++) {
@@ -748,7 +790,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             j2++;
     }    
     */
-    // Moving source rows to the end of indices
+    // Moving source rows to the end
     Integer_Type l = 0;
     uint32_t s = 0;
     Integer_Type m = 0;
@@ -756,7 +798,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
     std::vector<Integer_Type> r;
     for(j = 0; j < nnzcols; j++) {
         for(i = JA[j]; i < JA[j + 1]; i++) {
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
+            if(source_rows_bitvector[IR[IA[i]]] == 1) {
                 m = (JA[j+1] - JA[j]);
                 r.push_back(i);
             }
@@ -764,11 +806,10 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         if(m > 0) {
             n = r.size();
             s += n;
-            //printf("m=%d n=%d\n", m, n);
             if(m > n) {
                 for(Integer_Type p = 0; p < n; p++) {
                     for(Integer_Type q = JA[j+1] - 1; q >= JA[j]; q--) {
-                        if(nnzrows_sources_bitvector[IR[IA[q]]] != 1) {
+                        if(source_rows_bitvector[IR[IA[q]]] != 1) {
                             #ifdef HAS_WEIGHT
                             std::swap(A[r[p]], A[q]);
                             #endif
@@ -813,7 +854,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         for(i = JA[j]; i < JA[j + 1]; i++) {
             //if(!Env::rank)
               //  printf("   %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
+            if(source_rows_bitvector[IR[IA[i]]] == 1) {
                 m = (JA[j+1] - JA[j]);
                 r.push_back(i);
             }   
