@@ -298,11 +298,15 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JC; // COL_IDX
         Integer_Type* IR; // ROW_PTR
         Integer_Type  NC_REG_R_REG_C;
-        Integer_Type* JC_REG_R_REG_C;
         Integer_Type* JA_REG_R_REG_C;
+        Integer_Type* JC_REG_R_REG_C;
         Integer_Type  NC_REG_R_SNK_C;
-        Integer_Type* JC_REG_R_SNK_C;
         Integer_Type* JA_REG_R_SNK_C;
+        Integer_Type* JC_REG_R_SNK_C;
+        Integer_Type  NC_SRC_R_REG_C;
+        Integer_Type* JA_SRC_R_REG_C;
+        Integer_Type* JC_SRC_R_REG_C;
+
         
         Integer_Type* JA_REG_C;  // COL_PTR_REG_COL
         Integer_Type* JC_REG_C;  // COL_IDX_REG_COL
@@ -313,7 +317,7 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JA_SRC_RC; // COL_PTR_REG_COL_SRC_ROW
         Integer_Type* J_SRC_RC;  // COL_IDX_REG_COL_SRC_ROW
         Integer_Type* JC_NNZ_REG_C;  // COL_IDX_NNZ_REG_COL
-        Integer_Type* JA_REG_R_SNK_C;
+        //Integer_Type* JA_REG_R_SNK_C;
         Integer_Type* J_REG_SNK_C;
         Integer_Type* JA_SRC_R_SNK_C;
         Integer_Type* J_SRC_SNK_C;
@@ -685,36 +689,279 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
             k++;
         }
     }
-    /*
-    // Refine JC array indices
-    for(j = 1; j < nnzcols + 1; j++) {
-        if(JA[j - 1] == JA[j]) {
-            JC[j] = JC[j-1];
-        }
-    }
-    */
-    
+    assert(nnzcols == k);
     // Rows indices
     k = 0;
     for(i = 0; i < tile_height; i++) {
         if(nnzrows_bitvector[i]) {
-            //IR[k] = nnzrows_indices[i];
             IR[k] = i;
             k++;
         }
     }
+    assert(nnzrows == k);
+    // Moving source rows to the end
+    Integer_Type l = 0;
+    Integer_Type m = 0;
+    Integer_Type n = 0;
+    Integer_Type o = 0;
+    std::vector<Integer_Type> r;
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                m = (JA[j+1] - JA[j]);
+                r.push_back(i);
+            }
+        }
+        if(m > 0) {
+            n = r.size();
+            if(m > n) {
+                for(Integer_Type p = 0; p < n; p++) {
+                    for(Integer_Type q = JA[j+1] - 1; q >= JA[j]; q--) {
+                        if(source_rows_bitvector[IR[IA[q]]] != 1) {
+                            #ifdef HAS_WEIGHT
+                            std::swap(A[r[p]], A[q]);
+                            #endif
+                            std::swap(IA[r[p]], IA[q]);
+                            break;
+                        }
+                        else {
+                            if(r[p] == q)
+                                break;
+                        }
+                    }
+                }
+            }
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+        }
+    }
+    
+    /*
+    if(Env::rank == 0) {
+        for(uint32_t j = 0; j < nnzcols; j++) {
+            printf("j=%d/%d\n", j, JC[j]);
+            for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+            printf("   IA[%d]=%d/%d\n", i, IA[i], source_rows_bitvector[IR[IA[i]]]);
+            }
+        }
+    }
+    */
+    /* 
+       First iteration:
+       Regular rows to regular columns
+       Regular rows to sink columns
+    */
+    NC_REG_R_REG_C = regular_columns_indices.size();
+    if(NC_REG_R_REG_C) {
+        if((JA_REG_R_REG_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_REG_R_REG_C, 0, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type));
+        
+        if((JC_REG_R_REG_C = (Integer_Type*) mmap(nullptr, NC_REG_R_REG_C * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JC_REG_R_REG_C, 0, NC_REG_R_REG_C * sizeof(Integer_Type));
+    }
+
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit();     
+    if(NC_REG_R_REG_C) {
+        for(j = 0; j < NC_REG_R_REG_C; j++) 
+            JC_REG_R_REG_C[j] = regular_columns_indices[j];
+        
+        for(j = 0; j < nnzcols; j++) {
+            if(JC_REG_R_REG_C[k] == JC[j]) {
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        m = (JA[j+1] - JA[j]);
+                        r.push_back(i);
+                    }   
+                }
+                if(m > 0) {
+                    n = r.size();
+                    JA_REG_R_REG_C[l] = JA[j];
+                    JA_REG_R_REG_C[l + 1] = JA[j + 1] - n;            
+                    l += 2; 
+                    m = 0;
+                    n = 0;
+                    r.clear();
+                    r.shrink_to_fit();
+                }
+                else {
+                    JA_REG_R_REG_C[l] = JA[j];
+                    JA_REG_R_REG_C[l + 1] = JA[j + 1];
+                    l += 2;  
+                }
+                JC_REG_R_REG_C[k] = j;
+                k++;
+            }
+        }
+    }
+    //if(!Env::rank)
+    //    printf("%d %d\n", k, l);
+        
+    
+    NC_REG_R_SNK_C = sink_columns_indices.size();
+    if(NC_REG_R_SNK_C) {
+        if((JA_REG_R_SNK_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_SNK_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_REG_R_SNK_C, 0, (NC_REG_R_SNK_C * 2) * sizeof(Integer_Type));
+        
+        if((JC_REG_R_SNK_C = (Integer_Type*) mmap(nullptr, NC_REG_R_SNK_C * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JC_REG_R_SNK_C, 0, NC_REG_R_SNK_C * sizeof(Integer_Type));
+    }
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit(); 
+    if(NC_REG_R_SNK_C) {
+        for(j = 0; j < NC_REG_R_SNK_C; j++)
+            JC_REG_R_SNK_C[j] = sink_columns_indices[j];
+        
+        for(j = 0; j < nnzcols; j++) {
+            if(JC_REG_R_SNK_C[k] == JC[j]) {
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        m = (JA[j+1] - JA[j]);
+                        r.push_back(i);
+                    }   
+                }
+                if(m > 0) {
+                    n = r.size();
+                    JA_REG_R_SNK_C[l] = JA[j];
+                    JA_REG_R_SNK_C[l + 1] = JA[j + 1] - n;            
+                    l += 2; 
+                    m = 0;
+                    n = 0;
+                    r.clear();
+                    r.shrink_to_fit();
+                }
+                else {
+                    JA_REG_R_SNK_C[l] = JA[j];
+                    JA_REG_R_SNK_C[l + 1] = JA[j + 1];
+                    l += 2;  
+                }
+                JC_REG_R_SNK_C[k] = j;
+                k++;
+            }
+        }
+    }
+    
+    assert(nnzcols == (NC_REG_R_REG_C + NC_REG_R_SNK_C));
+
+    k = 0;
+    l = 0;
+    if(regular_columns_indices.size()) {
+        for(j = 0; j < nnzcols; j++) {
+            if(regular_columns_indices[k] == JC[j]) {
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        l++;
+                        break;
+                    }
+                }
+                k++;
+            }
+        }
+        
+        /*
+        for(Integer_Type j: regular_columns_indices) {
+            for(i = JA[j]; i < JA[j + 1]; i++) {
+                if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        k++;
+                        break;
+                }
+            }
+        }
+        */
+    }
+    
+    
+    NC_SRC_R_REG_C = l;
+    printf("<%d %d %lu>\n", l, NC_SRC_R_REG_C, regular_columns_indices.size());
+    if(NC_SRC_R_REG_C) {
+        if((JA_SRC_R_REG_C = (Integer_Type*) mmap(nullptr, (NC_SRC_R_REG_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_SRC_R_REG_C, 0, (NC_SRC_R_REG_C * 2) * sizeof(Integer_Type));
+        
+        if((JC_SRC_R_REG_C = (Integer_Type*) mmap(nullptr, NC_SRC_R_REG_C * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JC_SRC_R_REG_C, 0, NC_SRC_R_REG_C * sizeof(Integer_Type));
+    }
+
+    if(NC_SRC_R_REG_C) {
+        k = 0;
+        l = 0;   
+        m = 0;
+        n = 0;
+        o = 0;
+        r.clear();
+        r.shrink_to_fit(); 
+        
+        for(j = 0; j < nnzcols; j++) {
+            if(regular_columns_indices[k] == JC[j]) {
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        m = (JA[j+1] - JA[j]);
+                        r.push_back(i);
+                    }   
+                }
+                if(m > 0) {
+                    n = r.size();
+                    JA_SRC_R_REG_C[l] = JA[j + 1] - n;
+                    JA_SRC_R_REG_C[l + 1] = JA[j + 1];            
+                    l += 2; 
+                    m = 0;
+                    n = 0;
+                    r.clear();
+                    r.shrink_to_fit();
+                    JC_SRC_R_REG_C[o] = j;
+                    o++;
+                }
+                k++;
+            }
+        }
+    }
+    //printf("<%d %lu %d %d>\n", k, regular_columns_indices.size(), o, NC_SRC_R_REG_C);
+    
+    
+              //  JA_SRC_RC[l] = JA[j + 1] - n;
+            //JA_SRC_RC[l + 1] = JA[j + 1];
     
     
         /*
-        Integer_Type  NC_REG_R_REG_C;
-        Integer_Type* JC_REG_R_REG_C;
-        Integer_Type* JA_REG_R_REG_C;
-        Integer_Type  NC_REG_R_SNK_C;
-        Integer_Type* JC_REG_R_SNK_C;
-        Integer_Type* JA_REG_R_SNK_C;
+        Integer_Type  NC_SRC_R_REG_C;
+        Integer_Type* JC_SRC_R_REG_C;
+        Integer_Type* JA_SRC_R_REG_C;
         */
     
     
+    
+    
+    if(!Env::rank) {
+        printf("%d %d %d\n", nnzcols, NC_REG_R_REG_C, NC_REG_R_SNK_C);
+    }
+
     if((JA_REG_R = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
@@ -725,11 +972,16 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
     
     
     /*
-    if(!Env::rank) {
-        for(int i = 0; i < nnzrows; i++) {
-            printf("%d ", IR[i]);
+    if(Env::rank == 0) {
+        for(uint32_t i = 0; i < regular_rows_indices.size(); i++) {
+            printf("%d ", regular_rows_indices[i]);
         }
-        printf(" %d, %d\n", k, nnzrows );
+        printf("[\n\n");
+        
+        for(uint32_t i = 0; i < regular_columns_indices.size(); i++) {
+            printf("%d ", regular_columns_indices[i]);
+        }
+        printf("]\n\n");
         
     }
     */
@@ -790,45 +1042,7 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
             j2++;
     }    
     */
-    // Moving source rows to the end
-    Integer_Type l = 0;
-    uint32_t s = 0;
-    Integer_Type m = 0;
-    Integer_Type n = 0;
-    std::vector<Integer_Type> r;
-    for(j = 0; j < nnzcols; j++) {
-        for(i = JA[j]; i < JA[j + 1]; i++) {
-            if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                m = (JA[j+1] - JA[j]);
-                r.push_back(i);
-            }
-        }
-        if(m > 0) {
-            n = r.size();
-            s += n;
-            if(m > n) {
-                for(Integer_Type p = 0; p < n; p++) {
-                    for(Integer_Type q = JA[j+1] - 1; q >= JA[j]; q--) {
-                        if(source_rows_bitvector[IR[IA[q]]] != 1) {
-                            #ifdef HAS_WEIGHT
-                            std::swap(A[r[p]], A[q]);
-                            #endif
-                            std::swap(IA[r[p]], IA[q]);
-                            break;
-                        }
-                        else {
-                            if(r[p] == q)
-                                break;
-                        }
-                    }
-                }
-            }
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-    }
+
     //printf("%d %d\n", Env::rank, s);
     /*
     if(Env::rank == 1) {
