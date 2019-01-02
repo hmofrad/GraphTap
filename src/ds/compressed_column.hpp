@@ -435,7 +435,7 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
     }
     */
-    
+    /*
     if(munmap(JC_REG_C, nnzcols_regulars_local * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
@@ -462,7 +462,7 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
-    
+    */
     /*
     if(munmap(JA_SRC_RC, (nnzcols_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
@@ -474,7 +474,7 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
     }
     */
-    
+    /*
     if(nnzcols_sources_regulars_local > 0) {
         if(munmap(JA_SRC_RC, (nnzcols_sources_regulars_local * 2) * sizeof(Integer_Type)) == -1) {
             fprintf(stderr, "Error unmapping memory\n");
@@ -514,6 +514,43 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
     if(munmap(JC_NNZ_REG_C, nnzcols_regulars_local * sizeof(Integer_Type)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
+    }
+    */
+    
+    if(NC_REG_R_REG_C) {
+        if(munmap(JA_REG_R_REG_C, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JC_REG_R_REG_C, NC_REG_R_REG_C * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+    }
+    
+    if(NC_REG_R_SNK_C) {
+        if(munmap(JA_REG_R_SNK_C, (NC_REG_R_SNK_C * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JC_REG_R_SNK_C, NC_REG_R_SNK_C * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+    }
+
+    if(NC_SRC_R_REG_C) {
+        if(munmap(JA_SRC_R_REG_C, (NC_SRC_R_REG_C * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JC_SRC_R_REG_C, NC_SRC_R_REG_C * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
     }
 }
 
@@ -646,20 +683,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                                                const std::vector<char>&         regular_columns_bitvector,
                                                const std::vector<Integer_Type>& sink_columns_indices,
                                                const std::vector<char>&         sink_columns_bitvector) {
-
-/*
-populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples, 
-                                               const std::vector<char>& nnzcols_bitvector,
-                                               const std::vector<Integer_Type>& nnzcols_indices, 
-                                               const std::vector<Integer_Type>& nnzcols_regulars_indices,
-                                               const std::vector<char>& nnzcols_regulars_bitvector,
-                                               const std::vector<char>& nnzcols_sinks_bitvector,
-                                               const std::vector<char>& nnzrows_bitvector,
-                                               const std::vector<Integer_Type>& nnzrows_indices, 
-                                               const std::vector<char>& nnzrows_sources_bitvector,
-                                               const Integer_Type tile_height, 
-                                               const Integer_Type tile_width) {
-*/                                                   
     struct Triple<Weight, Integer_Type> pair;
     Integer_Type i = 0; // Row Index
     Integer_Type j = 1; // Col index
@@ -690,6 +713,24 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
         }
     }
     assert(nnzcols == k);
+    
+    Integer_Type nnzcols_local = 0;
+    std::vector<Integer_Type> JC_LOCAL_VAL;
+    std::vector<Integer_Type> JC_LOCAL_IDX;
+    for(j = 0; j < nnzcols; j++) {	
+        if(JA[j] != JA[j + 1]) {
+            JC_LOCAL_VAL.push_back(JC[j]);		
+            JC_LOCAL_IDX.push_back(j);	
+            nnzcols_local++;            
+        }
+    }
+    /*
+    // Refine JC array indices	
+    for(j = 1; j < nnzcols + 1; j++) {	
+        if(JA[j - 1] == JA[j])	
+            JC[j] = JC[j-1];		
+    }
+    */
     // Rows indices
     k = 0;
     for(i = 0; i < tile_height; i++) {
@@ -737,23 +778,62 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
             r.shrink_to_fit();
         }
     }
-    
+
+    // Regular rows to regular columns
     /*
-    if(Env::rank == 0) {
-        for(uint32_t j = 0; j < nnzcols; j++) {
-            printf("j=%d/%d\n", j, JC[j]);
-            for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-            printf("   IA[%d]=%d/%d\n", i, IA[i], source_rows_bitvector[IR[IA[i]]]);
+    k = 0;
+    l = 0;
+    if(regular_columns_indices.size()) {
+        for(j = 0; j < nnzcols; j++) {
+            if(regular_columns_indices[k] == JC[j]) {
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        l++;
+                        break;
+                    }
+                }
+                k++;
             }
         }
     }
     */
-    /* 
-       First iteration:
-       Regular rows to regular columns
-       Regular rows to sink columns
-    */
-    NC_REG_R_REG_C = regular_columns_indices.size();
+    
+    
+    Integer_Type j1 = 0;
+    Integer_Type j2 = 0;
+    
+    k = 0;
+    l = 0;
+    m = 0;
+    if(regular_columns_indices.size()) {
+        while((j1 < nnzcols_local) and (j2 < regular_columns_indices.size())) {
+            if(JC_LOCAL_VAL[j1] == regular_columns_indices[j2]) {
+                j = JC_LOCAL_IDX[j1];
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1)
+                        k++;
+                }
+                if(k) {
+                    m = JA[j + 1] - JA[j];
+                    if(m == k)
+                        l--;
+                    k = 0;
+                    m = 0;
+                }
+                l++;
+                j1++;
+                j2++;
+            }
+            else if (JC_LOCAL_VAL[j1] < regular_columns_indices[j2])
+                j1++;
+            else
+                j2++;
+        }
+    }
+    printf("%d %d %lu %d\n", nnzcols, nnzcols_local, regular_columns_indices.size(), l);
+    
+    NC_REG_R_REG_C = l;
+    //NC_REG_R_REG_C = regular_columns_indices.size();
     if(NC_REG_R_REG_C) {
         if((JA_REG_R_REG_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
             fprintf(stderr, "Error mapping memory\n");
@@ -775,9 +855,13 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
     r.clear();
     r.shrink_to_fit();     
     if(NC_REG_R_REG_C) {
+        
+        
+        
+        
+        /*
         for(j = 0; j < NC_REG_R_REG_C; j++) 
             JC_REG_R_REG_C[j] = regular_columns_indices[j];
-        
         for(j = 0; j < nnzcols; j++) {
             if(JC_REG_R_REG_C[k] == JC[j]) {
                 for(i = JA[j]; i < JA[j + 1]; i++) {
@@ -805,11 +889,13 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                 k++;
             }
         }
+        */
     }
-    //if(!Env::rank)
-    //    printf("%d %d\n", k, l);
-        
     
+    Env::barrier();
+    Env::exit(0);
+        
+    // Regular rows to sink columns
     NC_REG_R_SNK_C = sink_columns_indices.size();
     if(NC_REG_R_SNK_C) {
         if((JA_REG_R_SNK_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_SNK_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
@@ -864,10 +950,34 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
     }
     
     assert(nnzcols == (NC_REG_R_REG_C + NC_REG_R_SNK_C));
-
+    // Source rows to regular columns
+    j = 0;
+    j1 = 0;
+    j2 = 0;
     k = 0;
-    l = 0;
+    //l = 0;
+
     if(regular_columns_indices.size()) {
+        while((j1 < nnzcols_local) and (j2 < regular_columns_indices.size())) {
+            if(JC_LOCAL_VAL[j1] == regular_columns_indices[j2]) {
+                j = JC_LOCAL_IDX[j1];
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        k++;
+                        break;
+                    }
+                }
+                //k++;
+                j1++;
+                j2++;
+            }
+            else if (JC_LOCAL_VAL[j1] < regular_columns_indices[j2])
+                j1++;
+            else
+                j2++;
+        }
+
+        /*
         for(j = 0; j < nnzcols; j++) {
             if(regular_columns_indices[k] == JC[j]) {
                 for(i = JA[j]; i < JA[j + 1]; i++) {
@@ -879,22 +989,12 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                 k++;
             }
         }
-        
-        /*
-        for(Integer_Type j: regular_columns_indices) {
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                        k++;
-                        break;
-                }
-            }
-        }
         */
     }
+    //printf("k=%d l=%d %lu\n", k, l, nnzcols_local, regular_columns_indices.size());
     
     
-    NC_SRC_R_REG_C = l;
-    printf("<%d %d %lu>\n", l, NC_SRC_R_REG_C, regular_columns_indices.size());
+    NC_SRC_R_REG_C = k;
     if(NC_SRC_R_REG_C) {
         if((JA_SRC_R_REG_C = (Integer_Type*) mmap(nullptr, (NC_SRC_R_REG_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
             fprintf(stderr, "Error mapping memory\n");
@@ -909,15 +1009,49 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
         memset(JC_SRC_R_REG_C, 0, NC_SRC_R_REG_C * sizeof(Integer_Type));
     }
 
+    j1 = 0;
+    j2 = 0;
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    o = 0;
+    r.clear();
+    r.shrink_to_fit(); 
     if(NC_SRC_R_REG_C) {
-        k = 0;
-        l = 0;   
-        m = 0;
-        n = 0;
-        o = 0;
-        r.clear();
-        r.shrink_to_fit(); 
+        while((j1 < nnzcols_local) and (j2 < regular_columns_indices.size())) {
+            if(JC_LOCAL_VAL[j1] == regular_columns_indices[j2]) {
+                j = JC_LOCAL_IDX[j1];
+                for(i = JA[j]; i < JA[j + 1]; i++) {
+                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                        m = (JA[j+1] - JA[j]);
+                        r.push_back(i);
+                    }   
+                }
+                if(m > 0) {
+                    n = r.size();
+                    JA_SRC_R_REG_C[l] = JA[j + 1] - n;
+                    JA_SRC_R_REG_C[l + 1] = JA[j + 1];            
+                    l += 2; 
+                    m = 0;
+                    n = 0;
+                    r.clear();
+                    r.shrink_to_fit();
+                    JC_SRC_R_REG_C[o] = j;
+                    o++;
+                }
+                k++;
+                j1++;
+                j2++;
+            }
+            else if (JC_LOCAL_VAL[j1] < regular_columns_indices[j2])
+                j1++;
+            else
+                j2++;
+            
+        }
         
+        /*
         for(j = 0; j < nnzcols; j++) {
             if(regular_columns_indices[k] == JC[j]) {
                 for(i = JA[j]; i < JA[j + 1]; i++) {
@@ -941,473 +1075,7 @@ populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                 k++;
             }
         }
-    }
-    //printf("<%d %lu %d %d>\n", k, regular_columns_indices.size(), o, NC_SRC_R_REG_C);
-    
-    
-              //  JA_SRC_RC[l] = JA[j + 1] - n;
-            //JA_SRC_RC[l + 1] = JA[j + 1];
-    
-    
-        /*
-        Integer_Type  NC_SRC_R_REG_C;
-        Integer_Type* JC_SRC_R_REG_C;
-        Integer_Type* JA_SRC_R_REG_C;
         */
-    
-    
-    
-    
-    if(!Env::rank) {
-        printf("%d %d %d\n", nnzcols, NC_REG_R_REG_C, NC_REG_R_SNK_C);
-    }
-
-    if((JA_REG_R = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(JA_REG_R, 0, (nnzcols * 2) * sizeof(Integer_Type));
-    
-    
-    
-    
-    /*
-    if(Env::rank == 0) {
-        for(uint32_t i = 0; i < regular_rows_indices.size(); i++) {
-            printf("%d ", regular_rows_indices[i]);
-        }
-        printf("[\n\n");
-        
-        for(uint32_t i = 0; i < regular_columns_indices.size(); i++) {
-            printf("%d ", regular_columns_indices[i]);
-        }
-        printf("]\n\n");
-        
-    }
-    */
-    
-    /*
-    if(!Env::rank) {
-        for(j = 0; j < nnzcols; j++) {
-            printf("%d:%d\n", j, JC[j]);
-            for(i = JA[j]; i < JA[j+1]; i++) {
-                printf("   %d %d\n", i, IA[i]);
-            }
-        }
-    }
-    */ 
-    /*
-    // Regular columns pointers/indices
-    Integer_Type j1 = 0;
-    Integer_Type j2 = 0;
-    k = 0;
-    while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
-        if(JC[j1] == nnzcols_regulars_indices[j2]) {
-                k++;
-                j1++;
-                j2++;
-        }
-        else if (JC[j1] < nnzcols_regulars_indices[j2])
-            j1++;
-        else
-            j2++;
-    }
-    allocate_local_reg(k);
-
-    if(Env::rank == 2 or Env::rank == 3)
-        printf("rank=%d, nnzcols=%d nnzcols_regulars=%d nnzcols_regulars_local=%d\n", Env::rank, nnzcols, nnzcols_regulars, nnzcols_regulars_local);
-    
-    j1 = 0;
-    j2 = 0;        
-    k = 0;
-    Integer_Type l = 0;
-    while((j1 < nnzcols) and (j2 < nnzcols_regulars)) {
-        if(JC[j1] == nnzcols_regulars_indices[j2]) {
-            JC_REG_C[k] = JC[j1];
-            JC_NNZ_REG_C[k] = j1;
-            k++;
-            JA_REG_C[l] = JA[j1];
-            JA_REG_C[l + 1] = JA[j1 + 1];
-            l += 2;
-            //if(!Env::rank)
-            //    printf("JC[%d]=%d, REG[%d]=%d JA_REG_C=%d,%d\n", j1, JC[j1], j2, nnzcols_regulars_indices[j2], JA_REG_C[l-2], JA_REG_C[l-1]);
-            j1++;
-            j2++;
-
-
-        }
-        else if (JC[j1] < nnzcols_regulars_indices[j2])
-            j1++;
-        else
-            j2++;
-    }    
-    */
-
-    //printf("%d %d\n", Env::rank, s);
-    /*
-    if(Env::rank == 1) {
-        for(uint32_t j = 0; j < nnzcols; j++) {
-            printf("j=%d/%d\n", j, JC[j]);
-            for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-            printf("   IA[%d]=%d/%d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            }
-        }
-    }
-    */
-    //Env::barrier();
-    //Env::exit(0);
-    // NNZ columns pointers without source rows (1st iteration)
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    for(j = 0; j < nnzcols; j++) {
-        //if(!Env::rank)
-          //  printf("%d/%d:\n", j, JC[j]);
-        for(i = JA[j]; i < JA[j + 1]; i++) {
-            //if(!Env::rank)
-              //  printf("   %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                m = (JA[j+1] - JA[j]);
-                r.push_back(i);
-            }   
-        }
-        if(m > 0) {
-            n = r.size();
-            JA_REG_R[l] = JA[j];
-            JA_REG_R[l + 1] = JA[j + 1] - n;            
-            l += 2; 
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-        else {
-            JA_REG_R[l] = JA[j];
-            JA_REG_R[l + 1] = JA[j + 1];
-            l += 2;  
-        }
-    }
-    /*
-    // NNZ columns pointers for source rows (1st iteration)
-    k = 0;
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    for(j = 0; j < nnzcols; j++) {
-        for(i = JA[j]; i < JA[j + 1]; i++) {
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                k++;
-                break;
-            }   
-        }
-    }
-    allocate_local_src(k);
-    k = 0;
-    for(j = 0; j < nnzcols; j++) {
-        for(i = JA[j]; i < JA[j + 1]; i++) {
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                m = (JA[j+1] - JA[j]);
-                r.push_back(i);
-            }   
-        }
-        if(m > 0) {
-            n = r.size();
-            JA_SRC_R[l] = JA[j + 1] - n;
-            JA_SRC_R[l + 1] = JA[j + 1]; 
-            l += 2; 
-            J_SRC_C[k] = j;
-            k++;
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-    }
-    //if(!Env::rank) {
-    //for(j = 0; j < nnzcols_sources_local * 2; j = j + 2)
-    //    printf("%d %d %d %d\n", j, J_SRC_C[j/2], JA_SRC_R[j], JA_SRC_R[j+1]);
-   // }
-    
-    
-    //if(!Env::rank) {
-       // printf("k=%d\n", k);
-    //}
-    
-    //Env::barrier();
-    //Env::exit(0);
-    
-    
-    // Regular columns pointers without source rows (2nd to last iteration)
-    l = 0;       
-    m = 0;
-    n = 0;
-    Integer_Type o = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-        for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                m = (JA_REG_C[k+1] - JA_REG_C[k]);
-                r.push_back(i);
-            }
-        }
-        if(m > 0) {
-            n = r.size();
-            JA_REG_RC[l] = JA_REG_C[k];
-            JA_REG_RC[l + 1] = JA_REG_C[k + 1] - n;   
-            l += 2; 
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-        else {
-            JA_REG_RC[l] = JA_REG_C[k];
-            JA_REG_RC[l + 1] = JA_REG_C[k + 1];
-            l += 2;  
-        }
-    }
-    // Regular columns pointers for source rows (Last iteration)
-    k = 0;
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    //if(!Env::rank) {
-    for(j = 0; j < nnzcols; j++) {
-        if(nnzcols_regulars_bitvector[JC[j]]) {            
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                    k++;
-                    break;
-                }   
-            }
-        }
-    }
-    allocate_local_src_reg(k);
-    k = 0;
-    for(j = 0; j < nnzcols; j++) {
-        if(nnzcols_regulars_bitvector[JC[j]]) {
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                    m = (JA[j+1] - JA[j]);
-                    r.push_back(i);
-                }   
-            }
-            if(m > 0) {
-            n = r.size();
-            JA_SRC_RC[l] = JA[j + 1] - n;
-            JA_SRC_RC[l + 1] = JA[j + 1]; 
-            l += 2; 
-            J_SRC_RC[k] = j;
-            k++;
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-            }
-        }
-    }
-    
-    // Sink columns pointers for regular rows (Last iteration)
-    k = 0;
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    
-    //for(j = 0; j < nnzcols; j++) {
-    //    if(nnzcols_sinks_bitvector[JC[j]]) {
-    //        k++;
-            
-            //printf("[%d %d %d %d]\n", j, JC[j], nnzcols_sinks_bitvector[JC[j]], JA[j + 1] - JA[j]);
-    //        for(i = JA[j]; i < JA[j + 1]; i++) {
-    //            if(not (nnzrows_sources_bitvector[IR[IA[i]]] == 1)) {
-    //                k++;    
-    //                break;
-    //            }   
-    //        }
-    //    }
-    //}
-    allocate_local_reg_snk(k);
-   // printf("Rank=%d/%d\n", Env::rank, k);
-    k = 0;
-    for(j = 0; j < nnzcols; j++) {
-        if(nnzcols_sinks_bitvector[JC[j]]) {
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                    m = (JA[j+1] - JA[j]);
-                    r.push_back(i);
-                }   
-            }
-            if(m > 0) {
-            n = r.size();
-            JA_REG_R_SNK_C[l] = JA[j];
-            JA_REG_R_SNK_C[l + 1] = JA[j + 1] - n;            
-            l += 2; 
-            J_REG_SNK_C[k] = j;
-            k++;
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-            }
-            else {
-                JA_REG_R_SNK_C[l] = JA[j];
-                JA_REG_R_SNK_C[l + 1] = JA[j + 1]; 
-                l += 2;    
-                J_REG_SNK_C[k] = j;
-                k++;                
-            }
-        }
-    }
-    
-    k = 0;
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    
-    for(j = 0; j < nnzcols; j++) {
-        if(nnzcols_sinks_bitvector[JC[j]]) {
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                    k++;    
-                    break;
-                }   
-            }
-        }
-    }
-    allocate_local_src_snk(k);
-    //printf("Rank=%d/%d\n", Env::rank, k);
-    k = 0;
-    for(j = 0; j < nnzcols; j++) {
-        if(nnzcols_sinks_bitvector[JC[j]]) {
-            for(i = JA[j]; i < JA[j + 1]; i++) {
-                if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                    m = (JA[j+1] - JA[j]);
-                    r.push_back(i);
-                }   
-            }
-            if(m > 0) {
-                n = r.size();
-                JA_SRC_R_SNK_C[l] = JA[j + 1] - n;
-                JA_SRC_R_SNK_C[l + 1] = JA[j + 1]; 
-                l += 2; 
-                J_SRC_SNK_C[k] = j;
-                k++;
-                m = 0;
-                n = 0;
-                r.clear();
-                r.shrink_to_fit();
-            }
-        }
-    }
-    */    
-
-        
-    
-    
-    // TRASHHHHH
-    //Integer_Type* JA_SRC_R_SNK_C;
-    //Integer_Type* J_SRC_SNK_C;
-   // Env::barrier();
-   // Env::exit(0);
-    
-    
-    
-    //if(!Env::rank) {
-      //  for(uint32_t j = 0, k = 0; j < nnzcols_sources_regulars_local; j++, k = k + 2) {
-            //printf("j=%d/%d:\n", j, J_SRC_RC[j]);
-            //for(uint32_t i = JA_SRC_RC[k]; i < JA_SRC_RC[k + 1]; i++) {
-            //    printf("    %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            //}
-        //}
-    //}
-    //Env::barrier();
-    //Env::exit(0);
-    
-    //for(i = 0; i < nnzcols_sinks_bitvector.size(); i++)
-        //printf("%d ", nnzcols_sinks_bitvector[i]);
-    //printf("\n\n");
-    //for(i = 0; i < nnzcols_regulars_local; i++)
-    //    printf("%d ", JC_REG_C[i]);
-    //printf("\n\n");
-    //for(i = 0; i < nnzcols; i++)
-    //    printf("%d ", JC[i]);
-    //printf("\n\n");
-    
-    
-    //}
-    /*
-    //allocate_local_src(k);
-    l = 0;       
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit(); 
-    for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-        for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
-            if(nnzrows_sources_bitvector[IR[IA[i]]] == 1) {
-                m = (JA_REG_C[k+1] - JA_REG_C[k]);
-                r.push_back(i);
-            }
-        }
-        if(m > 0) {
-            n = r.size();
-            JA_SRC_RC[l] = JA_REG_C[k] - n;
-            JA_SRC_RC[l + 1] = JA_REG_C[k + 1];
-            l += 2; 
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-        else {
-            JA_REG_RC[l] = JA_REG_C[k];
-            JA_REG_RC[l + 1] = JA_REG_C[k + 1];
-            l += 2;  
-        }
-    }
-    */
-    
-    
-    /*
-    if(!Env::rank) {
-        for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-            printf("j=%d/%d\n", j, JC_NNZ_REG_C[j]);
-            for(uint32_t i = JA_REG_C[k]; i < JA_REG_C[k + 1]; i++) {
-                printf("   %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            }
-        }
-        printf("\n\n");
-        for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-            printf("j=%d/%d\n", j, JC_NNZ_REG_C[j]);
-            for(uint32_t i = JA_REG_RC[k]; i < JA_REG_RC[k + 1]; i++) {
-                printf("   %d %d %d\n", i, IA[i], nnzrows_sources_bitvector[IR[IA[i]]]);
-            }
-        }
-        
-    }
-    */
-   
-    //Env::barrier();
-    //Env::exit(0);
-
-//printf("%d %d %d\n", Env::rank, l/2, nnzcols_regulars_local);    
-    
-    
-    
-    
-    //Env::barrier();
-    //Env::exit(0);
-       
+    }       
 }
 #endif
