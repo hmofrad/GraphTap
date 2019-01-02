@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     V.free();
     VR.execute(num_iterations); // Vertex execution
     VR.checksum();
-    //VR.display();
+    VR.display();
     VR.free();
     G.free();
     
