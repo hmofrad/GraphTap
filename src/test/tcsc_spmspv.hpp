@@ -115,6 +115,7 @@ void TCSC::run_pagerank() {
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
+    //walk();
     construct_vectors_pagerank();
     for(uint32_t i = 0; i < nrows; i++) {
         if(rows[i] == 1)
@@ -395,11 +396,12 @@ void TCSC::walk() {
     uint32_t* IA = (uint32_t*) tcsc->IA;
     uint32_t* JA = (uint32_t*) tcsc->JA;
     uint32_t* JC = (uint32_t*) tcsc->JC;
+    uint32_t* IR = (uint32_t*) tcsc->IR;
     uint32_t nnzcols = tcsc->nnzcols;
     for(uint32_t j = 0; j < nnzcols; j++) {
-        printf("j=%d\n", j);
+        printf("j=%d/%d\n", j, JC[j]);
         for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-            printf("    i=%d, j=%d, value=%d\n", IA[i], JC[j], A[i]);
+            printf("   IA[%d]=%d/%d\n", i, IA[i], rows_sources[IR[IA[i]]]);
         }
     }
 }
@@ -463,9 +465,11 @@ uint64_t TCSC::spmv_nnzcols_regular_rows() {
     uint64_t noperations = 0;
     uint32_t* A  = (uint32_t*) tcsc->A;
     uint32_t* IA = (uint32_t*) tcsc->IA;
+    uint32_t* JC = (uint32_t*) tcsc->JC;
     uint32_t* JA_REG_R = (uint32_t*) tcsc->JA_REG_R;
     uint32_t nnzcols = tcsc->nnzcols;
     for(uint32_t j = 0, k = 0; j < nnzcols; j++, k = k + 2) {
+        //printf("%d %d %d\n", j, JA_REG_R[k + 1] - JA_REG_R[k], JC[j]);
         for(uint32_t i = JA_REG_R[k]; i < JA_REG_R[k + 1]; i++) {
             y[IA[i]] += (A[i] * x[j]);
             noperations++;
