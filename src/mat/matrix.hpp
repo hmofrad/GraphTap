@@ -1268,6 +1268,15 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filter() {
     }
     JV.clear();
     JV.shrink_to_fit();
+    
+    rowgrp_nnz_rows.clear();
+    rowgrp_nnz_rows.shrink_to_fit();
+    rowgrp_regular_rows.clear();
+    rowgrp_regular_rows.shrink_to_fit();
+    rowgrp_source_rows.clear();
+    rowgrp_source_rows.shrink_to_fit();
+    colgrp_nnz_columns.clear();
+    colgrp_nnz_columns.shrink_to_fit();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
