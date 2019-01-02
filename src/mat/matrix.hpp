@@ -81,8 +81,10 @@ class Matrix {
         std::vector<std::vector<Integer_Type>> IV;  // Nonzero rows indices    (from tile width)
         std::vector<std::vector<char>> J;           // Nonzero cols bitvectors (from tile height)
         std::vector<std::vector<Integer_Type>> JV;  // Nonzero cols indices    (from tile height)
-        std::vector<Integer_Type> rowgrp_IR; // Row group row indices         
-        std::vector<Integer_Type> colgrp_JC; // Column group column indices
+        std::vector<Integer_Type> rowgrp_nnz_rows;  // Row group row indices         
+        std::vector<Integer_Type> rowgrp_regular_rows; // Row group regular indices
+        std::vector<Integer_Type> rowgrp_source_rows;  // Row group source column indices
+        std::vector<Integer_Type> colgrp_nnz_columns;  // Column group column indices
         std::vector<std::vector<Integer_Type>> regular_rows;// Row group regular indices
         std::vector<std::vector<char>> regular_rows_bitvector;// Row group regular bitvector
         std::vector<std::vector<Integer_Type>> source_rows;// Row group source indices
@@ -666,11 +668,11 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     filter_vertices(_ROWS_);
     uint32_t io = accu_segment_row;
     auto& i_data = I[io];
-    rowgrp_IR.resize(nnz_row_sizes_loc[io]);
+    rowgrp_nnz_rows.resize(nnz_row_sizes_loc[io]);
     Integer_Type k = 0;
     for(Integer_Type i = 0; i < tile_height; i++) {
         if(i_data[i]) {
-            rowgrp_IR[k] = i;
+            rowgrp_nnz_rows[k] = i;
             k++;
         }
     }    
@@ -684,15 +686,20 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     filter_vertices(_COLS_);
     uint32_t jo = accu_segment_col;
     auto& j_data = J[jo];
-    colgrp_JC.resize(nnz_col_sizes_loc[jo]);
+    colgrp_nnz_columns.resize(nnz_col_sizes_loc[jo]);
     k = 0;
     for(Integer_Type j = 0; j < tile_width; j++) {
         if(j_data[j]) {
-            colgrp_JC[k] = j;
+            colgrp_nnz_columns[k] = j;
             k++;
         }
     }
+        
     classify_vertices();
+
+    rowgrp_regular_rows = regular_rows[io];
+    rowgrp_source_rows = source_rows[io];
+    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
