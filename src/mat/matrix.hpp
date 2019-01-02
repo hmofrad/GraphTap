@@ -1015,7 +1015,6 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::classify_vertices() {
         my_rank = Env::rank;
         if(leader == my_rank) {            
             for(uint32_t j = 0; j < tiling->rowgrp_nranks - 1; j++) {
-                follower = follower_rowgrp_ranks_rg[j];
                 follower = follower_rowgrp_ranks[j];
                 nitems = source_rows[io].size();
                 MPI_Send(&nitems, 1, TYPE_INT, follower, row_group, Env::MPI_WORLD);
@@ -1038,7 +1037,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::classify_vertices() {
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++)
         source_rows_bitvector[i].resize(tile_height);
     for(uint32_t i = 0; i < tiling->rank_nrowgrps; i++) {
-        for(uint32_t j: source_rows[i])
+        for(Integer_Type j: source_rows[i])
                 source_rows_bitvector[i][j] = 1;
     }
     // Regular columns
@@ -1047,7 +1046,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::classify_vertices() {
         follower = follower_colgrp_ranks[i];
         nitems = regular_columns[jo].size();
         MPI_Send(&nitems, 1, TYPE_INT, follower, col_group, Env::MPI_WORLD);
-        MPI_Isend(regular_columns[jo].data(), nitems, TYPE_INT, follower, col_group, Env::MPI_WORLD, &request);
+        MPI_Isend(regular_columns[jo].data(), regular_columns[jo].size(), TYPE_INT, follower, col_group, Env::MPI_WORLD, &request);
         out_requests.push_back(request);
     }
     
@@ -1070,7 +1069,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::classify_vertices() {
     for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         regular_columns_bitvector[i].resize(tile_height);
     for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {
-        for(uint32_t j: regular_columns[i])
+        for(Integer_Type j: regular_columns[i])
             regular_columns_bitvector[i][j] = 1;
     }     
     // Sink columns
@@ -1102,7 +1101,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::classify_vertices() {
     for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++)
         sink_columns_bitvector[i].resize(tile_height);
     for(uint32_t i = 0; i < tiling->rank_ncolgrps; i++) {
-        for(uint32_t j: sink_columns[i])
+        for(Integer_Type j: sink_columns[i])
             sink_columns_bitvector[i][j] = 1;
     }    
 }
