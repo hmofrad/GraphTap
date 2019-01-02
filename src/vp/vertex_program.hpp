@@ -1861,7 +1861,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply(
     #endif
 }
 
-
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_stationary() {
     uint32_t yi = accu_segment_row;
@@ -1877,182 +1876,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             }        
         }
     }
-    //else if(compression_type == _TCSC_) {
     else {
-        //if(iteration == 0) {
-            Integer_Type j = 0;
-            auto& iv_data = (*IV)[yi];
-            
-            if((not check_for_convergence) or (check_for_convergence and not converged)) {
-                
-                auto& regular_rows = (*rowgrp_regular_rows);
-                
-                for(Integer_Type i: regular_rows) {
-                    Vertex_State &state = V[i];
-                    j = iv_data[i];    
-                    C[i] = applicator(state, y_data[j]);
-                }
-            }
-            
-            if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
-                //printf(">>>%d %d\n", iteration, converged);
-                
-                /*
-                auto& regular_rows = (*rowgrp_regular_rows);
-                for(Integer_Type i: regular_rows) {
-                    Vertex_State &state = V[i];
-                    j = iv_data[i];    
-                    C[i] = applicator(state, y_data[j]);
-                    //if(!Env::rank)
-                      //  printf("%d ", y_data[j]);
-                }
-                */
-                
-                auto& source_rows = (*rowgrp_source_rows);
-                j = 0;
-                for(Integer_Type i: source_rows) {
-                    Vertex_State &state = V[i];
-                    j = iv_data[i];
-                    C[i] = applicator(state, y_data[j]);
-                }
-            }
-            
-            
-            /*
-            auto& i_data = (*I)[yi];
-            j = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                Vertex_State &state = V[i];
-                if(i_data[i]) {
-                    C[i] = applicator(state, y_data[j]);
-                    j++;
-                }
-                else
-                    C[i] = applicator(state);
-            }
-            */
-
-            
-            
-            
-        //} 
-        /*
-        else {
-            auto& regulars = (*rowgrp_REG);
-            auto& sources = (*rowgrp_SRC);
-            auto& i_data = (*I)[yi];
-            Integer_Type j = 0;
-            Integer_Type j1 = 0;
-            Integer_Type j2 = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                Vertex_State &state = V[i];
-                if(i_data[i]) {
-                    if(regulars[j1] == i) {
-                        C[i] = applicator(state, y_data[j]);
-                        j1++;
-                    }
-                    else if(sources[j2] == i) {
-                        C[i] = applicator(state, y_data[j]);
-                        j2++;
-                    }
-                    j++;
-                }
-                //else
-                //    C[i] = applicator(state);
-            }            
-        }
-        */
-
-        /*
-        auto& IR = (*rowgrp_nnz_rows);
-        Integer_Type IR_nitems = IR.size();
+        Integer_Type j = 0;
+        auto& iv_data = (*IV)[yi];
         
-        for(uint32_t i = 0; i < IR_nitems; i++) {
-            Vertex_State &state = V[IR[i]];
-            C[IR[i]] = applicator(state, y_data[i]);
-        }
-        */
-    }
-            //checksum();
-    /*        
-    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            C[i] = applicator(state, y_data[i]);
-        }
-    }
-
-    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
-    {
-        if(iteration == 0)
-        {
-            auto &i_data = (*I)[yi];
-            auto &iv_data = (*IV)[yi];
-            //#pragma omp parallel for schedule(static)
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
+        if((not check_for_convergence) or (check_for_convergence and not converged)) {
+            
+            auto& regular_rows = (*rowgrp_regular_rows);
+            
+            for(Integer_Type i: regular_rows) {
                 Vertex_State &state = V[i];
-                if(i_data[i])
-                {
-                    C[i] = applicator(state, y_data[iv_data[i]]);
-                }
-                else
-                    C[i] = applicator(state);
+                j = iv_data[i];    
+                C[i] = applicator(state, y_data[j]);
             }
-            */
-           /*
-            auto &i_data = (*I)[yi];
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
+        }
+        if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
+            auto& source_rows = (*rowgrp_source_rows);
+            j = 0;
+            for(Integer_Type i: source_rows) {
                 Vertex_State &state = V[i];
-                if(i_data[i])
-                {
-                    C[i] = applicator(state, y_data[j]);
-                    j++;
-                }
-                else
-                    C[i] = applicator(state);
-            }
-            */
-            /*
-        }
-        else    
-        {
-            auto &y2v_data = (*Y2V);
-            auto &v2y_data = (*V2Y);
-            Integer_Type y2v_nitems = y2v_data.size();
-            //#pragma omp parallel for schedule(static)
-            for(uint32_t i = 0; i < y2v_nitems; i++)
-            {
-                Vertex_State &state = V[v2y_data[i]];
-                C[v2y_data[i]] = applicator(state, y_data[y2v_data[i]]);
+                j = iv_data[i];
+                C[i] = applicator(state, y_data[j]);
             }
         }
     }
-    */
-//}
-    //wait_for_sends();
-    /*
-    if(not check_for_convergence) {
-    for(uint32_t i = 0; i < rank_nrowgrps; i++) {
-        for(uint32_t j = 0; j < Y[i].size(); j++) {
-            std::vector<Fractional_Type> &y_data = Y[i][j];
-            Integer_Type y_nitems = y_data.size();
-            //#pragma omp parallel for schedule(static)
-            //for(uint32_t k = 0; k < y_nitems; k++)
-            //    y_data[k] = 0;        
-          
-            std::fill(y_data.begin(), y_data.end(), 0);
-        }
-    }
-    }
-    */
-    
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
