@@ -171,8 +171,10 @@ class Vertex_Program
         std::vector<std::vector<Integer_Type>>* IV;
         std::vector<std::vector<char>>* J;
         std::vector<std::vector<Integer_Type>>* JV;
-        std::vector<Integer_Type>* rowgrp_IR;
-        std::vector<Integer_Type>* colgrp_JC;
+        std::vector<Integer_Type>* rowgrp_nnz_rows;
+        std::vector<Integer_Type>* rowgrp_regular_rows;
+        std::vector<Integer_Type>* rowgrp_source_rows;
+        std::vector<Integer_Type>* colgrp_nnz_columns;
         //std::vector<Integer_Type>* rowgrp_REG;
         //std::vector<Integer_Type>* rowgrp_SRC;
         //std::vector<Integer_Type>* rowgrp_SNK;
@@ -274,8 +276,11 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         IV = &(Graph.A->IV);
         J = &(Graph.A->J);
         JV = &(Graph.A->JV);
-        rowgrp_IR = &(Graph.A->rowgrp_IR);
-        colgrp_JC = &(Graph.A->colgrp_JC);
+        rowgrp_nnz_rows = &(Graph.A->rowgrp_nnz_rows);
+        rowgrp_regular_rows = &(Graph.A->rowgrp_regular_rows);
+        rowgrp_source_rows = &(Graph.A->rowgrp_source_rows);
+        colgrp_nnz_columns = &(Graph.A->colgrp_nnz_columns);
+        
         //rowgrp_REG = &(Graph.A->rowgrp_REG);
         //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
         //rowgrp_SNK = &(Graph.A->rowgrp_SNK);
@@ -329,8 +334,10 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         IV= &(Graph.A->JV);
         J = &(Graph.A->I);
         JV= &(Graph.A->IV);
-        rowgrp_IR = &(Graph.A->colgrp_JC);
-        colgrp_JC = &(Graph.A->rowgrp_IR);
+        rowgrp_nnz_rows = &(Graph.A->colgrp_nnz_columns);
+        rowgrp_regular_rows = &(Graph.A->rowgrp_regular_rows);
+        rowgrp_source_rows = &(Graph.A->rowgrp_source_rows);
+        colgrp_nnz_columns = &(Graph.A->rowgrp_nnz_rows);
         //rowgrp_REG = &(Graph.A->rowgrp_REG);
         //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
         //rowgrp_SNK = &(Graph.A->rowgrp_SNK);
@@ -896,7 +903,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     }
     //else if((compression_type == _DCSC_) or (compression_type == _TCSC_)) {
     else {    
-        auto& JC = (*colgrp_JC);
+        auto& JC = (*colgrp_nnz_columns);
         Integer_Type JC_nitems = JC.size();
         for(uint32_t j = 0; j < JC_nitems; j++) {
             Vertex_State& state = V[JC[j]];
@@ -957,7 +964,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         //auto &j2v_data = (*J2V);
         //Integer_Type v2j_nitems = v2j_data.size();
         //if(not directed) {
-            auto& JC = (*colgrp_JC);
+            auto& JC = (*colgrp_nnz_columns);
             Integer_Type JC_nitems = JC.size();
             for(uint32_t j = 0; j < JC_nitems; j++) {
                 Vertex_State &state = V[JC[j]];
@@ -973,7 +980,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
         /*    
         }
         else {
-            auto& IR = (*rowgrp_IR);
+            auto& IR = (*rowgrp_nnz_rows);
             Integer_Type IR_nitems = IR.size();
             for(uint32_t i = 0; i < IR_nitems; i++) {
                 Vertex_State &state = V[IR[i]];
@@ -2043,20 +2050,44 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     //else if(compression_type == _TCSC_) {
     else {
         //if(iteration == 0) {
-            auto& i_data = (*I)[yi];
+            auto& iv_data = (*IV)[yi];
+            auto& regular_rows = (*rowgrp_regular_rows);
             Integer_Type j = 0;
+            for(Integer_Type i: regular_rows) {
+                Vertex_State &state = V[i];
+                j = iv_data[i];    
+                C[i] = applicator(state, y_data[j]);
+            }
+        
+            /*
+            auto& source_rows = (*rowgrp_source_rows);
+            j = 0;
+            for(Integer_Type i: source_rows) {
+                Vertex_State &state = V[i];
+                j = iv_data[i];
+                C[i] = applicator(state, y_data[j]);
+            }
+            */
+            
+            
+            /*
+            auto& i_data = (*I)[yi];
+            j = 0;
             for(uint32_t i = 0; i < v_nitems; i++)
             {
                 Vertex_State &state = V[i];
                 if(i_data[i]) {
-                    //if(!Env::rank)
-                    //    printf("%d %f\n", j, y_data[j]);
                     C[i] = applicator(state, y_data[j]);
                     j++;
                 }
                 else
                     C[i] = applicator(state);
             }
+            */
+
+            
+            
+            
         //} 
         /*
         else {
@@ -2087,7 +2118,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         */
 
         /*
-        auto& IR = (*rowgrp_IR);
+        auto& IR = (*rowgrp_nnz_rows);
         Integer_Type IR_nitems = IR.size();
         
         for(uint32_t i = 0; i < IR_nitems; i++) {
@@ -2425,21 +2456,39 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type, typen
 bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_converged()
 {
     bool converged = false;
-    uint64_t c_sum_local = 0, c_sum_gloabl = 0;
-
-    Integer_Type c_nitems = C.size();    
     
-    for(uint32_t i = 0; i < c_nitems; i++)
-    {
-        if(not C[i]) 
-            c_sum_local++;
+    if((compression_type == _CSC_) or (compression_type == _DCSC_)) {
+        uint64_t c_sum_local = 0, c_sum_gloabl = 0;
+        Integer_Type c_nitems = C.size();   
+        for(uint32_t i = 0; i < c_nitems; i++)
+        {
+            if(not C[i]) 
+                c_sum_local++;
+        }
+        MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+        if(c_sum_gloabl == (tile_height * Env::nranks))
+            converged = true;
     }
-    //printf("%d %lu\n", iteration, (tile_height * Env::nranks) - c_sum_local);
-   
-    MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    if(c_sum_gloabl == (tile_height * Env::nranks))
-        converged = true;
-    
+    else {
+        Integer_Type c_sum_local = 0, c_sum_gloabl = 0;
+        uint32_t yi = accu_segment_row;
+        auto& iv_data = (*IV)[yi];
+        auto& regular_rows = (*rowgrp_regular_rows);
+        Integer_Type r_nitems = regular_rows.size();
+        for(Integer_Type i: regular_rows) {
+            Vertex_State &state = V[i];
+            if(not C[i]) 
+                c_sum_local++;
+        }
+        if(c_sum_local == r_nitems)
+            c_sum_local = 1;
+        else
+            c_sum_local = 0;
+        
+        MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, TYPE_INT, MPI_SUM, Env::MPI_WORLD);
+        if(c_sum_gloabl == (Integer_Type) Env::nranks)
+            converged = true;
+    }
     return(converged);   
 }
 
@@ -2448,7 +2497,8 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type, typen
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checksum()
 {
     //uint64_t v_sum_local = 0, v_sum_global = 0;
-    double v_sum_local = 0, v_sum_global = 0;
+    Fractional_Type v_sum_local = 0, v_sum_global = 0;
+    
     Integer_Type v_nitems = V.size();
     for(uint32_t i = 0; i < v_nitems; i++)
     {
@@ -2458,28 +2508,24 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
             
     }
     //MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, TYPE_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
     {
         std::cout << "Iterations: " << iteration << std::endl;
         std::cout << std::fixed << "Value checksum: " << v_sum_global << std::endl;
     }
 
-    //if(apply_depends_on_iter or gather_depends_on_apply)
-    //{
+    uint64_t v_sum_local_ = 0, v_sum_global_ = 0;
+    for(uint32_t i = 0; i < v_nitems; i++)
+    {
+        Vertex_State &state = V[i];
+        if((state.get_state() != infinity()) and (get_vid(i) < nrows)) 
+            v_sum_local_++;
+    }
 
-        uint64_t v_sum_local_ = 0, v_sum_global_ = 0;
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            if((state.get_state() != infinity()) and (get_vid(i) < nrows)) 
-                v_sum_local_++;
-        }
-
-        MPI_Allreduce(&v_sum_local_, &v_sum_global_, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-        if(Env::is_master)
-            std::cout << std::fixed << "Reachable vertices: " << v_sum_global_ << std::endl;
-    //}
+    MPI_Allreduce(&v_sum_local_, &v_sum_global_, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    if(Env::is_master)
+        std::cout << std::fixed << "Reachable vertices: " << v_sum_global_ << std::endl;
     Env::barrier();
 }
 
