@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=28
+#SBATCH --ntasks=16
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=7
+#SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
@@ -40,7 +40,7 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
 MPI="mpirun -np"
 APPS_PERFIX="bin"
-APPS=("./pr" "./bfs" "./sssp_w" "./cc")
+APPS=("./pr" "./bfs" "./sssp" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin")
 GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin")
@@ -83,7 +83,7 @@ do
             ITER_OR_SRC=${SRC}
         fi
         
-        if [ "${A}" = "./sssp_w" ]
+        if [ "${A}" = "./sssp" ]
         then
             GRAPH="${GRAPHS_W[${I}]}"    
         else
