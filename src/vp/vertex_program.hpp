@@ -62,6 +62,7 @@ class Vertex_Program
     protected:
         bool already_initialized = false;
         bool check_for_convergence = false;
+        bool converged = false;
         void init_stationary();
         void init_nonstationary();
         void init_stationary_postprocess();
@@ -212,6 +213,7 @@ class Vertex_Program
         std::vector<double> apply_time;
         std::vector<double> execute_time;
         #endif
+        void test();
 };
 
 /* Support or row-wise tile processing designated to original matrix and 
@@ -451,8 +453,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         iteration++;
         Env::print_num("Iteration: ", iteration);            
         if(check_for_convergence) {
-            if(has_converged())
+            converged = has_converged();
+            if(converged) {
+                combine();
+                apply();
                 break;
+            }
         }
         else if(iteration >= num_iterations) {
             break;
@@ -1322,12 +1328,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::bcast_
 }   
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
+void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::test() {
+    combine();
+    apply();
+}
+
+template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combine() {
     #ifdef TIMING
     double t1, t2, elapsed_time;
     t1 = Env::clock();
     #endif
     if(stationary) {
+        //if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged))
+        if((not check_for_convergence) or (check_for_convergence and not converged)) {
+            //if(!Env::rank)
+            //    printf(">>>>....%d %d\n", iteration, converged);
+            for(uint32_t i = 0; i < rank_nrowgrps; i++) {
+                for(uint32_t j = 0; j < Y[i].size(); j++) {
+                    std::vector<Fractional_Type> &y_data = Y[i][j];
+                    Integer_Type y_nitems = y_data.size();
+                    std::fill(y_data.begin(), y_data.end(), 0);
+                }
+            }
+        }
         combine_2d_stationary();
         combine_postprocess();
     }
@@ -1463,7 +1487,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }
             }
         }
-    } else {
+    } 
+    else {
         if(num_iterations == 1) {
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -1476,24 +1501,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
             } 
         }
         else {
-            if(iteration == 0) {
-                Integer_Type l;
-                Integer_Type NC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
-                if(NC_REG_R_REG_C) {
-                    Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
-                    Integer_Type* JA_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_REG_C;
-                    for(uint32_t j = 0, k = 0; j < NC_REG_R_REG_C; j++, k = k + 2) {
-                        l = JC_REG_R_REG_C[j];
-                        for(uint32_t i = JA_REG_R_REG_C[k]; i < JA_REG_R_REG_C[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }                    
-                }
-                
+            Integer_Type l;
+            if(iteration == 0) {               
                 Integer_Type NC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_SNK_C;
                 if(NC_REG_R_SNK_C) {
                     Integer_Type* JC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_SNK_C;
@@ -1509,45 +1518,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                         }
                     }                    
                 }
-                
-               
-                
-                /*
-                // Regular rows x nnz cols
-                Integer_Type* JA_REG_R = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R;
-                for(uint32_t j = 0, k = 0; j < ncols; j++, k = k + 2) {
-                    for(uint32_t i = JA_REG_R[k]; i < JA_REG_R[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[j], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[j]);
-                        #endif
-                    }
-                }
-                */
-                
-                //printf("Iter1=%d\n", iteration);
-                /*
-                // Source rows x nnz cols
-                Integer_Type nnzcols_sources_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_sources_local;
-                if(nnzcols_sources_local) {
-                    Integer_Type* J_SRC_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->J_SRC_C;
-                    Integer_Type* JA_SRC_R = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R;
-                    for(uint32_t j = 0, k = 0; j < nnzcols_sources_local; j++, k = k + 2) {
-                        Integer_Type l = J_SRC_C[j];
-                        for(uint32_t i = JA_SRC_R[k]; i < JA_SRC_R[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }
-                }
-                */
             }
-            else {
-                Integer_Type l;
+            
+            if((not check_for_convergence) or (check_for_convergence and not converged)) {
+                //printf("1.iter=%d\n", iteration);
                 Integer_Type NC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
                 if(NC_REG_R_REG_C) {
                     Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
@@ -1562,85 +1536,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                             #endif
                         }
                     }                    
-                }
-                
-                
-                
-                
-                /*
-                //printf("Iter2=%d\n", iteration);
-                // Regular rows to regular cols
-                Integer_Type* JA_REG_RC = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_RC;
-                Integer_Type* JC_NNZ_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_NNZ_REG_C;
-                //Integer_Type* JC_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_C;
-                //Integer_Type* JA_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_C;
-                Integer_Type nnzcols_regulars_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_regulars_local;
-                for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-                    Integer_Type l = JC_NNZ_REG_C[j];
-                    //if(!Env::rank)
-                    //    printf("j=%d k=%d l=%d %d\n", j, k, l, JC_REG_C[j]);
-                    for(uint32_t i = JA_REG_RC[k]; i < JA_REG_RC[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[l], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[l]);
-                        #endif
-                        //printf("%d %d %d %d %f %d %d\n", i, j, k, l, y_data[IA[i]], nnzcols_regulars, ncols);
-                    }
-                }
-                */
-                // Regular rows to sink cols
-                
-                // Source rows to sink cols
-                /*
-                if(iteration == 2) {
-                Integer_Type* JA_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_SNK_C;
-                Integer_Type* J_REG_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->J_REG_SNK_C;
-                Integer_Type nnzcols_regulars_sinks_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_regulars_sinks_local;
-                for(uint32_t j = 0, k = 0; j < nnzcols_regulars_sinks_local; j++, k = k + 2) {
-                    Integer_Type l = J_REG_SNK_C[j];
-                    for(uint32_t i = JA_REG_R_SNK_C[k]; i < JA_REG_R_SNK_C[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[l], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[l]);
-                        #endif
-                    }
-                }
-                
-                
-                Integer_Type* JA_SRC_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_SNK_C;
-                Integer_Type* J_SRC_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->J_SRC_SNK_C;
-                Integer_Type nnzcols_sources_sinks_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_sources_sinks_local;
-                for(uint32_t j = 0, k = 0; j < nnzcols_sources_sinks_local; j++, k = k + 2) {
-                    Integer_Type l = J_SRC_SNK_C[j];
-                    for(uint32_t i = JA_SRC_R_SNK_C[k]; i < JA_SRC_R_SNK_C[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[l], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[l]);
-                        #endif
-                    }
-                }
-                }
-                */
-                
-                
-                /*
-                for(uint32_t j = 0; j < ncols; j++) {
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[j], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[j]);
-                        #endif
-                    }
                 } 
-                */
-            }
-            
-            if((iteration + 1) == num_iterations) {
-                Integer_Type l;
+            }                
+            if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
+                //printf("2.iter=%d\n", iteration);
                 Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
                 if(NC_SRC_R_REG_C) {
                     Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
@@ -1656,79 +1555,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                         }
                     }                    
                 }
-                
-                
-                
-                
-                //Env::barrier();
-                //Env::exit(0);
-                
-                //printf("Iter3=%d\n", iteration);
-                // Sources rows to regular cols
-                /*
-                Integer_Type nnzcols_sources_regulars_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_sources_regulars_local;
-                if(nnzcols_sources_regulars_local) {
-                    Integer_Type* J_SRC_RC = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->J_SRC_RC;
-                    Integer_Type* JA_SRC_RC = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_RC;
-                    for(uint32_t j = 0, k = 0; j < nnzcols_sources_regulars_local; j++, k = k + 2) {
-                        Integer_Type l = J_SRC_RC[j];
-                        for(uint32_t i = JA_SRC_RC[k]; i < JA_SRC_RC[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }
-                }
-                */
-            }
-            
+            }            
         }
-        /*
-        else {
-            if(iteration == 0) {
-                Integer_Type* JA_REG_R = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R;
-                for(uint32_t j = 0, k = 0; j < ncols; j++, k = k + 2) {
-                    for(uint32_t i = JA_REG_R[k]; i < JA_REG_R[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[j], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[j]);
-                        #endif
-                        //if(!Env::rank)
-                        //    printf("%d %d %f\n", i, j, y_data[IA[i]]);
-                    }
-                }
-                
-
-            }
-            else {
-                Integer_Type* JA_REG_RC = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_RC;
-                Integer_Type* JC_NNZ_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_NNZ_REG_C;
-                Integer_Type* JC_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_C;
-                Integer_Type nnzcols_regulars_local = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols_regulars_local;
-                for(uint32_t j = 0, k = 0; j < nnzcols_regulars_local; j++, k = k + 2) {
-                    Integer_Type l = JC_NNZ_REG_C[j];
-                    //if(!Env::rank)
-                    //    printf("j=%d k=%d l=%d %d\n", j, k, l, JC_REG_C[j]);
-                    for(uint32_t i = JA_REG_RC[k]; i < JA_REG_RC[k + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], x_data[l], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], x_data[l]);
-                        #endif
-                        //printf("%d %d %d %d %f %d %d\n", i, j, k, l, y_data[IA[i]], nnzcols_regulars, ncols);
-                    }
-                }
-                //printf("iter=%d\n", iteration);
-                //Env::barrier();
-                //Env::exit(0);
-
-            }
-           
-        }
-        */
     }
     
 }
@@ -2041,33 +1869,53 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     std::vector<Fractional_Type> &y_data = Y[yi][yo];
     Integer_Type v_nitems = V.size();
     if((compression_type == _CSC_) or (compression_type == _DCSC_)){
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            C[i] = applicator(state, y_data[i]);
-        }        
+        if(not converged) {
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V[i];
+                C[i] = applicator(state, y_data[i]);
+            }        
+        }
     }
     //else if(compression_type == _TCSC_) {
     else {
         //if(iteration == 0) {
-            auto& iv_data = (*IV)[yi];
-            auto& regular_rows = (*rowgrp_regular_rows);
             Integer_Type j = 0;
-            for(Integer_Type i: regular_rows) {
-                Vertex_State &state = V[i];
-                j = iv_data[i];    
-                C[i] = applicator(state, y_data[j]);
+            auto& iv_data = (*IV)[yi];
+            
+            if((not check_for_convergence) or (check_for_convergence and not converged)) {
+                
+                auto& regular_rows = (*rowgrp_regular_rows);
+                
+                for(Integer_Type i: regular_rows) {
+                    Vertex_State &state = V[i];
+                    j = iv_data[i];    
+                    C[i] = applicator(state, y_data[j]);
+                }
             }
-        
-            /*
-            auto& source_rows = (*rowgrp_source_rows);
-            j = 0;
-            for(Integer_Type i: source_rows) {
-                Vertex_State &state = V[i];
-                j = iv_data[i];
-                C[i] = applicator(state, y_data[j]);
+            
+            if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
+                //printf(">>>%d %d\n", iteration, converged);
+                
+                /*
+                auto& regular_rows = (*rowgrp_regular_rows);
+                for(Integer_Type i: regular_rows) {
+                    Vertex_State &state = V[i];
+                    j = iv_data[i];    
+                    C[i] = applicator(state, y_data[j]);
+                    //if(!Env::rank)
+                      //  printf("%d ", y_data[j]);
+                }
+                */
+                
+                auto& source_rows = (*rowgrp_source_rows);
+                j = 0;
+                for(Integer_Type i: source_rows) {
+                    Vertex_State &state = V[i];
+                    j = iv_data[i];
+                    C[i] = applicator(state, y_data[j]);
+                }
             }
-            */
             
             
             /*
@@ -2127,7 +1975,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         }
         */
     }
-            checksum();
+            //checksum();
     /*        
     if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
     {
@@ -2189,8 +2037,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
     */
 //}
     //wait_for_sends();
-    
-    
+    /*
+    if(not check_for_convergence) {
     for(uint32_t i = 0; i < rank_nrowgrps; i++) {
         for(uint32_t j = 0; j < Y[i].size(); j++) {
             std::vector<Fractional_Type> &y_data = Y[i][j];
@@ -2202,6 +2050,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             std::fill(y_data.begin(), y_data.end(), 0);
         }
     }
+    }
+    */
     
 }
 
