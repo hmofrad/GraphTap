@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     bool acyclic = false;
     bool parallel_edges = true;
     Tiling_type TT = _2DT_;
-    Compression_type CT = _DCSC_;
+    Compression_type CT = _TCSC_;
     
     /* Degree execution */
     Graph<wp, ip, fp> G;    
@@ -37,19 +37,21 @@ int main(int argc, char** argv) {
     bool stationary = true;
     bool gather_depends_on_apply = false;
     bool apply_depends_on_iter  = false;
-    Ordering_type OT = _COL_;
+    Ordering_type OT = _ROW_;
     Deg_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
     V.execute(1);
     V.checksum();
     Env::barrier();
-
-    OT = _ROW_;
-    PR_Program<wp, ip, fp> VR(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
+    
+    transpose = true;
+    Graph<wp, ip, fp> GR;    
+    GR.load(file_path, num_vertices, num_vertices, directed, transpose, self_loops, acyclic, parallel_edges, TT, CT);
+    PR_Program<wp, ip, fp> VR(GR, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
     VR.initialize(V);
     V.free();
     VR.execute(num_iterations); // Vertex execution
     VR.checksum();
-    VR.display();
+    //VR.display();
     VR.free();
     G.free();
     
