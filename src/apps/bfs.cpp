@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     bool parallel_edges = false;
     Tiling_type TT = _2DT_;
     // Only CSC is supported for nonstationary algorithms
-    Compression_type CT = _DCSC_; 
+    Compression_type CT = _TCSC_; 
     
     /* Breadth First Search (BFS) execution */
     bool stationary = false;
