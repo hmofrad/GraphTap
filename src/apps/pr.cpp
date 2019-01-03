@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
     Deg_Program<wp, ip, fp> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
     V.execute(1);
     V.checksum();
+    G.free();
     Env::barrier();
     
     transpose = true;
@@ -53,7 +54,7 @@ int main(int argc, char** argv) {
     VR.checksum();
     VR.display();
     VR.free();
-    G.free();
+    GR.free();
     
     double time2 = Env::clock();
     Env::print_time("PageRank end-to-end", time2 - time1);
