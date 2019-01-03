@@ -948,6 +948,20 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_vertices(Filtering_ty
         nnz_col_sizes_all = nnz_sizes_all;
         nnz_col_sizes_loc = nnz_sizes_loc;
     }
+    
+
+    for(uint32_t j = 0; j < rank_nrowgrps_; j++) {
+        if(local_row_segments_[j] == owned_segment) {
+            for(uint32_t i = 0; i < rowgrp_nranks_; i++) {
+                F[j][i].clear();
+                F[j][i].shrink_to_fit();
+            }
+        }
+        else {
+            F[j][0].clear();
+            F[j][0].shrink_to_fit();
+        }
+    }
     F.clear();
     F.shrink_to_fit();
     Env::barrier();
