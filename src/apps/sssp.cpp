@@ -15,7 +15,7 @@
 int main(int argc, char** argv) { 
     Env::init();    
     double time1 = Env::clock();   
-    if(argc != 3 and argc != 4) {
+    if(argc != 3 and argc != 4 and argc != 5) {
         if(Env::is_master)
             std::cout << "\"Usage: " << argv[0] << " <file_path> <num_vertices> <root>\"" << std::endl; 
         Env::exit(1);
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2DT_;
-    Compression_type CT = _DCSC_; // Only CSC is supported
+    Compression_type CT = _TCSC_;
     
     /* Single Source Shortest Path (SSSP) execution*/
     bool stationary = false;
