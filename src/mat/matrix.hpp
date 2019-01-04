@@ -533,21 +533,16 @@ template<typename Weight, typename Integer_Type, typename Fractional_Type>
 void Matrix<Weight, Integer_Type, Fractional_Type>::init_tiles() {
     if(Env::is_master)
         printf("Edge distribution: Distributing edges among %d ranks\n", Env::nranks);     
-    distribute();
     
+    distribute();
     Triple<Weight, Integer_Type> pair;
-    //RowSort<Weight, Integer_Type> f_row;
     ColSort<Weight, Integer_Type> f_col;
     auto f_comp = [] (const Triple<Weight, Integer_Type> &a, const Triple<Weight, Integer_Type> &b) {return (a.row == b.row and a.col == b.col);};    
     for(uint32_t t: local_tiles_row_order) {
         pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         if(tile.triples->size()) {
-            //tile.allocated = true;
-            //if(compression_type == Compression_type::_CSR_)
-            //    std::sort(tile.triples->begin(), tile.triples->end(), f_row);
-            //if(compression_type == Compression_type::_CSC_)
-                std::sort(tile.triples->begin(), tile.triples->end(), f_col);
+            std::sort(tile.triples->begin(), tile.triples->end(), f_col);
             /* remove parallel edges (duplicates), necessary for triangle couting */
             if(not parallel_edges) {
                 auto last = std::unique(tile.triples->begin(), tile.triples->end(), f_comp);
