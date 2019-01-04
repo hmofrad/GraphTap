@@ -453,7 +453,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         Env::print_num("Iteration: ", iteration);            
         if(check_for_convergence) {
             converged = has_converged();
-            Env::print_num("converged: ", converged);            
             if(converged) {
                 combine();
                 apply();
@@ -1475,7 +1474,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }
             }
         }
-        else if(ordering_type == _COL_) {
+        else {// if(ordering_type == _COL_) {
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
                     #ifdef HAS_WEIGHT
@@ -1484,77 +1483,97 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                     combiner(y_data[j], x_data[IA[i]]);
                     #endif
                 }
-            }
+            }            
         }
     } 
     else {
         if(num_iterations == 1) {
-            for(uint32_t j = 0; j < ncols; j++) {
-                for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-                    #ifdef HAS_WEIGHT
-                    combiner(y_data[IA[i]], x_data[j], A[i]);
-                    #else
-                    combiner(y_data[IA[i]], x_data[j]);
-                    #endif
-                }
-            } 
-        }
-        else {
-            Integer_Type l;
-            if(iteration == 0) {               
-                Integer_Type NC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_SNK_C;
-                if(NC_REG_R_SNK_C) {
-                    Integer_Type* JC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_SNK_C;
-                    Integer_Type* JA_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_SNK_C;
-                    for(uint32_t j = 0, k = 0; j < NC_REG_R_SNK_C; j++, k = k + 2) {
-                        l = JC_REG_R_SNK_C[j];
-                        for(uint32_t i = JA_REG_R_SNK_C[k]; i < JA_REG_R_SNK_C[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }                    
-                }
-            }
-            
-            if((not check_for_convergence) or (check_for_convergence and not converged)) {
-                //printf("1.iter=%d\n", iteration);
-                Integer_Type NC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
-                if(NC_REG_R_REG_C) {
-                    Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
-                    Integer_Type* JA_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_REG_C;
-                    for(uint32_t j = 0, k = 0; j < NC_REG_R_REG_C; j++, k = k + 2) {
-                        l = JC_REG_R_REG_C[j];
-                        for(uint32_t i = JA_REG_R_REG_C[k]; i < JA_REG_R_REG_C[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }                    
+            if(ordering_type == _ROW_) {
+                for(uint32_t j = 0; j < ncols; j++) {
+                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                        #ifdef HAS_WEIGHT
+                        combiner(y_data[IA[i]], x_data[j], A[i]);
+                        #else
+                        combiner(y_data[IA[i]], x_data[j]);
+                        #endif
+                    }
                 } 
-            }                
-            if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
-                //printf("2.iter=%d\n", iteration);
-                Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
-                if(NC_SRC_R_REG_C) {
-                    Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
-                    Integer_Type* JA_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_REG_C;
-                    for(uint32_t j = 0, k = 0; j < NC_SRC_R_REG_C; j++, k = k + 2) {
-                        l = JC_SRC_R_REG_C[j];
-                        for(uint32_t i = JA_SRC_R_REG_C[k]; i < JA_SRC_R_REG_C[k + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[l], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[l]);
-                            #endif
-                        }
-                    }                    
+            }
+            else { 
+                for(uint32_t j = 0; j < ncols; j++) {
+                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                        #ifdef HAS_WEIGHT
+                        combiner(y_data[j], x_data[IA[i]], A[i]);   
+                        #else
+                        combiner(y_data[j], x_data[IA[i]]);
+                        #endif
+                    }
                 }
             }            
+        }
+        else {
+            if(ordering_type == _ROW_) {                
+                Integer_Type l;
+                if(iteration == 0) {               
+                    Integer_Type NC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_SNK_C;
+                    if(NC_REG_R_SNK_C) {
+                        Integer_Type* JC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_SNK_C;
+                        Integer_Type* JA_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_SNK_C;
+                        for(uint32_t j = 0, k = 0; j < NC_REG_R_SNK_C; j++, k = k + 2) {
+                            l = JC_REG_R_SNK_C[j];
+                            for(uint32_t i = JA_REG_R_SNK_C[k]; i < JA_REG_R_SNK_C[k + 1]; i++) {
+                                #ifdef HAS_WEIGHT
+                                combiner(y_data[IA[i]], x_data[l], A[i]);
+                                #else
+                                combiner(y_data[IA[i]], x_data[l]);
+                                #endif
+                            }
+                        }                    
+                    }
+                }
+                
+                if((not check_for_convergence) or (check_for_convergence and not converged)) {
+                    //printf("1.iter=%d\n", iteration);
+                    Integer_Type NC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
+                    if(NC_REG_R_REG_C) {
+                        Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
+                        Integer_Type* JA_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_REG_C;
+                        for(uint32_t j = 0, k = 0; j < NC_REG_R_REG_C; j++, k = k + 2) {
+                            l = JC_REG_R_REG_C[j];
+                            for(uint32_t i = JA_REG_R_REG_C[k]; i < JA_REG_R_REG_C[k + 1]; i++) {
+                                #ifdef HAS_WEIGHT
+                                combiner(y_data[IA[i]], x_data[l], A[i]);
+                                #else
+                                combiner(y_data[IA[i]], x_data[l]);
+                                #endif
+                            }
+                        }                    
+                    } 
+                }                
+                if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
+                    //printf("2.iter=%d\n", iteration);
+                    Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
+                    if(NC_SRC_R_REG_C) {
+                        Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
+                        Integer_Type* JA_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_REG_C;
+                        for(uint32_t j = 0, k = 0; j < NC_SRC_R_REG_C; j++, k = k + 2) {
+                            l = JC_SRC_R_REG_C[j];
+                            for(uint32_t i = JA_SRC_R_REG_C[k]; i < JA_SRC_R_REG_C[k + 1]; i++) {
+                                #ifdef HAS_WEIGHT
+                                combiner(y_data[IA[i]], x_data[l], A[i]);
+                                #else
+                                combiner(y_data[IA[i]], x_data[l]);
+                                #endif
+                            }
+                        }                    
+                    }
+                }
+            }
+            else {
+                fprintf(stderr, "Not implemented\n");
+                Env::exit(0);
+            }                
+                
         }
     }
     
@@ -1883,14 +1902,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             }        
         }
     }
+    else if (compression_type == _TCSC1_){
+        if(not converged) {
+            auto& i_data = (*I)[yi];
+            Integer_Type j = 0;
+            for(uint32_t i = 0; i < v_nitems; i++)
+            {
+                Vertex_State &state = V[i];
+                if(i_data[i]) {
+                    C[i] = applicator(state, y_data[j]);
+                    j++;
+                }
+                else
+                    C[i] = applicator(state);
+            }        
+        }
+    }
     else {
         Integer_Type j = 0;
         auto& iv_data = (*IV)[yi];
         
         if((not check_for_convergence) or (check_for_convergence and not converged)) {
-            
-            auto& regular_rows = (*rowgrp_regular_rows);
-            
+            auto& regular_rows = (*rowgrp_regular_rows);            
             for(Integer_Type i: regular_rows) {
                 Vertex_State &state = V[i];
                 j = iv_data[i];    
@@ -2248,7 +2281,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
 {
     bool converged = false;
     uint64_t c_sum_local = 0, c_sum_gloabl = 0;
-        if((compression_type == _CSC_) or (compression_type == _DCSC_)) {
+        if((compression_type == _CSC_) or (compression_type == _DCSC_) or (compression_type == _TCSC1_)) {
             
             Integer_Type c_nitems = C.size();   
             for(uint32_t i = 0; i < c_nitems; i++)
@@ -2262,19 +2295,34 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                 c_sum_local = 0;
         }
         else {
-            
-            auto& IR = (*rowgrp_nnz_rows);
-            Integer_Type IR_nitems = IR.size();
-            Integer_Type i = 0;
-            for(Integer_Type i: IR) {
-                if(not C[i]) 
-                    c_sum_local++;
+            if(stationary) {
+                uint32_t yi = accu_segment_row;
+                auto& iv_data = (*IV)[yi];
+                auto& regular_rows = (*rowgrp_regular_rows);
+                Integer_Type r_nitems = regular_rows.size();
+                for(Integer_Type i: regular_rows) {
+                    if(not C[i]) 
+                        c_sum_local++;
+                }
+                if(c_sum_local == r_nitems)
+                    c_sum_local = 1;
+                else
+                    c_sum_local = 0;
             }
-            
-            if(c_sum_local == IR_nitems)
-                c_sum_local = 1;
-            else
-                c_sum_local = 0;
+            else {
+                auto& IR = (*rowgrp_nnz_rows);
+                Integer_Type IR_nitems = IR.size();
+                Integer_Type i = 0;
+                for(Integer_Type i: IR) {
+                    if(not C[i]) 
+                        c_sum_local++;
+                }
+                
+                if(c_sum_local == IR_nitems)
+                    c_sum_local = 1;
+                else
+                    c_sum_local = 0;
+            }
             
             
             /*
