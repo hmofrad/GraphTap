@@ -85,6 +85,7 @@ class Matrix {
         std::vector<Integer_Type> rowgrp_regular_rows; // Row group regular indices
         std::vector<Integer_Type> rowgrp_source_rows;  // Row group source column indices
         std::vector<Integer_Type> colgrp_nnz_columns;  // Column group column indices
+        std::vector<Integer_Type> colgrp_sink_columns;    // Column group sink column indices
         std::vector<std::vector<Integer_Type>> regular_rows;// Row group regular indices
         std::vector<std::vector<char>> regular_rows_bitvector;// Row group regular bitvector
         std::vector<std::vector<Integer_Type>> source_rows;// Row group source indices
@@ -694,6 +695,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
 
     rowgrp_regular_rows = regular_rows[io];
     rowgrp_source_rows = source_rows[io];
+    colgrp_sink_columns = sink_columns[jo];
     
 }
 
@@ -1285,6 +1287,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::del_filter() {
     rowgrp_source_rows.shrink_to_fit();
     colgrp_nnz_columns.clear();
     colgrp_nnz_columns.shrink_to_fit();
+    colgrp_sink_columns.clear();
+    colgrp_sink_columns.shrink_to_fit();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
