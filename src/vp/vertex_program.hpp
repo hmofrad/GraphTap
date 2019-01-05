@@ -176,6 +176,7 @@ class Vertex_Program
         std::vector<Integer_Type>* rowgrp_regular_rows;
         std::vector<Integer_Type>* rowgrp_source_rows;
         std::vector<Integer_Type>* colgrp_nnz_columns;
+        std::vector<Integer_Type>* colgrp_sink_columns;
         //std::vector<Integer_Type>* rowgrp_REG;
         //std::vector<Integer_Type>* rowgrp_SRC;
         //std::vector<Integer_Type>* rowgrp_SNK;
@@ -281,6 +282,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         rowgrp_regular_rows = &(Graph.A->rowgrp_regular_rows);
         rowgrp_source_rows = &(Graph.A->rowgrp_source_rows);
         colgrp_nnz_columns = &(Graph.A->colgrp_nnz_columns);
+        colgrp_sink_columns = &(Graph.A->colgrp_sink_columns);
         
         //rowgrp_REG = &(Graph.A->rowgrp_REG);
         //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
@@ -337,8 +339,9 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         JV= &(Graph.A->IV);
         rowgrp_nnz_rows = &(Graph.A->colgrp_nnz_columns);
         rowgrp_regular_rows = &(Graph.A->rowgrp_regular_rows);
-        rowgrp_source_rows = &(Graph.A->rowgrp_source_rows);
+        rowgrp_source_rows = &(Graph.A->colgrp_sink_columns);
         colgrp_nnz_columns = &(Graph.A->rowgrp_nnz_rows);
+        colgrp_sink_columns = &(Graph.A->rowgrp_source_rows);
         //rowgrp_REG = &(Graph.A->rowgrp_REG);
         //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
         //rowgrp_SNK = &(Graph.A->rowgrp_SNK);
@@ -1434,6 +1437,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
     #endif
     Integer_Type* IA;
     Integer_Type* JA;
+    Integer_Type* JC;
     Integer_Type ncols;
     if(compression_type == _CSC_) {
         #ifdef HAS_WEIGHT
@@ -1448,7 +1452,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
         A = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
         #endif
         IA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
-        JA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
+        JA   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;   
+        JC   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC;           
         ncols = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
     //else if(compression_type == _TCSC_) {
@@ -1462,7 +1467,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
     }
     
     
-    if((compression_type == _CSC_) or (compression_type == _DCSC_) or (compression_type == _TCSC1_)) {        
+    if((compression_type == _CSC_) or (compression_type == _TCSC1_)) {        
         if(ordering_type == _ROW_) {
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -1474,9 +1479,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }
             }
         }
-        else {// if(ordering_type == _COL_) {
+        else {
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                    if(i >= 16375)
+                        printf("j=%d i=%d\n", j, i);
                     #ifdef HAS_WEIGHT
                     combiner(y_data[j], x_data[IA[i]], A[i]);   
                     #else
@@ -1485,7 +1492,46 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }
             }            
         }
-    } 
+    }
+    else if(compression_type == _DCSC_) {
+        if(ordering_type == _ROW_) {
+            Integer_Type k = 0;
+            auto& iv_data = (*IV)[tile.jth];
+            for(uint32_t j = 0; j < ncols; j++) {
+                for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                    k = iv_data[IA[i]];
+                    //printf("j=%d i=%d ys=%lu xs=%lu\n", j, IA[i], y_data.size(), x_data.size());
+                    #ifdef HAS_WEIGHT
+                    combiner(y_data[IA[i]], x_data[j], A[i]);
+                    #else
+                    combiner(y_data[IA[i]], x_data[j]);
+                    //combiner(y_data[IA[i]], x_data[j]);
+                    #endif
+                }
+            }
+            //for(uint32_t i = 0; i < y_data.size(); i++) 
+             //   printf("%f\n", y_data[i]);
+            
+        }
+        else {
+            //auto& iv_data = (*IV)[0];
+            Integer_Type k = 0;
+            Integer_Type l = 0;
+            auto& jv_data = (*JV)[tile.jth];
+            printf("%d %lu %lu\n", ncols, y_data.size(), x_data.size());
+            for(uint32_t j = 0; j < ncols; j++) {
+                for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                    k = jv_data[IA[i]];
+                    l = JC[j];
+                    #ifdef HAS_WEIGHT
+                    combiner(y_data[l], x_data[k], A[i]);   
+                    #else
+                    combiner(y_data[l], x_data[k]);
+                    #endif
+                }
+            }            
+        }
+    }
     else {
         if(num_iterations == 1) {
             if(ordering_type == _ROW_) {
