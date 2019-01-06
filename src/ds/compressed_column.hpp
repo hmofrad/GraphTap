@@ -297,6 +297,9 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JA; // COL_PTR
         Integer_Type* JC; // COL_IDX
         Integer_Type* IR; // ROW_PTR
+        Integer_Type* JA_REG_R_NNZ_C;
+        Integer_Type* JA_SRC_R_NNZ_C;
+        Integer_Type* JC_REG_R_NNZ_C;
         Integer_Type  NC_REG_R_REG_C;
         Integer_Type* JA_REG_R_REG_C;
         Integer_Type* JC_REG_R_REG_C;
@@ -377,6 +380,24 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         exit(1);
         }
     }
+
+    if(nnzcols) {
+        if(munmap(JA_REG_R_NNZ_C, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        if(munmap(JA_SRC_R_NNZ_C, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        /*
+        if(munmap(JC_REG_R_NNZ_C, nnzcols * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        */
+    }    
+    
     
     if(NC_REG_R_REG_C) {
         if(munmap(JA_REG_R_REG_C, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type)) == -1) {
@@ -519,6 +540,94 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             r.shrink_to_fit();
         }
     }
+    
+    if(nnzcols) {
+        if((JA_REG_R_NNZ_C = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_REG_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
+
+        if((JA_SRC_R_NNZ_C = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA_SRC_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
+    }
+    
+    // Regular rows to nnz columns
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit();  
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                m = (JA[j+1] - JA[j]);
+                r.push_back(i);
+            }
+        }
+        if(m > 0) {              
+            n = r.size();
+            JA_REG_R_NNZ_C[l] = JA[j];
+            JA_REG_R_NNZ_C[l + 1] = JA[j + 1] - n;
+            l += 2; 
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+        }
+        else {
+            JA_REG_R_NNZ_C[l] = JA[j];
+            JA_REG_R_NNZ_C[l + 1] = JA[j + 1];
+            l += 2;  
+        }
+    }
+    
+    // Source rows to nnz columns
+    k = 0;
+    l = 0;   
+    m = 0;
+    n = 0;
+    r.clear();
+    r.shrink_to_fit();  
+    for(j = 0; j < nnzcols; j++) {
+        for(i = JA[j]; i < JA[j + 1]; i++) {
+            if(source_rows_bitvector[IR[IA[i]]] == 1) {
+                m = (JA[j+1] - JA[j]);
+                r.push_back(i);
+            }
+        }
+        if(m > 0) {              
+            n = r.size();
+            JA_SRC_R_NNZ_C[l] = JA[j + 1] - n;
+            JA_SRC_R_NNZ_C[l + 1] = JA[j + 1];
+            l += 2; 
+            m = 0;
+            n = 0;
+            r.clear();
+            r.shrink_to_fit();
+        }
+        else {
+            JA_SRC_R_NNZ_C[l] = JA[j];
+            JA_SRC_R_NNZ_C[l + 1] = JA[j];
+            l += 2;  
+        }
+    }
+    
+    
+    /*
+    for(j = 0; j < (nnzcols * 2); j = j + 2) {
+        printf(">>>j=%d\n ", j);
+        for(i = JA_REG_R_NNZ_C[j]; i < JA_REG_R_NNZ_C[j + 1]; i++) {
+            printf("j=%d  i = %d/%d\n", j, IA[i], source_rows_bitvector[IR[IA[i]]] );
+        }
+    }
+    Env::barrier();
+    Env::exit(0);
+    */
 
     // Regular rows to regular columns
     Integer_Type j1 = 0;
