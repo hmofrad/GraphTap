@@ -15,7 +15,7 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 .PHONY: dir all test misc clean
 
 objs   = deg pr pr1 cc bfs
-objs_w = sssp 
+objs_w = sssp
 
 all: dir $(objs) $(objs_w)
 
