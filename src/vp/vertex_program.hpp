@@ -2259,7 +2259,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
         }                    
     }
     
-    checksum();
     if(not gather_depends_on_apply and not apply_depends_on_iter) {
         for(uint32_t i = 0; i < rank_nrowgrps; i++) {
             for(uint32_t j = 0; j < Y[i].size(); j++) {
