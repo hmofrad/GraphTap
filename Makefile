@@ -9,7 +9,7 @@ CXX = g++
 MPI_CXX = mpicxx
 SKIPPED_CXX_WARNINGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized
 CXX_FLAGS = -std=c++14 -fpermissive $(SKIPPED_CXX_WARNINGS)
-#OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
+OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 #DEBUG = -g 
 # -fsanitize=undefined,address -lasan -lubsan
 .PHONY: dir all test misc clean
