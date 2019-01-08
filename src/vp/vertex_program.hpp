@@ -2462,7 +2462,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                 c_sum_local = 0;
         }
         else {
-            if(stationary) {
+            //if(stationary) {
                 uint32_t yi = accu_segment_row;
                 auto& iv_data = (*IV)[yi];
                 auto& regular_rows = (*rowgrp_regular_rows);
@@ -2475,8 +2475,8 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                     c_sum_local = 1;
                 else
                     c_sum_local = 0;
-            }
-            else {
+            //}
+           // else {
                 /*
                 uint32_t yi = accu_segment_row;
                 auto& iv_data = (*IV)[yi];
@@ -2493,7 +2493,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                 */
                 
                 
-                
+                /*
                 auto& IR = (*rowgrp_nnz_rows);
                 Integer_Type IR_nitems = IR.size();
                 Integer_Type i = 0;
@@ -2506,8 +2506,9 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                     c_sum_local = 1;
                 else
                     c_sum_local = 0;
+                */
                
-            }
+            //}
             
             
             /*
@@ -2603,8 +2604,8 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checksum()
 {
-    //uint64_t v_sum_local = 0, v_sum_global = 0;
-    Fractional_Type v_sum_local = 0, v_sum_global = 0;
+    uint64_t v_sum_local = 0, v_sum_global = 0;
+    //Fractional_Type v_sum_local = 0, v_sum_global = 0;
     
     Integer_Type v_nitems = V.size();
     for(uint32_t i = 0; i < v_nitems; i++)
@@ -2614,8 +2615,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
                 v_sum_local += state.get_state();
             
     }
-    //MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, TYPE_DOUBLE, MPI_SUM, Env::MPI_WORLD);
+    MPI_Allreduce(&v_sum_local, &v_sum_global, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
+    //MPI_Allreduce(&v_sum_local, &v_sum_global, 1, TYPE_DOUBLE, MPI_SUM, Env::MPI_WORLD);
     if(Env::is_master)
     {
         std::cout << "Iterations: " << iteration << std::endl;
