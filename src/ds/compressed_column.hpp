@@ -298,7 +298,7 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JC; // COL_IDX
         Integer_Type* IR; // ROW_PTR
         Integer_Type* JA_REG_R_NNZ_C;
-        Integer_Type* JA_SRC_R_NNZ_C;
+        //Integer_Type* JA_SRC_R_NNZ_C;
         Integer_Type* JC_REG_R_NNZ_C;
         Integer_Type  NC_REG_R_REG_C;
         Integer_Type* JA_REG_R_REG_C;
@@ -390,10 +390,10 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
             fprintf(stderr, "Error unmapping memory\n");
             exit(1);
         }
-        if(munmap(JA_SRC_R_NNZ_C, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
-            fprintf(stderr, "Error unmapping memory\n");
-            exit(1);
-        }
+        //if(munmap(JA_SRC_R_NNZ_C, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
+        //    fprintf(stderr, "Error unmapping memory\n");
+        //    exit(1);
+        //}
     }    
    
     
@@ -560,11 +560,11 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         }
         memset(JA_REG_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
 
-        if((JA_SRC_R_NNZ_C = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-            fprintf(stderr, "Error mapping memory\n");
-            exit(1);
-        }
-        memset(JA_SRC_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
+        //if((JA_SRC_R_NNZ_C = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+        //    fprintf(stderr, "Error mapping memory\n");
+        //    exit(1);
+        //}
+        //memset(JA_SRC_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
     }
     
     // Regular rows to nnz columns
@@ -597,7 +597,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             l += 2;  
         }
     }
-    
+    /*
     // Source rows to nnz columns
     k = 0;
     l = 0;   
@@ -628,7 +628,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             l += 2;  
         }
     }
-    
+    */
     
     /*
     for(j = 0; j < (nnzcols * 2); j = j + 2) {
