@@ -1625,6 +1625,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }                
                 if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
                     //printf("2.iter=%d\n", iteration);
+                    if(stationary) {
                     Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
                     if(NC_SRC_R_REG_C) {
                         Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
@@ -1655,6 +1656,30 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                                 #endif
                             }
                         }                    
+                    }
+                    }
+                    else {
+                        //std::vector<uint32_t>::iterator it;
+                        //it = std::unique(active_vertices.begin(), active_vertices.end());
+                        //active_vertices.resize(std::distance(active_vertices.begin(), it)); 
+                        Integer_Type* JA_SRC_R_NNZ_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_NNZ_C;
+                        for(Integer_Type j: active_vertices) {
+                            Integer_Type k = j * 2;
+                            for(uint32_t i = JA_SRC_R_NNZ_C[k]; i < JA_SRC_R_NNZ_C[k + 1]; i++) {
+                                #ifdef HAS_WEIGHT
+                                combiner(y_data[IA[i]], x_data[j], A[i]);
+                                #else
+                                combiner(y_data[IA[i]], x_data[j]);
+                                #endif
+                            }
+                        } 
+                        
+                        
+                        
+                        //printf("Not implemented\n");
+                        //Env::barrier();
+                        //Env::exit(0);
+                        
                     }
                 }             
             }
@@ -1825,6 +1850,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
                     Integer_Type j = 0;
                     for(Integer_Type k = 0; k < s_nitems; k++) {
                         j = xi_data[k] * 2;
+                        active_vertices.push_back(xi_data[k]);
                         for(uint32_t i = JA_REG_R_NNZ_C[j]; i < JA_REG_R_NNZ_C[j + 1]; i++) {
                             #ifdef HAS_WEIGHT
                             combiner(y_data[IA[i]], xv_data[k], A[i]);
