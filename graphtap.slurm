@@ -40,7 +40,7 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 NP=$SLURM_NTASKS
 MPI="mpirun -np"
 APPS_PERFIX="bin"
-APPS=("./pr1" "./sssp" "./bfs" "./cc")
+APPS=("./pr" "./sssp" "./bfs" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
 GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin")
 GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin")
@@ -76,7 +76,7 @@ for A in "${APPS[@]}";
 do
     for N in "${NTIMES[@]}";
     do
-        if [ "${A}" = "./pr1" ]
+        if [ "${A}" = "./pr" ]
         then
             ITER_OR_SRC=${ITERS}
         else
