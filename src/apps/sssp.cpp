@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     bool acyclic = false;
     bool parallel_edges = false;
     Tiling_type TT = _2DT_;
-    Compression_type CT = _TCSC1_;
+    Compression_type CT = _TCSC_;
     
     /* Single Source Shortest Path (SSSP) execution*/
     bool stationary = false;
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     V.execute();
     //V.execute(std::atoi(argv[4]));
     V.checksum();
-    //V.display();
+    V.display();
     V.free();
     G.free();    
 
