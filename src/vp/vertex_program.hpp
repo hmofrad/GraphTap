@@ -1625,7 +1625,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 }                
                 if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
                     //printf("2.iter=%d\n", iteration);
-                    if(stationary) {
+                    //if(stationary) {
                     Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
                     if(NC_SRC_R_REG_C) {
                         Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
@@ -1657,6 +1657,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                             }
                         }                    
                     }
+                    /*
                     }
                     else {
                         //std::vector<uint32_t>::iterator it;
@@ -1681,6 +1682,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                         //Env::exit(0);
                         
                     }
+                    */
                 }             
             }
             else {
