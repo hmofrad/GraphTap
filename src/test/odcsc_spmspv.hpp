@@ -151,6 +151,17 @@ void ODCSC::run_pagerank() {
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
+    
+    for(uint32_t i = 1; i < niters; i++) {
+        std::fill(x_regulars.begin(), x_regulars.end(), 0);
+        std::fill(x_sources.begin(), x_sources.end(), 0);
+        std::fill(y.begin(), y.end(), 0);
+        message_nnzcols();
+        noperations += spmv_nnzrows_nnzcols();
+        update();
+    }
+    
+    /*
     if(niters == 1)
     {
         std::fill(x_regulars.begin(), x_regulars.end(), 0);
@@ -183,6 +194,7 @@ void ODCSC::run_pagerank() {
         noperations += spmv_nnzrows_nnzcols_regulars();
         update();
     }
+    */
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "ODCSC SpMSpV");
