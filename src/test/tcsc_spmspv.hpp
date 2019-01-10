@@ -125,7 +125,7 @@ void TCSC::run_pagerank() {
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    
+    /*
     for(uint32_t i = 1; i < niters; i++) {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
@@ -133,7 +133,7 @@ void TCSC::run_pagerank() {
         noperations += spmv_nnzcols();
         update();        
     }
-    /*
+    */
     if(niters == 1)
     {
         std::fill(x.begin(), x.end(), 0);
@@ -163,7 +163,6 @@ void TCSC::run_pagerank() {
         noperations += spmv_nnzcols_regular();
         update();
     }
-    */
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "TCSC SpMSpV");
