@@ -2,9 +2,9 @@
 #SBATCH --job-name=graphtap
 #SBATCH --output=graphtap.out
 #SBATCH --error=graphtap.err
-#SBATCH --ntasks=28
+#SBATCH --ntasks=64
 #SBATCH --nodes=4
-#SBATCH --ntasks-per-node=7
+#SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 ##SBATCH --mem=50000
 ##SBATCH --sockets-per-node=2
