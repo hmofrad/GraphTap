@@ -594,8 +594,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    
-    Env::barrier();
+    MPI_Barrier(MPI_COMM_WORLD);    
     for (int32_t r = 0; r < Env::nranks; r++) {
         if (r != Env::rank) {
             auto &outbox = outboxes[r];
@@ -604,7 +603,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    Env::barrier();
+    MPI_Barrier(MPI_COMM_WORLD);    
     
     
     for (int32_t r = 0; r < Env::nranks; r++) {
@@ -616,7 +615,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
-    Env::barrier();
+    MPI_Barrier(MPI_COMM_WORLD);    
     
     
     /*
