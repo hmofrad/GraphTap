@@ -1,1 +1,1 @@
-# GraphTap: A Distributed Graph Analytics Platform
+# GraphTap: Efiicient Distributed Graph Analytics using Triply Compressed Sparse Matrix Format
