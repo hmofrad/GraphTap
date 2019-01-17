@@ -2021,10 +2021,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply(
     else {
         if(not converged)
             apply_nonstationary();
-        else {
-            if(compression_type == _TCSC_)
-                apply_nonstationary();
-        }
+        //else {
+        //    if(compression_type == _TCSC_)
+        //        apply_nonstationary();
+        //}
     }
 
     #ifdef TIMING
