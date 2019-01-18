@@ -16,10 +16,10 @@
  
 enum Compression_type
 {
-   _CSC_, // Compressed Sparse Col
-  _DCSC_, // Compressed Sparse Col
-  _TCSC_, // Compressed Sparse Col
- _TCSC1_, // Compressed Sparse Col
+   _CSC_, // Compressed sparse col
+  _DCSC_, // Doubly compressed sparse col
+  _TCSC_, // Triply compressed sparse col
+  _TCSC_CF_
 };
 
 template<typename Weight, typename Integer_Type>
@@ -34,6 +34,14 @@ struct Compressed_column {
                               const Integer_Type tile_width,
                               const std::vector<char>&         nnzcols_bitvector,
                               const std::vector<Integer_Type>& nnzcols_indices){};
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+                              const Integer_Type tile_height, 
+                              const Integer_Type tile_width,                
+                              const std::vector<char>&         nnzrows_bitvector,
+                              const std::vector<Integer_Type>& nnzrows_indices, 
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices) {};                               
+                              
         virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                               const Integer_Type tile_height, 
                               const Integer_Type tile_width,                
@@ -266,21 +274,8 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
                               const std::vector<char>&         nnzrows_bitvector,
                               const std::vector<Integer_Type>& nnzrows_indices, 
                               const std::vector<char>&         nnzcols_bitvector,
-                              const std::vector<Integer_Type>& nnzcols_indices, 
-                              const std::vector<Integer_Type>& regular_rows_indices,
-                              const std::vector<char>&         regular_rows_bitvector,
-                              const std::vector<Integer_Type>& source_rows_indices,
-                              const std::vector<char>&         source_rows_bitvector,
-                              const std::vector<Integer_Type>& regular_columns_indices,
-                              const std::vector<char>&         regular_columns_bitvector,
-                              const std::vector<Integer_Type>& sink_columns_indices,
-                              const std::vector<char>&         sink_columns_bitvector);
+                              const std::vector<Integer_Type>& nnzcols_indices);
                               
-        void allocate_local_reg(Integer_Type nnzcols_regulars_local_);
-        void allocate_local_src(Integer_Type nnzcols_sources_local_);
-        void allocate_local_src_reg(Integer_Type nnzcols_sources_regulars_local_);
-        void allocate_local_reg_snk(Integer_Type nnzcols_regulars_sinks_local_);
-        void allocate_local_src_snk(Integer_Type nnzcols_sources_sinks_local_);
         uint64_t nnz;
         Integer_Type nnzcols;
         Integer_Type nnzcols_regulars;
@@ -297,21 +292,6 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
         Integer_Type* JA; // COL_PTR
         Integer_Type* JC; // COL_IDX
         Integer_Type* IR; // ROW_PTR
-        Integer_Type* JA_REG_R_NNZ_C;
-        //Integer_Type* JA_SRC_R_NNZ_C;
-        Integer_Type* JC_REG_R_NNZ_C;
-        Integer_Type  NC_REG_R_REG_C;
-        Integer_Type* JA_REG_R_REG_C;
-        Integer_Type* JC_REG_R_REG_C;
-        Integer_Type  NC_REG_R_SNK_C;
-        Integer_Type* JA_REG_R_SNK_C;
-        Integer_Type* JC_REG_R_SNK_C;
-        Integer_Type  NC_SRC_R_REG_C;
-        Integer_Type* JA_SRC_R_REG_C;
-        Integer_Type* JC_SRC_R_REG_C;
-        Integer_Type  NC_SRC_R_SNK_C;
-        Integer_Type* JA_SRC_R_SNK_C;
-        Integer_Type* JC_SRC_R_SNK_C;
 };
 
 template<typename Weight, typename Integer_Type>
@@ -382,6 +362,184 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
         }
+    } 
+}
+
+template<typename Weight, typename Integer_Type>
+void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+                                               const Integer_Type tile_height, 
+                                               const Integer_Type tile_width,                
+                                               const std::vector<char>&         nnzrows_bitvector,
+                                               const std::vector<Integer_Type>& nnzrows_indices, 
+                                               const std::vector<char>&         nnzcols_bitvector,
+                                               const std::vector<Integer_Type>& nnzcols_indices) {
+    struct Triple<Weight, Integer_Type> pair;
+    Integer_Type i = 0; // Row Index
+    Integer_Type j = 1; // Col index
+    JA[0] = 0;
+    for (auto& triple : *triples) {
+        pair  = {(triple.row % tile_height), (triple.col % tile_width)};
+        while((j - 1) != nnzcols_indices[pair.col]) {
+            j++;
+            JA[j] = JA[j - 1];
+        }            
+        #ifdef HAS_WEIGHT
+        A[i] = triple.weight;
+        #endif
+        JA[j]++;
+        IA[i] = nnzrows_indices[pair.row];
+        i++;
+    }
+    while((j + 1) < (nnzcols + 1)) {
+        j++;
+        JA[j] = JA[j - 1];
+    }
+    // Column indices
+    Integer_Type k = 0;
+    for(j = 0; j < tile_height; j++) {
+        if(nnzcols_bitvector[j]) {
+            JC[k] = j;
+            k++;
+        }
+    }
+    assert(nnzcols == k);
+    // Rows indices
+    k = 0;
+    for(i = 0; i < tile_height; i++) {
+        if(nnzrows_bitvector[i]) {
+            IR[k] = i;
+            k++;
+        }
+    }
+    assert(nnzrows == k);
+}
+
+template<typename Weight, typename Integer_Type>
+struct TCSC_CF_BASE : public Compressed_column<Weight, Integer_Type> {
+    public:
+        TCSC_CF_BASE(uint64_t nnz_, Integer_Type nnzcols_, Integer_Type nnzrows_);
+        ~TCSC_CF_BASE();
+        virtual void populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+                              const Integer_Type tile_height, 
+                              const Integer_Type tile_width,                
+                              const std::vector<char>&         nnzrows_bitvector,
+                              const std::vector<Integer_Type>& nnzrows_indices, 
+                              const std::vector<char>&         nnzcols_bitvector,
+                              const std::vector<Integer_Type>& nnzcols_indices, 
+                              const std::vector<Integer_Type>& regular_rows_indices,
+                              const std::vector<char>&         regular_rows_bitvector,
+                              const std::vector<Integer_Type>& source_rows_indices,
+                              const std::vector<char>&         source_rows_bitvector,
+                              const std::vector<Integer_Type>& regular_columns_indices,
+                              const std::vector<char>&         regular_columns_bitvector,
+                              const std::vector<Integer_Type>& sink_columns_indices,
+                              const std::vector<char>&         sink_columns_bitvector);
+                              
+        void allocate_local_reg(Integer_Type nnzcols_regulars_local_);
+        void allocate_local_src(Integer_Type nnzcols_sources_local_);
+        void allocate_local_src_reg(Integer_Type nnzcols_sources_regulars_local_);
+        void allocate_local_reg_snk(Integer_Type nnzcols_regulars_sinks_local_);
+        void allocate_local_src_snk(Integer_Type nnzcols_sources_sinks_local_);
+        uint64_t nnz;
+        Integer_Type nnzcols;
+        Integer_Type nnzcols_regulars;
+        Integer_Type nnzcols_regulars_local;
+        Integer_Type nnzcols_sources_local;
+        Integer_Type nnzcols_sources_regulars_local;
+        Integer_Type nnzcols_regulars_sinks_local;
+        Integer_Type nnzcols_sources_sinks_local;
+        Integer_Type nnzrows;
+        #ifdef HAS_WEIGHT
+        Weight* A;  // WEIGHT
+        #endif
+        Integer_Type* IA; // ROW_IDX
+        Integer_Type* JA; // COL_PTR
+        Integer_Type* JC; // COL_IDX
+        Integer_Type* IR; // ROW_PTR
+        Integer_Type* JA_REG_R_NNZ_C;
+        Integer_Type* JC_REG_R_NNZ_C;
+        Integer_Type  NC_REG_R_REG_C;
+        Integer_Type* JA_REG_R_REG_C;
+        Integer_Type* JC_REG_R_REG_C;
+        Integer_Type  NC_REG_R_SNK_C;
+        Integer_Type* JA_REG_R_SNK_C;
+        Integer_Type* JC_REG_R_SNK_C;
+        Integer_Type  NC_SRC_R_REG_C;
+        Integer_Type* JA_SRC_R_REG_C;
+        Integer_Type* JC_SRC_R_REG_C;
+        Integer_Type  NC_SRC_R_SNK_C;
+        Integer_Type* JA_SRC_R_SNK_C;
+        Integer_Type* JC_SRC_R_SNK_C;
+};
+
+template<typename Weight, typename Integer_Type>
+TCSC_CF_BASE<Weight, Integer_Type>::TCSC_CF_BASE(uint64_t nnz_, Integer_Type nnzcols_, Integer_Type nnzrows_) {
+    nnz = nnz_;
+    nnzcols = nnzcols_;
+    nnzrows = nnzrows_;
+    if(nnz and nnzcols and nnzrows) {
+        #ifdef HAS_WEIGHT
+        if((A = (Weight*) mmap(nullptr, nnz * sizeof(Weight), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(A, 0, nnz * sizeof(Weight));
+        #endif
+        
+        if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(IA, 0, nnz * sizeof(Integer_Type));
+        
+        if((JA = (Integer_Type*) mmap(nullptr, (nnzcols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA, 0, (nnzcols + 1) * sizeof(Integer_Type));
+        
+        if((JC = (Integer_Type*) mmap(nullptr, nnzcols * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JC, 0, nnzcols * sizeof(Integer_Type));
+        
+        if((IR = (Integer_Type*) mmap(nullptr, nnzrows * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(IR, 0, nnzrows * sizeof(Integer_Type));
+    }
+}
+
+template<typename Weight, typename Integer_Type>
+TCSC_CF_BASE<Weight, Integer_Type>::~TCSC_CF_BASE() {
+    if(nnz and nnzcols and nnzrows) {
+        #ifdef HAS_WEIGHT
+        if(munmap(A, nnz * sizeof(Weight)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        #endif
+        if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JA, (nnzcols + 1) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JC, nnzcols * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(IR, nnzrows * sizeof(Integer_Type)) == -1) {
+        fprintf(stderr, "Error unmapping memory\n");
+        exit(1);
+        }
     }
 
     
@@ -390,14 +548,8 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
             fprintf(stderr, "Error unmapping memory\n");
             exit(1);
         }
-        //if(munmap(JA_SRC_R_NNZ_C, (nnzcols * 2) * sizeof(Integer_Type)) == -1) {
-        //    fprintf(stderr, "Error unmapping memory\n");
-        //    exit(1);
-        //}
     }    
    
-    
-    
     if(NC_REG_R_REG_C) {
         if(munmap(JA_REG_R_REG_C, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type)) == -1) {
             fprintf(stderr, "Error unmapping memory\n");
@@ -449,7 +601,7 @@ TCSC_BASE<Weight, Integer_Type>::~TCSC_BASE() {
 }
 
 template<typename Weight, typename Integer_Type>
-void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
+void TCSC_CF_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<Weight, Integer_Type>>* triples,
                                                const Integer_Type tile_height, 
                                                const Integer_Type tile_width,                
                                                const std::vector<char>&         nnzrows_bitvector,
@@ -559,12 +711,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             exit(1);
         }
         memset(JA_REG_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
-
-        //if((JA_SRC_R_NNZ_C = (Integer_Type*) mmap(nullptr, (nnzcols * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        //    fprintf(stderr, "Error mapping memory\n");
-        //    exit(1);
-        //}
-        //memset(JA_SRC_R_NNZ_C, 0, (nnzcols * 2) * sizeof(Integer_Type));
     }
     
     // Regular rows to nnz columns
@@ -597,49 +743,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             l += 2;  
         }
     }
-    /*
-    // Source rows to nnz columns
-    k = 0;
-    l = 0;   
-    m = 0;
-    n = 0;
-    r.clear();
-    r.shrink_to_fit();  
-    for(j = 0; j < nnzcols; j++) {
-        for(i = JA[j]; i < JA[j + 1]; i++) {
-            if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                m = (JA[j+1] - JA[j]);
-                r.push_back(i);
-            }
-        }
-        if(m > 0) {              
-            n = r.size();
-            JA_SRC_R_NNZ_C[l] = JA[j + 1] - n;
-            JA_SRC_R_NNZ_C[l + 1] = JA[j + 1];
-            l += 2; 
-            m = 0;
-            n = 0;
-            r.clear();
-            r.shrink_to_fit();
-        }
-        else {
-            JA_SRC_R_NNZ_C[l] = JA[j];
-            JA_SRC_R_NNZ_C[l + 1] = JA[j];
-            l += 2;  
-        }
-    }
-    */
-    
-    /*
-    for(j = 0; j < (nnzcols * 2); j = j + 2) {
-        printf(">>>j=%d\n ", j);
-        for(i = JA_REG_R_NNZ_C[j]; i < JA_REG_R_NNZ_C[j + 1]; i++) {
-            printf("j=%d  i = %d/%d\n", j, IA[i], source_rows_bitvector[IR[IA[i]]] );
-        }
-    }
-    Env::barrier();
-    Env::exit(0);
-    */
 
     // Regular rows to regular columns
     Integer_Type j1 = 0;
@@ -672,12 +775,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
         }
     }
-    //printf("%d %d %d=%d, %lu=%d %d\n", Env::rank, nnzcols, nnzcols_local, j1, regular_columns_indices.size(), j2, l); 
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == regular_columns_indices.size());
-    
+
     NC_REG_R_REG_C = l;
-    //NC_REG_R_REG_C = regular_columns_indices.size();
     if(NC_REG_R_REG_C) {
         if((JA_REG_R_REG_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_REG_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
             fprintf(stderr, "Error mapping memory\n");
@@ -743,46 +842,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
             
         }        
-
-        
-        
-        /*
-        for(j = 0; j < NC_REG_R_REG_C; j++) 
-            JC_REG_R_REG_C[j] = regular_columns_indices[j];
-        for(j = 0; j < nnzcols; j++) {
-            if(JC_REG_R_REG_C[k] == JC[j]) {
-                for(i = JA[j]; i < JA[j + 1]; i++) {
-                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                        m = (JA[j+1] - JA[j]);
-                        r.push_back(i);
-                    }   
-                }
-                if(m > 0) {
-                    n = r.size();
-                    JA_REG_R_REG_C[l] = JA[j];
-                    JA_REG_R_REG_C[l + 1] = JA[j + 1] - n;            
-                    l += 2; 
-                    m = 0;
-                    n = 0;
-                    r.clear();
-                    r.shrink_to_fit();
-                }
-                else {
-                    JA_REG_R_REG_C[l] = JA[j];
-                    JA_REG_R_REG_C[l + 1] = JA[j + 1];
-                    l += 2;  
-                }
-                JC_REG_R_REG_C[k] = j;
-                k++;
-            }
-        }
-        */
     }
 
-    //assert(j2 == regular_columns_indices.size());
-    
-    //Env::barrier();
-    //Env::exit(0);
     j1 = 0;
     j2 = 0;
     k = 0;
@@ -813,17 +874,9 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
         }
     }
-    //printf("%d %d %d %lu %d %d\n", nnzcols, nnzcols_local, j1, sink_columns_indices.size(), j2, l);   
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == sink_columns_indices.size());
-    
-    
-    
-    
-    //printf("%d %d %lu %d\n", nnzcols, nnzcols_local, sink_columns_indices.size(), l);    
+
     // Regular rows to sink columns
     NC_REG_R_SNK_C = l;
-    //NC_REG_R_SNK_C = sink_columns_indices.size();
     if(NC_REG_R_SNK_C) {
         if((JA_REG_R_SNK_C = (Integer_Type*) mmap(nullptr, (NC_REG_R_SNK_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
             fprintf(stderr, "Error mapping memory\n");
@@ -888,47 +941,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
             
         }     
-        
-        
-        
-        /*
-        for(j = 0; j < NC_REG_R_SNK_C; j++)
-            JC_REG_R_SNK_C[j] = sink_columns_indices[j];
-        
-        for(j = 0; j < nnzcols; j++) {
-            if(JC_REG_R_SNK_C[k] == JC[j]) {
-                for(i = JA[j]; i < JA[j + 1]; i++) {
-                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                        m = (JA[j+1] - JA[j]);
-                        r.push_back(i);
-                    }   
-                }
-                if(m > 0) {
-                    n = r.size();
-                    JA_REG_R_SNK_C[l] = JA[j];
-                    JA_REG_R_SNK_C[l + 1] = JA[j + 1] - n;            
-                    l += 2; 
-                    m = 0;
-                    n = 0;
-                    r.clear();
-                    r.shrink_to_fit();
-                }
-                else {
-                    JA_REG_R_SNK_C[l] = JA[j];
-                    JA_REG_R_SNK_C[l + 1] = JA[j + 1];
-                    l += 2;  
-                }
-                JC_REG_R_SNK_C[k] = j;
-                k++;
-            }
-        }
-        */
     }
     
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == sink_columns_indices.size());
-    
-    //assert(nnzcols == (NC_REG_R_REG_C + NC_REG_R_SNK_C));
     // Source rows to regular columns
     j1 = 0;
     j2 = 0;
@@ -953,27 +967,7 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             else
                 j2++;
         }
-
-        /*
-        for(j = 0; j < nnzcols; j++) {
-            if(regular_columns_indices[k] == JC[j]) {
-                for(i = JA[j]; i < JA[j + 1]; i++) {
-                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                        l++;
-                        break;
-                    }
-                }
-                k++;
-            }
-        }
-        */
     }
- 
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == regular_columns_indices.size());
-    
-    //printf("k=%d l=%d %lu\n", k, l, nnzcols_local, regular_columns_indices.size());
-    
     
     NC_SRC_R_REG_C = k;
     if(NC_SRC_R_REG_C) {
@@ -1031,35 +1025,8 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
                 j2++;
             
         }
-        
-        /*
-        for(j = 0; j < nnzcols; j++) {
-            if(regular_columns_indices[k] == JC[j]) {
-                for(i = JA[j]; i < JA[j + 1]; i++) {
-                    if(source_rows_bitvector[IR[IA[i]]] == 1) {
-                        m = (JA[j+1] - JA[j]);
-                        r.push_back(i);
-                    }   
-                }
-                if(m > 0) {
-                    n = r.size();
-                    JA_SRC_R_REG_C[l] = JA[j + 1] - n;
-                    JA_SRC_R_REG_C[l + 1] = JA[j + 1];            
-                    l += 2; 
-                    m = 0;
-                    n = 0;
-                    r.clear();
-                    r.shrink_to_fit();
-                    JC_SRC_R_REG_C[o] = j;
-                    o++;
-                }
-                k++;
-            }
-        }
-        */
     }  
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == regular_columns_indices.size());
+
     // Source rows to sink columns
     j1 = 0;
     j2 = 0;
@@ -1085,9 +1052,6 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
         }
     }
       
-    //assert(j1 == nnzcols_local);
-    //assert(j2 == sink_columns_indices.size());
-    //printf("k== %d\n", k);
     NC_SRC_R_SNK_C = k;
     if(NC_SRC_R_SNK_C) {
         if((JA_SRC_R_SNK_C = (Integer_Type*) mmap(nullptr, (NC_SRC_R_SNK_C * 2) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
@@ -1146,30 +1110,11 @@ void TCSC_BASE<Weight, Integer_Type>::populate(const std::vector<struct Triple<W
             
         }
     }
-    
-    //assert(j2 == sink_columns_indices.size());
-    
-    
-    /*
-    for(uint32_t j = 0, k = 0; j < NC_SRC_R_REG_C; j++, k = k + 2) {
-        l = JC_SRC_R_SNK_C[j];
-        for(uint32_t i = JA_SRC_R_SNK_C[k]; i < JA_SRC_R_SNK_C[k + 1]; i++) {
-            printf("j=%d l=%d i=%d IA=%d\n", j, l, i, IA[i]);
-        }
-    }    
-    */
-    
-    
-    ///Env::barrier();
-    //Env::exit(0);
-    
-    
-    
-    
-    
+
     JC_LOCAL_VAL.clear();
     JC_LOCAL_VAL.shrink_to_fit();
     JC_LOCAL_IDX.clear();
     JC_LOCAL_IDX.shrink_to_fit();
 }
+
 #endif
