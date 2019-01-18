@@ -42,10 +42,10 @@ MPI="mpirun -np"
 APPS_PERFIX="bin"
 APPS=("./pr" "./sssp" "./bfs" "./cc")
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
-GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin")
-GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin")
-GRAPHS_V=("67108863" "134217728" "268435456" "536870912")
-SRC_V=("1554330" "1554330" "1" "1554332")
+GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin" "rmat30.bin")
+GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin" "rmat30_w.bin")
+GRAPHS_V=("67108863" "134217728" "268435456" "536870912" "1073741824")
+SRC_V=("1554330" "1554330" "1" "1554332" "1")
 
 
 if [ "${SLURM_NNODES}" = "4" ]
@@ -57,9 +57,12 @@ then
 elif [ "$SLURM_NNODES" = "16" ]
 then
     I="2"
-elif [ "$SLURM_NNODES" = "32" ]
+elif [ "$SLURM_NNODES" = "24" ]
 then
     I="3"
+elif [ "$SLURM_NNODES" = "32" ]
+then
+    I="4"
 else
     echo "Invalid input graph"
     exit;     
