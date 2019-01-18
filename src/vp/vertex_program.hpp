@@ -441,14 +441,14 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::free()
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execute(Integer_Type num_iterations_) {
-    double t1, t2, elapsed_time;
-    t1 = Env::clock();
     num_iterations = num_iterations_;
     if(not already_initialized)
         initialize();
     if(!num_iterations)
         check_for_convergence = true; 
-
+    
+    double t1, t2, elapsed_time;
+    t1 = Env::clock();
     while(true) {
         scatter_gather();
         combine();
