@@ -14,7 +14,7 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 
 .PHONY: dir all test misc clean
 
-objs   =  deg pr cc bfs
+objs   = deg pr cc bfs
 objs_w = sssp
 
 all: dir $(objs) $(objs_w)
@@ -23,10 +23,10 @@ dir:
 	@mkdir -p bin
 
 $(objs): %: src/apps/%.cpp
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(TIMING) $(DEBUG) -o bin/$@   -I src $<
+	$(MPI_CXX) $(CXX_FLAGS) $(OPTIMIZE) $(DEBUG) $(TIMING) -o bin/$@   -I src $<
 
 $(objs_w): %: src/apps/%.cpp
-	$(MPI_CXX) $(CXX_FLAGS) $(DEBUG) $(OPTIMIZE) $(TIMING) -DHAS_WEIGHT -o bin/$@ -I src $<
+	$(MPI_CXX) $(CXX_FLAGS) $(OPTIMIZE) $(DEBUG) $(TIMING) -DHAS_WEIGHT -o bin/$@ -I src $<
 
 test: dir
 	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/main src/test/main.cpp
