@@ -717,6 +717,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_filtering() {
     rowgrp_regular_rows = regular_rows[io];
     rowgrp_source_rows = source_rows[io];
     colgrp_sink_columns = sink_columns[jo];
+    Env::barrier();
     
 }
 
@@ -1162,6 +1163,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_compression() {
             printf("Edge compression: TCSC\n");
         init_tcsc();
     }
+    Env::barrier();
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type>
