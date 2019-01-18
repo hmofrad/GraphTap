@@ -1488,18 +1488,25 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
         JC   = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC;           
         ncols = static_cast<DCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
-    //else if(compression_type == _TCSC_) {
-    else {    
+    else if(compression_type == _TCSC_) {
         #ifdef HAS_WEIGHT
         A = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
         #endif
         IA   = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
         JA   = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
-        ncols = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
+        ncols = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;                
+    }
+    else {    
+        #ifdef HAS_WEIGHT
+        A = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->A;
+        #endif
+        IA   = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->IA;
+        JA   = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
+        ncols = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
     
     
-    if((compression_type == _CSC_) or (compression_type == _TCSC1_)) {        
+    if((compression_type == _CSC_) or (compression_type == _TCSC_)) {        
         if(ordering_type == _ROW_) {
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
@@ -1593,10 +1600,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
             if(ordering_type == _ROW_) {                
                 Integer_Type l;
                 if(iteration == 0) {               
-                    Integer_Type NC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_SNK_C;
+                    Integer_Type NC_REG_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_SNK_C;
                     if(NC_REG_R_SNK_C) {
-                        Integer_Type* JC_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_SNK_C;
-                        Integer_Type* JA_REG_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_SNK_C;
+                        Integer_Type* JC_REG_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_SNK_C;
+                        Integer_Type* JA_REG_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_SNK_C;
                         for(uint32_t j = 0, k = 0; j < NC_REG_R_SNK_C; j++, k = k + 2) {
                             l = JC_REG_R_SNK_C[j];
                             for(uint32_t i = JA_REG_R_SNK_C[k]; i < JA_REG_R_SNK_C[k + 1]; i++) {
@@ -1612,10 +1619,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 
                 if((not check_for_convergence) or (check_for_convergence and not converged)) {
                     //printf("1.iter=%d\n", iteration);
-                    Integer_Type NC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
+                    Integer_Type NC_REG_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_REG_R_REG_C;
                     if(NC_REG_R_REG_C) {
-                        Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
-                        Integer_Type* JA_REG_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_REG_C;
+                        Integer_Type* JC_REG_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_REG_R_REG_C;
+                        Integer_Type* JA_REG_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_REG_C;
                         for(uint32_t j = 0, k = 0; j < NC_REG_R_REG_C; j++, k = k + 2) {
                             l = JC_REG_R_REG_C[j];
                             for(uint32_t i = JA_REG_R_REG_C[k]; i < JA_REG_R_REG_C[k + 1]; i++) {
@@ -1631,10 +1638,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                 if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
                     //printf("2.iter=%d\n", iteration);
                     //if(stationary) {
-                    Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
+                    Integer_Type NC_SRC_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_REG_C;
                     if(NC_SRC_R_REG_C) {
-                        Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
-                        Integer_Type* JA_SRC_R_REG_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_REG_C;
+                        Integer_Type* JC_SRC_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_REG_C;
+                        Integer_Type* JA_SRC_R_REG_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_REG_C;
                         for(uint32_t j = 0, k = 0; j < NC_SRC_R_REG_C; j++, k = k + 2) {
                             l = JC_SRC_R_REG_C[j];
                             for(uint32_t i = JA_SRC_R_REG_C[k]; i < JA_SRC_R_REG_C[k + 1]; i++) {
@@ -1647,10 +1654,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                         }                    
                     }
                     
-                    Integer_Type NC_SRC_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_SNK_C;
+                    Integer_Type NC_SRC_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->NC_SRC_R_SNK_C;
                     if(NC_SRC_R_REG_C) {
-                        Integer_Type* JC_SRC_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_SNK_C;
-                        Integer_Type* JA_SRC_R_SNK_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_SNK_C;
+                        Integer_Type* JC_SRC_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JC_SRC_R_SNK_C;
+                        Integer_Type* JA_SRC_R_SNK_C = static_cast<TCSC_CF_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_SNK_C;
                         for(uint32_t j = 0, k = 0; j < NC_SRC_R_SNK_C; j++, k = k + 2) {
                             l = JC_SRC_R_SNK_C[j];
                             for(uint32_t i = JA_SRC_R_SNK_C[k]; i < JA_SRC_R_SNK_C[k + 1]; i++) {
@@ -2050,7 +2057,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
             }        
         //}
     }
-    else if (compression_type == _TCSC1_){
+    else if (compression_type == _TCSC_){
         //if(not converged) {
             auto& i_data = (*I)[yi];
             Integer_Type j = 0;
@@ -2427,7 +2434,7 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
 {
     bool converged = false;
     uint64_t c_sum_local = 0, c_sum_gloabl = 0;
-        if((compression_type == _CSC_) or (compression_type == _DCSC_) or (compression_type == _TCSC1_)) {
+        if((compression_type == _CSC_) or (compression_type == _DCSC_) or (compression_type == _TCSC_)) {
             
             Integer_Type c_nitems = C.size();   
             for(uint32_t i = 0; i < c_nitems; i++)
