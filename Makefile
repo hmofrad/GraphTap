@@ -29,7 +29,7 @@ $(objs_w): %: src/apps/%.cpp
 	$(MPI_CXX) $(CXX_FLAGS) $(OPTIMIZE) $(DEBUG) $(TIMING) -DHAS_WEIGHT -o bin/$@ -I src $<
 
 test: dir
-	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/main src/test/main.cpp
+	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/main src/singlenode/main.cpp
 
 misc: dir
 	$(CXX) $(CXX_FLAGS) $(OPTIMIZE) -o bin/converter src/misc/converter.cpp
