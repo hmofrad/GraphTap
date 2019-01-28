@@ -81,44 +81,48 @@ template<typename Weight, typename Integer_Type>
 CSC_BASE<Weight, Integer_Type>::CSC_BASE(uint64_t nnz_, Integer_Type ncols_) {
     nnz = nnz_;
     ncols = ncols_;
-    #ifdef HAS_WEIGHT
-    if((A = (Weight*) mmap(nullptr, nnz * sizeof(Weight), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
+    if(nnz and ncols) {
+        #ifdef HAS_WEIGHT
+        if((A = (Weight*) mmap(nullptr, nnz * sizeof(Weight), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(A, 0, nnz * sizeof(Weight));
+        #endif
+        
+        if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(IA, 0, nnz * sizeof(Integer_Type));
+        
+        if((JA = (Integer_Type*) mmap(nullptr, (ncols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA, 0, (ncols + 1) * sizeof(Integer_Type));
     }
-    memset(A, 0, nnz * sizeof(Weight));
-    #endif
-    
-    if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(IA, 0, nnz * sizeof(Integer_Type));
-    
-    if((JA = (Integer_Type*) mmap(nullptr, (ncols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(JA, 0, (ncols + 1) * sizeof(Integer_Type));
 }
 
 template<typename Weight, typename Integer_Type>
 CSC_BASE<Weight, Integer_Type>::~CSC_BASE() {
-    #ifdef HAS_WEIGHT
-    if(munmap(A, nnz * sizeof(Weight)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    #endif
-    
-    if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    
-    if(munmap(JA, (ncols + 1) * sizeof(Integer_Type)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
+    if(nnz and ncols) {
+        #ifdef HAS_WEIGHT
+        if(munmap(A, nnz * sizeof(Weight)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        #endif
+        
+        if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JA, (ncols + 1) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
     }
 }
 
@@ -173,55 +177,59 @@ template<typename Weight, typename Integer_Type>
 DCSC_BASE<Weight, Integer_Type>::DCSC_BASE(uint64_t nnz_, Integer_Type nnzcols_) {
     nnz = nnz_;
     nnzcols = nnzcols_;
-    #ifdef HAS_WEIGHT
-    if((A = (Weight*) mmap(nullptr, nnz * sizeof(Weight), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
+    if(nnz and nnzcols) {
+        #ifdef HAS_WEIGHT
+        if((A = (Weight*) mmap(nullptr, nnz * sizeof(Weight), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(A, 0, nnz * sizeof(Weight));
+        #endif
+        
+        if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(IA, 0, nnz * sizeof(Integer_Type));
+        
+        if((JA = (Integer_Type*) mmap(nullptr, (nnzcols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JA, 0, (nnzcols + 1) * sizeof(Integer_Type));
+        
+        if((JC = (Integer_Type*) mmap(nullptr, nnzcols * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
+            fprintf(stderr, "Error mapping memory\n");
+            exit(1);
+        }
+        memset(JC, 0, nnzcols * sizeof(Integer_Type));
     }
-    memset(A, 0, nnz * sizeof(Weight));
-    #endif
-    
-    if((IA = (Integer_Type*) mmap(nullptr, nnz * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(IA, 0, nnz * sizeof(Integer_Type));
-    
-    if((JA = (Integer_Type*) mmap(nullptr, (nnzcols + 1) * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(JA, 0, (nnzcols + 1) * sizeof(Integer_Type));
-    
-    if((JC = (Integer_Type*) mmap(nullptr, nnzcols * sizeof(Integer_Type), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
-        fprintf(stderr, "Error mapping memory\n");
-        exit(1);
-    }
-    memset(JC, 0, nnzcols * sizeof(Integer_Type));
 }
 
 template<typename Weight, typename Integer_Type>
 DCSC_BASE<Weight, Integer_Type>::~DCSC_BASE() {
-    #ifdef HAS_WEIGHT
-    if(munmap(A, nnz * sizeof(Weight)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    #endif
-    
-    if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    
-    if(munmap(JA, (nnzcols + 1) * sizeof(Integer_Type)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
-    }
-    
-    if(munmap(JC, nnzcols * sizeof(Integer_Type)) == -1) {
-        fprintf(stderr, "Error unmapping memory\n");
-        exit(1);
+    if(nnz and nnzcols) {
+        #ifdef HAS_WEIGHT
+        if(munmap(A, nnz * sizeof(Weight)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        #endif
+        
+        if(munmap(IA, nnz * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JA, (nnzcols + 1) * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
+        
+        if(munmap(JC, nnzcols * sizeof(Integer_Type)) == -1) {
+            fprintf(stderr, "Error unmapping memory\n");
+            exit(1);
+        }
     }
 }
 
