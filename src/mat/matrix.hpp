@@ -1178,7 +1178,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_csc() {
         auto pair = tile_of_local_tile(t);
         auto& tile = tiles[pair.row][pair.col];
         tile.compressor = new CSC_BASE<Weight, Integer_Type>(tile.nedges, tile_width);
-        tile.compressor->populate(tile.triples, tile_height, tile_width);
+        if(tile.nedges)
+            tile.compressor->populate(tile.triples, tile_height, tile_width);
     }
 }
 
@@ -1193,7 +1194,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_dcsc() {
         auto& j_data = J[xi];
         auto& jv_data = JV[xi];
         tile.compressor = new DCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems);
-        tile.compressor->populate(tile.triples, tile_height, tile_width, j_data, jv_data);
+        if(tile.nedges)
+            tile.compressor->populate(tile.triples, tile_height, tile_width, j_data, jv_data);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row)
@@ -1218,7 +1220,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc()
         auto& j_data = J[xi];
         auto& jv_data = JV[xi];
         tile.compressor = new TCSC_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems);
-        tile.compressor->populate(tile.triples, tile_height, tile_width, i_data, iv_data, j_data, jv_data);
+        if(tile.nedges)
+            tile.compressor->populate(tile.triples, tile_height, tile_width, i_data, iv_data, j_data, jv_data);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
@@ -1252,7 +1255,8 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::init_tcsc_cf()
         auto& sink_columns_data = sink_columns[xi];
         auto& sink_columns_bv_data = sink_columns_bitvector[xi];
         tile.compressor = new TCSC_CF_BASE<Weight, Integer_Type>(tile.nedges, c_nitems, r_nitems);
-        tile.compressor->populate(tile.triples, tile_height, tile_width, i_data, iv_data, j_data, jv_data, regular_rows_data, regular_rows_bv_data, source_rows_data, source_rows_bv_data, regular_columns_data, regular_columns_bv_data, sink_columns_data, sink_columns_bv_data);
+        if(tile.nedges)
+            tile.compressor->populate(tile.triples, tile_height, tile_width, i_data, iv_data, j_data, jv_data, regular_rows_data, regular_rows_bv_data, source_rows_data, source_rows_bv_data, regular_columns_data, regular_columns_bv_data, sink_columns_data, sink_columns_bv_data);
         xi++;
         next_row = (((tile.nth + 1) % tiling->rank_ncolgrps) == 0);
         if(next_row) {
