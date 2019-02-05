@@ -595,18 +595,22 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     
-    MPI_Barrier(MPI_COMM_WORLD);    
+   // MPI_Barrier(MPI_COMM_WORLD);    
     for (int32_t r = 0; r < Env::nranks; r++) {
         if (r != Env::rank) {
             auto &outbox = outboxes[r];
             uint32_t outbox_size = outbox.size();
             MPI_Sendrecv(&outbox_size, 1, MPI_UNSIGNED, r, Env::rank, &inbox_sizes[r], 1, MPI_UNSIGNED, 
                                                         r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
+            auto &inbox = inboxes[r];
+            inbox.resize(inbox_sizes[r]);
+            MPI_Sendrecv(outbox.data(), outbox.size(), MANY_TRIPLES, r, Env::rank, inbox.data(), inbox.size(), MANY_TRIPLES, 
+                                                        r, r, Env::MPI_WORLD, MPI_STATUS_IGNORE);
         }
     }
     MPI_Barrier(MPI_COMM_WORLD);    
     
-    
+    /*
     for (int32_t r = 0; r < Env::nranks; r++) {
         if (r != Env::rank) {
             auto &inbox = inboxes[r];
@@ -617,7 +621,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::distribute()
         }
     }
     MPI_Barrier(MPI_COMM_WORLD);    
-    
+    */
     
     /*
     for (int32_t i = 0; i < Env::nranks; i++) {
