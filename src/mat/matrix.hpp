@@ -782,7 +782,7 @@ void Matrix<Weight, Integer_Type, Fractional_Type>::filter_vertices(Filtering_ty
     uint32_t fi = 0, fo = 0;
     
     /* F is a temprorary 3D array designated to the filtering step. We'd 
-       rather use tack for this because of narrowing down the heap usage.*/
+       rather use char for this because of narrowing down the heap usage.*/
     std::vector<std::vector<std::vector<char>>> F;
     F.resize(rank_nrowgrps_);
     for(uint32_t j = 0; j < rank_nrowgrps_; j++) {
