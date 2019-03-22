@@ -2646,9 +2646,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     //double std_dev = std::sqrt(sq_sum / vec.size() - mean * mean);
     //return{mean, std_dev};
     
-    Integer_Type n = A->nrows;
-    double sum = (double) v_sum_global;
-    double mean = sum / n;
+
     
     std::vector<Integer_Type> vec(v_nitems);
     Integer_Type max_val = 0;
@@ -2661,15 +2659,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
             vec[i] = 0;
         if(vec[i] > max_val) {
             max_val = vec[i];
-            if(535 == max_val)
-                printf("i=%d %d %d %d\n", i, vec[i], get_vid(i), Env::rank);
         }
     }
-            printf("%d %d\n", Env::rank, max_val);
     
     MPI_Request request;
     std::vector<MPI_Request> requests;
-        
+    // Exchange Maximums
     std::vector<Integer_Type> max_val_all(Env::nranks);
     if(Env::is_master)
     {
@@ -2693,58 +2688,53 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     Env::barrier();
 
     
-    // Calculate standard deviation of degree
+    // Exchange all values 
     std::vector<Integer_Type> vec_all(v_nitems * Env::nranks);
     if(Env::is_master)
     {        
         for(uint32_t i = 0; i < v_nitems; i++)
         {
             vec_all[i] = vec[i];
-        }
-        
+        }        
         for(int i = 0; i < Env::nranks; i++) 
         {
             if(i !=  0) 
             {
-                //printf("Recieve: %d <-- %d\n", Env::rank, i);
                 MPI_Irecv(vec_all.data() + (v_nitems * i), v_nitems, TYPE_INT, i, 0, Env::MPI_WORLD, &request);
                 requests.push_back(request);
             }
         }
-             
         MPI_Waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
         requests.clear(); 
-
-        double sq_sum = std::inner_product(vec_all.begin(), vec_all.end(), vec_all.begin(), 0.0);
-        double std_dev = std::sqrt((sq_sum / n) - (mean * mean));
-        printf("std_dev=%f\n", std_dev);
     }
     else
     {
-        //printf("Send: %d --> %d\n", Env::rank, 0);
         MPI_Send(vec.data(), v_nitems, TYPE_INT, 0, 0, Env::MPI_WORLD);
     }
     Env::barrier();
     
     
-    // Calculate mode of degree
+    // Calculate final statistics
     if(Env::is_master)
     {
-        //max_val = std::max(max_val_all.begin(), max_val_all.end());
+        Integer_Type n = A->nrows;
+        double sum = (double) v_sum_global;
+        double mean = sum / n;
+        double sq_sum = std::inner_product(vec_all.begin(), vec_all.end(), vec_all.begin(), 0.0);
+        double std_dev = std::sqrt((sq_sum / n) - (mean * mean));
+        
         auto it = max_element(std::begin(max_val_all), std::end(max_val_all));
         max_val = (Integer_Type) *it;
-        std::vector<Integer_Type> vals(max_val+1    );
-        printf("max_val=%d\n", max_val);
+        std::vector<Integer_Type> vals(max_val+1);
         for(uint32_t i = 0; i < vec_all.size(); i++) {
             vals[vec_all[i]]++;
-            if(vec_all[i] == 535)
-                printf(">>>%d %d %lu\n", i, vec_all[i], vals.size());
         }
         it = max_element(std::begin(vals), std::end(vals));
         Integer_Type mode = (Integer_Type) *it;
-        printf("mode=%d\n", mode);
-        for(int i = 0; i < vals.size(); i++)
-            printf("%d %d\n", i, vals[i]);
+        
+
+        std::cout << "sum: mean +/- std_dev: " << sum << ": " << mean << " +/- " << std_dev << std::endl;
+        std::cout << "mod | max            : " << mode << " | " << max_val << std::endl;
     }
     
     
