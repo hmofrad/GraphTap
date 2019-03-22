@@ -2733,8 +2733,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         Integer_Type mode = (Integer_Type) *it;
         
 
-        std::cout << "sum: mean +/- std_dev: " << sum << ": " << mean << " +/- " << std_dev << std::endl;
-        std::cout << "mod | max            : " << mode << " | " << max_val << std::endl;
+        std::cout << "Sum: mean +/- std_dev: " << sum << ": " << mean << " +/- " << std_dev << std::endl;
+        std::cout << "Mode        : " << mode    << std::endl;
+        std::cout << "Max element : " << max_val << std::endl;
+        std::cout << "Skew        : " << (mean - mode) / std_dev << std::endl;
     }
     
     
