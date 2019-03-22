@@ -44,20 +44,20 @@ APPS=("./deg")
 #APPS=("./pr" "./sssp" "./bfs" "./cc")
 
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/real"
-GRAPHS=("usa-roads-1.bin" "live-journal-1.bin" "protein-k-mer-1.bin" "uk-2005-1.bin" "twitter-2010-1.bin" "uk-2006-06-1.bin" "uk-union-1.bin")
+GRAPHS=("usa-roads-1.bin" "live-journal-1.bin0" "protein-k-mer-1.bin0" "uk-2005-1.bin0" "twitter-2010-1.bin0" "uk-2006-06-1.bin0" "uk-union-1.bin0")
 GRAPHS_W=("usa-roads-1-w.bin" "live-journal-1-w.bin" "protein-k-mer-1-w.bin" "uk-2005-1-w.bin" "twitter-2010-1-w.bin" "uk-2006-06-1-w.bin" "uk-union-1-w.bin")
 GRAPHS_V=("23947348" "4847572" "214005018" "39459926" "41652231" "80644903" "133633041")
 SRC_V=("200" "10010" "2" "21049533" "23934133" "48018932" "26927947")
 
 if [ "${SLURM_NNODES}" = "4" ]
 then
-    II=("0" "1" "2" "3");
+    II=("0" "1" "2");
 elif [ "$SLURM_NNODES" = "8" ]
 then
-    II=("4" "5");
+    II=("3" "4");
 elif [ "$SLURM_NNODES" = "16" ]
 then
-    II=("6");
+    II=("5");
 elif [ "$SLURM_NNODES" = "24" ]
 then
     I="3"
