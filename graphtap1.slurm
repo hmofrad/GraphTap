@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=graphtap
-#SBATCH --output=graphtap.out
-#SBATCH --error=graphtap.err
+#SBATCH --job-name=graphtap1
+#SBATCH --output=graphtap1.out
+#SBATCH --error=graphtap1.err
 #SBATCH --ntasks=64
 #SBATCH --nodes=4
 #SBATCH --ntasks-per-node=16
@@ -27,9 +27,9 @@ echo "SLURMTMPDIR="$SLURMTMPDIR
 echo "working directory = "$SLURM_SUBMIT_DIR
 echo "************************************************"
 
-#module purge
-#module load gcc/5.4.0
-#module load intel
+module purge
+module load gcc/5.4.0
+module load intel
 export I_MPI_FABRICS=shm:ofa
 
 export SLURM_CPU_BIND="none"
@@ -99,7 +99,7 @@ for I in "${II[@]}";
             
             CMD="${MPI} ${NP} ${APPS_PERFIX}/${A} ${GRAPHS_PERFIX}/${GRAPH} ${GRAPH_V} ${ITER_OR_SRC}"
             echo "Command=${CMD}"
-            #${CMD}
+            ${CMD}
         done
     done
 done
