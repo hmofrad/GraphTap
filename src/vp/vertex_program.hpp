@@ -2737,7 +2737,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         MPI_Send(vec.data(), v_nitems, TYPE_INT, 0, 0, Env::MPI_WORLD);
     }
     Env::barrier();
-    
+    vec.clear();
+    vec.shrink_to_fit();
     
     // Calculate final statistics
     if(Env::is_master)
