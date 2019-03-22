@@ -2650,6 +2650,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     
     std::vector<Integer_Type> vec(v_nitems);
     Integer_Type max_val = 0;
+    Integer_Type max_idx = 0;
     for(uint32_t i = 0; i < v_nitems; i++)
     {
         Vertex_State &state = V[i];
@@ -2659,6 +2660,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
             vec[i] = 0;
         if(vec[i] > max_val) {
             max_val = vec[i];
+            max_idx = get_vid(i);
         }
     }
     
@@ -2666,6 +2668,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     std::vector<MPI_Request> requests;
     // Exchange Maximums
     std::vector<Integer_Type> max_val_all(Env::nranks);
+    
     if(Env::is_master)
     {
         max_val_all[Env::rank] = max_val;
@@ -2684,6 +2687,28 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
     else
     {
         MPI_Send(&max_val, 1, TYPE_INT, 0, 0, Env::MPI_WORLD);
+    }
+    Env::barrier();
+    
+    std::vector<Integer_Type> max_idx_all(Env::nranks);
+    if(Env::is_master)
+    {
+        max_idx_all[Env::rank] = max_val;
+        for(int i = 0; i < Env::nranks; i++) 
+        {
+            if(i !=  0) 
+            {
+                MPI_Irecv(max_idx_all.data() + i, 1, TYPE_INT, i, 0, Env::MPI_WORLD, &request);
+                MPI_Waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
+                requests.clear(); 
+            }
+        }
+        MPI_Waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
+        requests.clear(); 
+    }
+    else
+    {
+        MPI_Send(&max_idx, 1, TYPE_INT, 0, 0, Env::MPI_WORLD);
     }
     Env::barrier();
 
@@ -2723,6 +2748,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         double sq_sum = std::inner_product(vec_all.begin(), vec_all.end(), vec_all.begin(), 0.0);
         double std_dev = std::sqrt((sq_sum / n) - (mean * mean));
         
+        for(uint64_t i = 0; i < max_val_all.size(); i++) {
+            if(max_val_all[i] > max_val) {
+                max_val = max_val_all[i];
+                max_idx = max_idx_all[i];
+            }
+        }
         auto it = max_element(std::begin(max_val_all), std::end(max_val_all));
         max_val = (Integer_Type) *it;
         std::vector<Integer_Type> vals(max_val+1);
@@ -2734,9 +2765,10 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         
 
         std::cout << "Sum: mean +/- std_dev: " << sum << ": " << mean << " +/- " << std_dev << std::endl;
-        std::cout << "Mode        : " << mode    << std::endl;
-        std::cout << "Max element : " << max_val << std::endl;
-        std::cout << "Skew        : " << (mean - mode) / std_dev << std::endl;
+        std::cout << "Mode & skew : " << mode << " & " << (mean - mode) / std_dev << std::endl;
+        std::cout << "Max index : " << max_idx << std::endl;
+        std::cout << "Max value : " << max_val << std::endl;
+        
     }
     
     
