@@ -41,22 +41,36 @@ NP=$SLURM_NTASKS
 MPI="mpirun -np"
 APPS_PERFIX="bin"
 APPS=("./pr" "./sssp" "./bfs" "./cc")
-GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
-GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin" "rmat30.bin")
-GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin" "rmat30_w.bin")
-GRAPHS_V=("67108863" "134217728" "268435456" "536870912" "1073741824")
-SRC_V=("1554330" "1554330" "1" "1554332" "1")
+#GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/graph500/rmat"
+#GRAPHS=("rmat26_1.bin" "rmat27_1.bin" "rmat28.bin" "rmat29.bin" "rmat30.bin")
+#GRAPHS_W=("rmat26_1_w.bin0" "rmat27_1_w.bin0" "rmat28_w.bin" "rmat29_w.bin" "rmat30_w.bin")
+#GRAPHS_V=("67108863" "134217728" "268435456" "536870912" "1073741824")
+#SRC_V=("1554330" "1554330" "1" "1554332" "1")
+
+
+GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/real/"
+GRAPHS=("usa-roads-1.bin" "live-journal-1.bin" "protein-k-mer-1.bin" "uk-2005-1.bin" "twitter-2010-1.bin" "uk-2006-06-1.bin" "uk-union-1.bin")
+GRAPHS_W=("usa-roads-1-w.bin" "live-journal-1-w.bin" "protein-k-mer-1-w.bin" "uk-2005-1-w.bin" "twitter-2010-1-w.bin" "uk-2006-06-1-w.bin" "uk-union-1-w.bin")
+GRAPHS_V=("23947348" "4847572" "214005018" "39459926" "41652231" "80644903" "133633041")
+SRC_V=("1554330" "1554330" "1" "1554332" "1" "1" "1")
+
 
 
 if [ "${SLURM_NNODES}" = "4" ]
 then
     I="0"
+#    I="1"
+#    I="2"
+#    I="3"
 elif [ "$SLURM_NNODES" = "8" ]
 then
-    I="1"
+#    I="1"
+    I="4"
+#    I="5"
 elif [ "$SLURM_NNODES" = "16" ]
 then
-    I="2"
+#    I="2"
+    I="6"
 elif [ "$SLURM_NNODES" = "24" ]
 then
     I="3"
