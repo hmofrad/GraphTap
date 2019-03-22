@@ -16,7 +16,7 @@
 ## while true; do free -g; sleep 10; done
 ## grep 'Execution' la3.out
 ## strings graphtap.out | grep 'Execute'
-## 
+ 
 
 echo "SLURM_JOB_ID="$SLURM_JOB_ID
 echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
