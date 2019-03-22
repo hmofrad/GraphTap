@@ -2771,7 +2771,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         std::cout << "Max value : " << max_val << std::endl;
         
     }
-    
+    Env::barrier();
     
     
     
