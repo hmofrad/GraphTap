@@ -1,0 +1,111 @@
+#!/bin/bash
+#SBATCH --job-name=graphtap
+#SBATCH --output=graphtap.out
+#SBATCH --error=graphtap.err
+#SBATCH --ntasks=64
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=16
+#SBATCH --cpus-per-task=1
+##SBATCH --mem=50000
+##SBATCH --sockets-per-node=2
+##SBATCH --ntasks-per-socket=8
+#SBATCH --time=01:00:00
+#SBATCH --cluster=mpi
+#SBATCH --partition=opa-high-mem
+
+## while true; do free -g; sleep 10; done
+## grep 'Execution' la3.out
+## strings graphtap.out | grep 'Execute'
+## 
+
+echo "SLURM_JOB_ID="$SLURM_JOB_ID
+echo "SLURM_JOB_NODELIST"=$SLURM_JOB_NODELIST
+echo "SLURM_NNODES"=$SLURM_NNODES
+echo "SLURM_CORES_NODES"=$SLURM_CPUS_PER_TASK
+echo "SLURM_TASKS"=$SLURM_NTASKS
+echo "SLURMTMPDIR="$SLURMTMPDIR
+echo "working directory = "$SLURM_SUBMIT_DIR
+echo "************************************************"
+
+#module purge
+#module load gcc/5.4.0
+#module load intel
+export I_MPI_FABRICS=shm:ofa
+
+export SLURM_CPU_BIND="none"
+export I_MPI_FALLBACK=0
+export LD_LIBRARY_PATH=/ihome/rmelhem/moh18/boost/boost_1_67_0/stage/lib:/ihome/rmelhem/moh18/boost:$LD_LIBRARY_PATH
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+NP=$SLURM_NTASKS
+MPI="mpirun -np"
+APPS_PERFIX="bin"
+APPS=("./deg")
+#APPS=("./pr" "./sssp" "./bfs" "./cc")
+
+GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/real"
+GRAPHS=("usa-roads-1.bin" "live-journal-1.bin" "protein-k-mer-1.bin" "uk-2005-1.bin" "twitter-2010-1.bin" "uk-2006-06-1.bin" "uk-union-1.bin")
+GRAPHS_W=("usa-roads-1-w.bin" "live-journal-1-w.bin" "protein-k-mer-1-w.bin" "uk-2005-1-w.bin" "twitter-2010-1-w.bin" "uk-2006-06-1-w.bin" "uk-union-1-w.bin")
+GRAPHS_V=("23947348" "4847572" "214005018" "39459926" "41652231" "80644903" "133633041")
+SRC_V=("1" "1" "1" "1" "1" "1" "1")
+
+
+SLURM_NNODES=4
+if [ "${SLURM_NNODES}" = "4" ]
+then
+    II=("0" "1" "2" "3");
+elif [ "$SLURM_NNODES" = "8" ]
+then
+    II=("4" "5");
+elif [ "$SLURM_NNODES" = "16" ]
+then
+    II=("6");
+elif [ "$SLURM_NNODES" = "24" ]
+then
+    I="3"
+elif [ "$SLURM_NNODES" = "32" ]
+then
+    I="4"
+else
+    echo "Invalid input graph"
+    exit;     
+fi
+
+
+for I in "${II[@]}";
+    do
+    GRAPH_V=${GRAPHS_V[${I}]}
+    SRC=${SRC_V[${I}]}
+    ITERS=20
+    NTIMES=("1")
+    #NTIMES=("1" "2" "3");
+    for A in "${APPS[@]}";
+    do
+        for N in "${NTIMES[@]}";
+        do
+            if [ "${A}" = "./pr" ]
+            then
+                ITER_OR_SRC=${ITERS}
+            else
+                ITER_OR_SRC=${SRC}
+            fi
+            
+            if [ "${A}" = "./sssp" ]
+            then
+                GRAPH="${GRAPHS_W[${I}]}"    
+            else
+                GRAPH="${GRAPHS[${I}]}"
+            fi    
+            
+            CMD="${MPI} ${NP} ${APPS_PERFIX}/${A} ${GRAPHS_PERFIX}/${GRAPH} ${GRAPH_V} ${ITER_OR_SRC}"
+            echo "Command=${CMD}"
+            #${CMD}
+        done
+    done
+done
+
+strings graphtap.out | grep 'Execute time'
+strings graphtap.out | grep 'Iterations'
+strings graphtap.out | grep 'Value checksum'
+strings graphtap.out | grep 'Reachable vertices'
+
