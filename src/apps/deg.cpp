@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     /* Degree execution */
     Deg_Program<wp, ip, ip> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
     V.execute(num_iterations);
-    V.checksum();
+    V.checksum1();
     V.display();
     V.free();
     G.free();
