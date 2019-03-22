@@ -130,11 +130,12 @@ void Graph<Weight, Integer_Type, Fractional_Type>::load(std::string filepath_,
     const char* text = "ASCII";
     const char* data = "data";
     const char* data1 = "Hitachi";
+    const char* data2 = "VMS";
     if(!strcmp(token, text)) {
         load_text(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
         tiling_type_, compression_type_);
     }
-    else if(!strcmp(token, data) or !strcmp(token, data1)) {
+    else if(!strcmp(token, data) or !strcmp(token, data1) or !strcmp(token, data2)) {
         load_binary(filepath_, nrows_, ncols_, directed_, transpose_, self_loops_, acyclic_, parallel_edges_, 
         tiling_type_, compression_type_);
     }
