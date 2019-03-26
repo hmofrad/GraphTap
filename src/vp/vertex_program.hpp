@@ -2761,9 +2761,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         for(uint32_t i = 0; i < vec_all.size(); i++) {
             vals[vec_all[i]]++;
         }
-        it = max_element(std::begin(vals), std::end(vals));
-        Integer_Type mode = (Integer_Type) *it;
-        
+        //it = max_element(std::begin(vals), std::end(vals));
+        //Integer_Type mode = (Integer_Type) *it;
+        Integer_Type mode = std::distance(vals.begin(), max_element(std::begin(vals), std::end(vals))); 
 
         std::cout << "Sum: mean +/- std_dev: " << sum << ": " << mean << " +/- " << std_dev << std::endl;
         std::cout << "Mode & skew : " << mode << " & " << (mean - mode) / std_dev << std::endl;
