@@ -60,6 +60,7 @@ void CSC::run_pagerank() {
     column_sort(pairs);
     csc = new struct CSC_BASE(nedges, nvertices);
     populate();
+    space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;  
@@ -203,6 +204,7 @@ void CSC::update() {
 
 void CSC::space() {
     total_size += csc->size;
+    total_size += (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size());
 }
 
 double CSC::checksum() {
