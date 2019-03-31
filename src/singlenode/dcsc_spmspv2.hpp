@@ -4,8 +4,8 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef DCSC_SPMSPV_HPP
-#define DCSC_SPMSPV_HPP 
+#ifndef DCSC_SPMSPV2_HPP
+#define DCSC_SPMSPV2_HPP 
  
 #include <chrono> 
  
@@ -68,11 +68,11 @@ void DCSC_::run_pagerank() {
     construct_filter();
     dcsc = new struct DCSC_BASE(nedges, nnzcols_);
     populate();        
-    space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
     construct_vectors_pagerank();
+    space();
     for(uint32_t i = 0; i < nrows; i++) {
         if(rows[i] == 1)
             d[i] = v[i];
@@ -91,7 +91,7 @@ void DCSC_::run_pagerank() {
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "DCSC SpMSpV");
+    stats(t, "DCSC SpMSpV2");
     display();
     destruct_vectors_pagerank();
     destruct_filter();
