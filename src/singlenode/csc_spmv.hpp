@@ -60,12 +60,12 @@ void CSC::run_pagerank() {
     column_sort(pairs);
     csc = new struct CSC_BASE(nedges, nvertices);
     populate();
-    space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;  
     //walk();
     construct_vectors();
+    space();
     (void)spmv();
     v = y;
     //(void)checksum();
