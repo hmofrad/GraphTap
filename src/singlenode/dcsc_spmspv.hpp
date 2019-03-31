@@ -235,6 +235,7 @@ void DCSC::update() {
 
 void DCSC::space() {
     total_size += dcsc->size;
+    total_size += (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size());
 }
 
 double DCSC::checksum() {
