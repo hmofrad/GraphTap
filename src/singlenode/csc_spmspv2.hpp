@@ -4,14 +4,14 @@
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
-#ifndef CSC_SPMSPV_HPP
-#define CSC_SPMSPV_HPP 
+#ifndef CSC_SPMSPV2_HPP
+#define CSC_SPMSPV2_HPP 
 
 #include <chrono>
 
 #include "pair.hpp" 
 #include "io.cpp" 
-#include "csc_spmspv.hpp"
+#include "csc_spmv.hpp"
 
 class CSC_ : protected CSC {
     using CSC::CSC;
@@ -70,11 +70,11 @@ void CSC_::run_pagerank() {
     construct_filter();
     csc = new struct CSC_BASE(nedges, nvertices);
     populate();
-    space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
     construct_vectors_pagerank();
+    space();
     for(uint32_t i = 0; i < nrows; i++) {
         if(rows[i] == 1)
             d[i] = v[i];
@@ -93,7 +93,7 @@ void CSC_::run_pagerank() {
     }
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-    stats(t, "CSC SpMSpV");
+    stats(t, "CSC SpMSpV2");
     display();
     destruct_vectors_pagerank();
     destruct_filter();
