@@ -65,7 +65,7 @@ TCSC_BASE::TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32
         exit(1);
     }
     memset(IR, 0, nnzrows * sizeof(uint32_t));
-    
+    /*
     if((JA_REG_C = mmap(nullptr, (nnzcols_regulars * 2) * sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) == (void*) -1) {    
         fprintf(stderr, "Error mapping memory\n");
         exit(1);
@@ -89,10 +89,10 @@ TCSC_BASE::TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32
         exit(1);
     }
     memset(JA_REG_RC, 0, (nnzcols_regulars * 2) * sizeof(uint32_t));
-    
-    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t)) + (nnzrows * sizeof(uint32_t))
-                                    + ((nnzcols_regulars * 2) * sizeof(uint32_t)) + (nnzcols_regulars * sizeof(uint32_t)) 
-                                    + (nnzcols * 2) * sizeof(uint32_t) + ((nnzcols_regulars * 2) * sizeof(uint32_t));
+    */
+    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t)) + (nnzrows * sizeof(uint32_t));
+                                    //+ ((nnzcols_regulars * 2) * sizeof(uint32_t)) + (nnzcols_regulars * sizeof(uint32_t)) 
+                                    //+ (nnzcols * 2) * sizeof(uint32_t) + ((nnzcols_regulars * 2) * sizeof(uint32_t));
                                     
 }
 
@@ -121,7 +121,7 @@ TCSC_BASE::~TCSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
-    
+    /*
     if(munmap(JA_REG_C, (nnzcols_regulars * 2) * sizeof(uint32_t)) == -1) {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
@@ -141,5 +141,6 @@ TCSC_BASE::~TCSC_BASE() {
         fprintf(stderr, "Error unmapping memory\n");
         exit(1);
     }
+    */
 }
 #endif
