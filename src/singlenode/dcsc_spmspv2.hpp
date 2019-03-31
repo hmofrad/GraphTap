@@ -188,7 +188,7 @@ void DCSC_::update() {
 void DCSC_::space() {
     total_size += dcsc->size;
     total_size += (sizeof(uint32_t) * rows_all.size()) + (sizeof(uint32_t) * rows_nnz.size());
-    total_size += (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size());
+    total_size += (2 * sizeof(uint32_t) * x.size()) + (2 * sizeof(uint32_t) + y.size());
     
 }
 #endif
