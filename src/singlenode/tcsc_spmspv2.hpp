@@ -111,12 +111,12 @@ void TCSC::run_pagerank() {
     construct_filter();
     tcsc = new struct TCSC_BASE(nedges, nnzcols_, nnzrows_, nnzcols_regulars_);
     populate();        
-    space();
     pairs->clear();
     pairs->shrink_to_fit();
     pairs = nullptr;
     //walk();
     construct_vectors_pagerank();
+    space();
     for(uint32_t i = 0; i < nrows; i++) {
         if(rows[i] == 1)
             d[i] = v[i];
@@ -125,7 +125,7 @@ void TCSC::run_pagerank() {
     std::fill(v.begin(), v.end(), alpha);
     std::chrono::steady_clock::time_point t1, t2;
     t1 = std::chrono::steady_clock::now();
-    /*
+    
     for(uint32_t i = 1; i < niters; i++) {
         std::fill(x.begin(), x.end(), 0);
         std::fill(y.begin(), y.end(), 0);
@@ -133,7 +133,8 @@ void TCSC::run_pagerank() {
         noperations += spmv_nnzcols();
         update();        
     }
-    */
+    
+    /*
     if(niters == 1)
     {
         std::fill(x.begin(), x.end(), 0);
@@ -163,6 +164,7 @@ void TCSC::run_pagerank() {
         noperations += spmv_nnzcols_regular();
         update();
     }
+    */
     t2 = std::chrono::steady_clock::now();
     auto t  = (std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
     stats(t, "TCSC SpMSpV");
@@ -288,6 +290,7 @@ void TCSC::populate() {
     uint32_t nnzrows = tcsc->nnzrows;
     for(uint32_t i = 0; i < nnzrows; i++)
         IR[i] = rows_nnz[i];
+    /*
     // Regular columns pointers/indices
     uint32_t* JA_REG_C = (uint32_t*) tcsc->JA_REG_C; // COL_PTR_REG_COL
     uint32_t* JC_REG_C = (uint32_t*) tcsc->JC_REG_C; // COL_IDX_REG_COL
@@ -398,6 +401,7 @@ void TCSC::populate() {
             l += 2;  
         }
     }
+    */
 }
 
 void TCSC::walk() {
