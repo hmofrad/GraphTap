@@ -51,7 +51,8 @@ DCSC_BASE::DCSC_BASE(uint64_t nnz_, uint32_t nnzcols_) {
     }
     memset(JC, 0, nnzcols * sizeof(uint32_t));
     
-    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
+    //size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
+    size = (nnzcols * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t));
 }
 
 DCSC_BASE::~DCSC_BASE() {
