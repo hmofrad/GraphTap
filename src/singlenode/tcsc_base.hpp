@@ -90,9 +90,11 @@ TCSC_BASE::TCSC_BASE(uint64_t nnz_, uint32_t nnzcols_, uint32_t nnzrows_, uint32
     }
     memset(JA_REG_RC, 0, (nnzcols_regulars * 2) * sizeof(uint32_t));
     */
-    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t)) + (nnzrows * sizeof(uint32_t));
+    //size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((nnzcols + 1) * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t)) + (nnzrows * sizeof(uint32_t));
                                     //+ ((nnzcols_regulars * 2) * sizeof(uint32_t)) + (nnzcols_regulars * sizeof(uint32_t)) 
                                     //+ (nnzcols * 2) * sizeof(uint32_t) + ((nnzcols_regulars * 2) * sizeof(uint32_t));
+                                    
+    size = (nnzcols * sizeof(uint32_t)) + (nnzcols * sizeof(uint32_t)) + (nnzrows * sizeof(uint32_t));
                                     
 }
 
