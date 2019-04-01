@@ -44,7 +44,8 @@ CSC_BASE::CSC_BASE(uint64_t nnz_, uint32_t ncols_) {
     }
     memset(JA, 0, (ncols + 1) * sizeof(uint32_t));
     
-    size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((ncols + 1) * sizeof(uint32_t));
+    //size = (nnz * sizeof(uint32_t)) + (nnz * sizeof(uint32_t)) + ((ncols + 1) * sizeof(uint32_t));
+    size = (ncols * sizeof(uint32_t));
 }
 
 CSC_BASE::~CSC_BASE() {
