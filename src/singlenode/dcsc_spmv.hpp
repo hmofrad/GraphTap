@@ -237,9 +237,9 @@ void DCSC::update() {
 void DCSC::space() {
     total_size += dcsc->size;
     total_size += (((sizeof(uint32_t) * x.size())) + ((sizeof(uint32_t) + y.size())));
-    uint32_t nnzcols = dcsc->nnzcols;
-    total_size += (nnzcols * sizeof(uint32_t));
-    total_size += (nvertices * sizeof(uint32_t));
+    //uint32_t nnzcols = dcsc->nnzcols;
+    //total_size += (nnzcols * sizeof(uint32_t));
+    //total_size += (nvertices * sizeof(uint32_t));
 }
 
 double DCSC::checksum() {
