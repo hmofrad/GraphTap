@@ -537,7 +537,7 @@ void TCSC::update() {
 
 void TCSC::space() {
     total_size += tcsc->size;
-    total_size += (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size());
+    total_size += ((sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size()));
 }
 
 double TCSC::checksum() {
