@@ -204,7 +204,7 @@ void CSC::update() {
 
 void CSC::space() {
     total_size += csc->size;
-    total_size += (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size());
+    total_size +=( (sizeof(uint32_t) * x.size()) + (sizeof(uint32_t) + y.size()));
 }
 
 double CSC::checksum() {
