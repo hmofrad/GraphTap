@@ -203,8 +203,8 @@ void CSC_::update() {
 
 void CSC_::space() {
     total_size += csc->size;
-    total_size += (sizeof(uint32_t) * rows_all.size()) + (sizeof(uint32_t) * rows_nnz.size());
-    total_size += (sizeof(uint32_t) * cols_all.size()) + (sizeof(uint32_t) * cols_nnz.size());
-    total_size += (2 * sizeof(uint32_t) * x.size()) + (2 * sizeof(uint32_t) + y.size());
+    total_size += ((sizeof(uint32_t) * rows_all.size()) + (sizeof(uint32_t) * rows_nnz.size()));
+    total_size += ((sizeof(uint32_t) * cols_all.size()) + (sizeof(uint32_t) * cols_nnz.size()));
+    total_size += ((2 * sizeof(uint32_t) * x.size()) + (2 * sizeof(uint32_t) + y.size()));
 }
 #endif
