@@ -37,7 +37,7 @@ for G in "${GRAPHS[@]}"
 do
     for A in "${APPS[@]}"
     do
-        CMD="./main ${A} ${GRAPHS_PERFIX}/${G} 20"
+        CMD="${PERF}  ./main ${A} ${GRAPHS_PERFIX}/${G} 20"
         echo "Command=${CMD}"
         ${CMD}
     done
