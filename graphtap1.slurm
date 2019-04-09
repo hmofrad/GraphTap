@@ -44,10 +44,10 @@ APPS_PERFIX="bin"
 APPS=("./pr" "./sssp" "./bfs" "./cc")
 
 GRAPHS_PERFIX="/zfs1/cs3580_2017F/moh18/real"
-GRAPHS=("live-journal-1.bin" "usa-roads-1.bin" "protein-k-mer-1.bin" "uk-2005-1.bin" "twitter-2010-1.bin" "uk-2006-06-1.bin" "uk-union-1.bin")
-GRAPHS_W=("live-journal-1-w.bin0" "usa-roads-1-w.bin0" "protein-k-mer-1-w.bin0" "uk-2005-1-w.bin0" "twitter-2010-1-w.bin0" "uk-2006-06-1-w.bin0" "uk-union-1-w.bin0")
-GRAPHS_V=("4847572" "23947348" "214005018" "39459926" "41652231" "80644903" "133633041")
-SRC_V=("10010" "200" "2" "21049533" "23934133" "48018932" "26927947")
+GRAPHS=("usa-roads-1.bin" "live-journal-1.bin"  "protein-k-mer-1.bin" "uk-2005-1.bin" "it-2004-1.bin0" "twitter-2010-1.bin" "gsh-2015-host-1.bin0" "uk-2006-06-1.bin" "uk-union-1.bin")
+GRAPHS_W=("usa-roads-1-w.bin0" "live-journal-1-w.bin0" "protein-k-mer-1-w.bin0" "uk-2005-1-w.bin0" "it-2004-1-w.bin0" "twitter-2010-1-w.bin0" "gsh-2015-host-1-w.bin0" "uk-2006-06-1-w.bin0" "uk-union-1-w.bin0")
+GRAPHS_V=("23947348" "4847572"  "214005018" "39459926" "41291596" "41652231" "68660142"  "80644903" "133633041")
+SRC_V=("200" "10010" "2" "21049533" "6767" "23934133" "901503" "48018932" "26927947")
 
 if [ "${SLURM_NNODES}" = "4" ]
 then
@@ -60,10 +60,10 @@ then
     II=("4");
 elif [ "$SLURM_NNODES" = "24" ]
 then
-    I=("5")
+    II=("5")
 elif [ "$SLURM_NNODES" = "32" ]
 then
-    I=("6")
+    II=("6")
 else
     echo "Invalid input graph"
     exit;     
