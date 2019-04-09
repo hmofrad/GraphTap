@@ -1,6 +1,6 @@
 /*
  * dcsc_base.hpp: Base class for Double Compressed Sparse Column (DCSC) data structure
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
