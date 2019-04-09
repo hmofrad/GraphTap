@@ -11,4 +11,4 @@
 
 ## Contact
     Mohammad Hasanzadeh Mofrad
-    moh18@pitt.edu
+    m.hasanzadeh.mofrad@gmail.com
