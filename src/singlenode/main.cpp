@@ -4,7 +4,7 @@
             Double Compressed Sparse Column (DCSC)  SpMV/SpMSpV
    Optmized Double Compressed Sparse Column (ODCSC) SpMSpV (LA3)
             Triple Compressed Sparse Column (TCSC)  SpMSpV (GraphTap)
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  * Compile: g++ -o main main.cpp -std=c++14 -DNDEBUG -O3 -flto -fwhole-program -march=native
  */
