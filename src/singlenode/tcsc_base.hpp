@@ -1,6 +1,6 @@
 /*
  * tcsc_base.hpp: Base class for Triple Compressed Sparse Column (TCSC) data structure
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
