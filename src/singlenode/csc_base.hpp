@@ -1,6 +1,6 @@
 /*
  * csc_base.hpp: Base class for Compressed Sparse Column (CSC) data structure
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
