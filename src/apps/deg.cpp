@@ -1,6 +1,6 @@
 /*
  * deg.cpp: Degree benchmark main
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
     Deg_Program<wp, ip, ip> V(G, stationary, gather_depends_on_apply, apply_depends_on_iter, OT);
     V.execute(num_iterations);
     V.checksum();
+    V.checksum1();
     V.display();
     V.free();
     G.free();
