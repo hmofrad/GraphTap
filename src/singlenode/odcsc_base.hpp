@@ -1,6 +1,6 @@
 /*
  * odcsc_base.hpp: Base class for Optimized Double Compressed Sparse Column (ODCSC) data structure
- * (c) Mohammad Mofrad, 2018
+ * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
 
