@@ -13,7 +13,6 @@ OPTIMIZE = -DNDEBUG -O3 -flto -fwhole-program -march=native
 #DEBUG = -g  -fsanitize=undefined,address -lasan -lubsan
 
 .PHONY: dir all test misc clean
-
 objs   = deg pr cc bfs
 objs_w = sssp
 
