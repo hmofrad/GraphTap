@@ -1085,7 +1085,7 @@ void TCSC_CF_BASE<Weight, Integer_Type>::populate(const std::vector<struct Tripl
     o = 0;
     r.clear();
     r.shrink_to_fit(); 
-    if(NC_SRC_R_REG_C) {
+    if(NC_SRC_R_SNK_C) {
         while((j1 < nnzcols_local) and (j2 < sink_columns_indices.size())) {
             if(JC_LOCAL_VAL[j1] == sink_columns_indices[j2]) {
                 j = JC_LOCAL_IDX[j1];
