@@ -456,10 +456,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         apply();
         iteration++;
         Env::print_num("Iteration: ", iteration);        
-	//checksum();
         if(check_for_convergence) {
             converged = has_converged();
-            //Env::print_num("Converged: ", converged);            
             if(converged) {
                 combine();
                 apply();
