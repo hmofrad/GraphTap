@@ -456,6 +456,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::execut
         apply();
         iteration++;
         Env::print_num("Iteration: ", iteration);        
+	//checksum();
         if(check_for_convergence) {
             converged = has_converged();
             //Env::print_num("Converged: ", converged);            
@@ -2014,7 +2015,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply(
         if(not converged)
             apply_stationary();
         else {
-            if(compression_type == _TCSC_)
+            if(compression_type == _TCSC_CF_)
                 apply_stationary();
         }
     }
