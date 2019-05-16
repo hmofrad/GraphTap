@@ -550,7 +550,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     }
     // Initialize messages
     std::vector<Integer_Type> x_sizes;
-    if(compression_type == _CSC_)
+    if((compression_type == _CSC_) or (compression_type == _DCSC_))
         x_sizes.resize(rank_ncolgrps, tile_height);
     //else if((compression_type == _DCSC_) or (compression_type == _TCSC_))
     else    
@@ -657,7 +657,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     activity_statuses.resize(ncolgrps);
     
     std::vector<Integer_Type> x_sizes;    
-    if(compression_type == _CSC_)
+    if((compression_type == _CSC_) or (compression_type == _DCSC_))
         x_sizes.resize(rank_ncolgrps, tile_height);
     //else if((compression_type == _DCSC_) or (compression_type == _TCSC_))
     else    
@@ -906,7 +906,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     uint32_t xo = accu_segment_col;    
     std::vector<Fractional_Type>& x_data = X[xo];
     Integer_Type v_nitems = V.size();
-    if(compression_type == _CSC_) {
+    if((compression_type == _CSC_) or (compression_type == _DCSC_)) {
         for(uint32_t i = 0; i < v_nitems; i++) {
             Vertex_State& state = V[i];
             x_data[i] = messenger(state);
@@ -956,7 +956,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
     std::vector<Integer_Type> &xi_data = XI[xo];
     Integer_Type v_nitems = V.size();
     Integer_Type k = 0;
-    if(compression_type == _CSC_) {
+    if((compression_type == _CSC_) or (compression_type == _DCSC_)) {
         for(uint32_t i = 0; i < v_nitems; i++) {
             Vertex_State &state = V[i];
             if(C[i]) {
@@ -1538,9 +1538,9 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
                     #ifdef HAS_WEIGHT
-                    combiner(y_data[IA[i]], x_data[j], A[i]);
+                    combiner(y_data[IA[i]], x_data[JC[j]], A[i]);
                     #else
-                    combiner(y_data[IA[i]], x_data[j]);
+                    combiner(y_data[IA[i]], x_data[JC[j]]);
                     #endif
                 }
             }
@@ -1552,7 +1552,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
             auto& jv_data = (*JV)[tile.ith];
             for(uint32_t j = 0; j < ncols; j++) {
                 for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-                    k = jv_data[IA[i]];
+                    //k = jv_data[IA[i]]];
+                    k = IA[i];
                     l = JC[j];
                     #ifdef HAS_WEIGHT
                     combiner(y_data[l], x_data[k], A[i]);   
