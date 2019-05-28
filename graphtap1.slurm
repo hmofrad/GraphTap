@@ -49,26 +49,27 @@ GRAPHS_W=("usa-roads-1-w.bin0" "live-journal-1-w.bin0" "protein-k-mer-1-w.bin0" 
 GRAPHS_V=("23947348" "4847572"  "214005018" "39459926" "41291596" "41652231" "68660142"  "80644903" "133633041")
 SRC_V=("200" "10010" "2" "21049533" "6767" "23934133" "901503" "48018932" "26927947")
 
-if [ "${SLURM_NNODES}" = "4" ]
+
+
+if [ "${SLURM_NNODES}" = "2" ]
 then
     II=("0" "1" "2");
+elif [ "${SLURM_NNODES}" = "4" ]
+then
+    II=("3" "4");
 elif [ "$SLURM_NNODES" = "8" ]
 then
-    II=("3");
+    II=("5" "6");
 elif [ "$SLURM_NNODES" = "16" ]
 then
-    II=("4");
+    II=("7");
 elif [ "$SLURM_NNODES" = "24" ]
 then
-    II=("5")
-elif [ "$SLURM_NNODES" = "32" ]
-then
-    II=("6")
+    II=("8")
 else
     echo "Invalid input graph"
     exit;     
 fi
-
 
 for I in "${II[@]}";
     do
