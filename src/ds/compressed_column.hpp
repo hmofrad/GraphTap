@@ -1,8 +1,8 @@
 /*
  * compressed_column.hpp: Column compressed storage implementaion
  * Compressed Sparse Column (CSC)
- * Double Compressed Sparse Column (DCSC)
- * Triple Compressed Sparse Column (TCSC)
+ * Doubly Compressed Sparse Column (DCSC)
+ * Triply Compressed Sparse Column (TCSC)
  * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) m.hasanzadeh.mofrad@gmail.com 
  */
