@@ -286,12 +286,6 @@ struct TCSC_BASE : public Compressed_column<Weight, Integer_Type> {
                               
         uint64_t nnz;
         Integer_Type nnzcols;
-        Integer_Type nnzcols_regulars;
-        Integer_Type nnzcols_regulars_local;
-        Integer_Type nnzcols_sources_local;
-        Integer_Type nnzcols_sources_regulars_local;
-        Integer_Type nnzcols_regulars_sinks_local;
-        Integer_Type nnzcols_sources_sinks_local;
         Integer_Type nnzrows;
         #ifdef HAS_WEIGHT
         Weight* A;  // WEIGHT
