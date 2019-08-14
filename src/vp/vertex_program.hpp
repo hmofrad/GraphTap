@@ -179,16 +179,6 @@ class Vertex_Program
         std::vector<Integer_Type>* rowgrp_source_rows;
         std::vector<Integer_Type>* colgrp_nnz_columns;
         std::vector<Integer_Type>* colgrp_sink_columns;
-        //std::vector<Integer_Type>* rowgrp_REG;
-        //std::vector<Integer_Type>* rowgrp_SRC;
-        //std::vector<Integer_Type>* rowgrp_SNK;
-        //std::vector<Integer_Type>* rowgrp_ZRO;
-        //std::vector<Integer_Type>* V2J;
-        //std::vector<Integer_Type>* J2V;
-        //std::vector<Integer_Type>* Y2V;
-        //std::vector<Integer_Type>* V2Y;
-        //std::vector<Integer_Type>* I2V;
-        //std::vector<Integer_Type>* V2I;
 
         std::vector<Integer_Type> nnz_row_sizes_loc;
         std::vector<Integer_Type> nnz_col_sizes_loc;
@@ -285,18 +275,6 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         rowgrp_source_rows = &(Graph.A->rowgrp_source_rows);
         colgrp_nnz_columns = &(Graph.A->colgrp_nnz_columns);
         colgrp_sink_columns = &(Graph.A->colgrp_sink_columns);
-        
-        //rowgrp_REG = &(Graph.A->rowgrp_REG);
-        //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
-        //rowgrp_SNK = &(Graph.A->rowgrp_SNK);
-        //rowgrp_ZRO = &(Graph.A->rowgrp_ZRO);
-        //JV = &(Graph.A->JV);
-        //V2J = &(Graph.A->V2J);
-        //J2V = &(Graph.A->J2V);
-        //Y2V = &(Graph.A->Y2V);
-        //V2Y = &(Graph.A->V2Y);
-        //I2V = &(Graph.A->I2V);
-        //V2I = &(Graph.A->V2I);
     }
     else if (ordering_type == _COL_)
     {
@@ -314,7 +292,7 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         accu_segment_col = A->accu_segment_row;
         accu_segment_row = A->accu_segment_col;
         //accu_segment_col_vec = A->accu_segment_row_vec;
-        ///accu_segment_row_vec = A->accu_segment_col_vec;
+        //accu_segment_row_vec = A->accu_segment_col_vec;
         all_rowgrp_ranks_accu_seg = A->all_colgrp_ranks_accu_seg;
         //accu_segment_rg_vec = A->accu_segment_cg_vec;
         accu_segment_rg = A->accu_segment_cg;
@@ -344,20 +322,6 @@ Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::Vertex_Prog
         rowgrp_source_rows = &(Graph.A->colgrp_sink_columns);
         colgrp_nnz_columns = &(Graph.A->rowgrp_nnz_rows);
         colgrp_sink_columns = &(Graph.A->rowgrp_source_rows);
-        //rowgrp_REG = &(Graph.A->rowgrp_REG);
-        //rowgrp_SRC = &(Graph.A->rowgrp_SRC);
-        //rowgrp_SNK = &(Graph.A->rowgrp_SNK);
-        //rowgrp_ZRO = &(Graph.A->rowgrp_ZRO);
-        //V2J = &(Graph.A->J2V);
-        //J2V = &(Graph.A->V2J);
-        //Y2V = &(Graph.A->V2Y);
-        //V2Y = &(Graph.A->Y2V);
-        //I2V = &(Graph.A->V2I);
-        //V2I = &(Graph.A->I2V);
-        //if(filtering_type == _SNKS_)
-        //    filtering_type = _SRCS_;
-        ///else if(filtering_type == _SRCS_)
-        //    filtering_type = _SNKS_;
     }   
     
     TYPE_DOUBLE = Types<Weight, Integer_Type, Fractional_Type>::get_data_type();
@@ -556,10 +520,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     else    
         x_sizes = nnz_col_sizes_loc;
     
-    //if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-    //    x_sizes.resize(rank_ncolgrps, tile_height);
-    //else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-    //    x_sizes = nnz_col_sizes_loc;
 
     X.resize(rank_ncolgrps);
     for(uint32_t i = 0; i < rank_ncolgrps; i++)
@@ -572,11 +532,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
     //else if(compression_type == _TCSC_)
     else    
         y_sizes = nnz_row_sizes_loc;
-    
-    //if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
-        //y_sizes.resize(rank_nrowgrps, tile_height);
-    //else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
-      //  y_sizes = nnz_row_sizes_loc;
+   
   
     Y.resize(rank_nrowgrps);
     for(uint32_t i = 0; i < rank_nrowgrps; i++) {
@@ -591,62 +547,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_s
         }
     }
 }
-/*
-template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_stationary_postprocess()
-{
-    uint32_t xo = accu_segment_col;
-    std::vector<Fractional_Type> &x_data = X[xo];
-    Integer_Type v_nitems = V.size();
-    if(compression_type == _CSC_) {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            x_data[i] = messenger(state);
-        }
-    }
-    
-        if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-        {
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                Vertex_State &state = V[i];
-                x_data[i] = messenger(state);
-            }
-
-        }
-        else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-        {
-            
-            auto &j_data = (*J)[xo];
-            auto &jv_data = (*JV)[xo];
-            //#pragma omp parallel for schedule(static)
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                if(j_data[i])
-                {
-                    Vertex_State &state = V[i];
-                    x_data[jv_data[i]] = messenger(state);
-                }
-            }
-            
-            
-            //auto &j_data = (*J)[xo];
-            //Integer_Type j = 0;
-            //for(uint32_t i = 0; i < v_nitems; i++)
-            //{
-            //    if(j_data[i])
-            //    {
-            //        Vertex_State &state = V[i];
-            //       x_data[j] = messenger(state);
-            //        j++;
-            //    }
-            //}
-            
-        }
-    //}
-}
-*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_nonstationary()
@@ -663,13 +563,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     else    
         x_sizes = nnz_col_sizes_loc;
     
-    /*
-
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-        x_sizes.resize(rank_ncolgrps, tile_height);
-    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-        x_sizes = nnz_col_sizes_loc;
-    */
     
     // Initialize nonstationary messages values
     XV.resize(rank_ncolgrps);
@@ -689,12 +582,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
     //else if(compression_type == _TCSC_)    
     else    
         y_sizes = nnz_row_sizes_loc;
-    /*
-    if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
-        y_sizes.resize(rank_nrowgrps, tile_height);
-    else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
-        y_sizes = nnz_row_sizes_loc;
-    */
+
     T.resize(rank_nrowgrps);
     for(uint32_t i = 0; i < rank_nrowgrps; i++)
         T[i].resize(y_sizes[i]);
@@ -744,113 +632,8 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_n
         Integer_Type y_nitems = y_data.size();
         for(uint32_t i = 0; i < y_nitems; i++)
                 y_data[i] = infinity();
-            
-        /*
-        if((filtering_type == _NONE_) or (filtering_type == _SNKS_))
-        {
-            for(uint32_t i = 0; i < v_nitems; i++)
-                y_data[i] = infinity();
-        }
-        else if((filtering_type == _SOME_) or (filtering_type == _SRCS_))
-        {
-            auto &i_data = (*I)[yi];       
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                if(i_data[i])
-                {
-                    y_data[j] = infinity();
-                    j++;
-                }
-            }
-        }
-        */
     }
 }
-
-/*
-template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
-void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::init_nonstationary_postprocess()
-{
-    uint32_t xo = accu_segment_col;
-    std::vector<Fractional_Type> &x_data = X[xo];
-    std::vector<Fractional_Type> &xv_data = XV[xo];
-    std::vector<Integer_Type> &xi_data = XI[xo];
-    
-    Integer_Type v_nitems = V.size();
-    Integer_Type k = 0;
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            if(C[i])
-            {
-                x_data[i] = messenger(state);
-                xv_data[k] = x_data[i];
-                xi_data[k] = i;
-                k++;
-            }
-            else
-                x_data[i] = infinity();
-        }
-    }
-    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-    {
-        if(not directed)
-        {
-            uint32_t yi = accu_segment_row;
-            auto &i_data = (*I)[yi];
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {    
-                if(i_data[i])
-                {
-                    Vertex_State &state = V[i];
-                    if(C[i])
-                    {
-                        x_data[j] = messenger(state);
-                        xv_data[k] = x_data[j];
-                        xi_data[k] = j;
-                        k++;
-                    }
-                    else
-                        x_data[j] = infinity();
-                    j++;
-                }
-            }
-        }
-        else
-        {
-            auto &j_data = (*J)[xo];
-            Integer_Type j = 0;
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                
-                if(j_data[i])
-                {
-                    Vertex_State &state = V[i];
-                    if(C[i])                            
-                    {
-                        x_data[j] = messenger(state);
-                        xv_data[k] = x_data[j];
-                        xi_data[k] = j;
-                        k++;
-                    }
-                    else
-                        x_data[j] = infinity();
-                    j++;
-                }
-            }
-        }
-    }
-    
-    if(activity_filtering)
-        msgs_activity_statuses[xo] = k;
-    else
-        msgs_activity_statuses[xo] = 0;
-}
-*/
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
 void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatter_gather() {
@@ -921,31 +704,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
             x_data[j] = messenger(state);
         }
     }
-    
-    /*
-        if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-        {
-            //#pragma omp parallel for schedule(static)
-            for(uint32_t i = 0; i < v_nitems; i++)
-            {
-                Vertex_State &state = V[i];
-                x_data[i] = messenger(state);
-            }
-        }
-        else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-        {
-            
-            auto &v2j_data = (*V2J);
-            auto &j2v_data = (*J2V);
-            Integer_Type v2j_nitems = v2j_data.size();
-            //#pragma omp parallel for schedule(static)
-            for(uint32_t i = 0; i < v2j_nitems; i++)
-            {
-                Vertex_State &state = V[v2j_data[i]];
-                x_data[j2v_data[i]] = messenger(state);
-            }
-        }
-        */
+
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -990,93 +749,12 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::scatte
                 else
                     x_data[j] = infinity();
             }
-        /*    
-        }
-        else {
-            auto& IR = (*rowgrp_nnz_rows);
-            Integer_Type IR_nitems = IR.size();
-            for(uint32_t i = 0; i < IR_nitems; i++) {
-                Vertex_State &state = V[IR[i]];
-                if(C[IR[i]]) {
-                    x_data[i] = messenger(state);    
-                    xv_data[k] = x_data[i];
-                    xi_data[k] = i;
-                    k++;
-                }
-                else
-                    x_data[i] = infinity();
-                
-            }
-        }
-        */
     }
     
-    /*
-    if((filtering_type == _NONE_) or (filtering_type == _SRCS_))
-    {
-        for(uint32_t i = 0; i < v_nitems; i++)
-        {
-            Vertex_State &state = V[i];
-            if(C[i])
-            {
-                x_data[i] = messenger(state);
-                xv_data[k] = x_data[i];
-                xi_data[k] = i;
-                k++;
-            }
-            else
-                x_data[i] = infinity();
-        }
-    }
-    else if((filtering_type == _SOME_) or (filtering_type == _SNKS_))
-    {
-        auto &v2j_data = (*V2J);
-        auto &j2v_data = (*J2V);
-        Integer_Type v2j_nitems = v2j_data.size();
-        if(not directed)
-        {
-            for(uint32_t i = 0; i < v2j_nitems; i++)
-            {
-                Vertex_State &state = V[v2j_data[i]];
-                if(C[v2j_data[i]])
-                {
-                    x_data[j2v_data[i]] = messenger(state);
-                    xv_data[k] = x_data[j2v_data[i]];
-                    xi_data[k] = j2v_data[i];
-                    k++;
-                }
-                else
-                    x_data[j2v_data[i]] = infinity();
-            }
-        }
-        else
-        {
-            auto &v2i_data = (*V2I);
-            auto &i2v_data = (*I2V);
-            Integer_Type v2i_nitems = v2i_data.size();
-            for(uint32_t i = 0; i < v2i_nitems; i++)
-            {
-                Vertex_State &state = V[v2i_data[i]];
-                if(C[v2i_data[i]])
-                {
-                    x_data[i2v_data[i]] = messenger(state);
-                    xv_data[k] = x_data[i2v_data[i]];
-                    xi_data[k] = i2v_data[i];
-                    k++;
-                }
-                else
-                    x_data[i2v_data[i]] = infinity();
-            
-            }
-        }
-    }
-    */
     if(activity_filtering) {
         msgs_activity_statuses[xo] = k;
         scatter_gather_nonstationary_activity_filtering();
     }
-    //else
-    //    msgs_activity_statuses[xo] = 0;
 }
 
 template<typename Weight, typename Integer_Type, typename Fractional_Type, typename Vertex_State>
@@ -1367,33 +1045,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::combin
             combine_2d_nonstationary();
             combine_postprocess();
         }
-        //else {
-            /*
-            if(((not check_for_convergence) or (check_for_convergence and not converged))) {
-                combine_2d_nonstationary();
-                combine_postprocess();
-            }
-            else {
-                if(compression_type == _TCSC_) {
-                    scatter_gather_stationary();
-                    bcast_stationary();
-                    
-                    combine_2d_stationary();
-                    combine_postprocess();
-                }
-            }
-            */
-                
-        //}
-                    
-        //printf("Still not Converged\n");
-        //else
-          //  printf("Converged\n");
-        
-
-
-
-        //printf("combine_postprocess\n\n");
     }
     #ifdef TIMING    
     t2 = Env::clock();
@@ -1662,32 +1313,7 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_s
                             }
                         }                    
                     }
-                    /*
-                    }
-                    else {
-                        //std::vector<uint32_t>::iterator it;
-                        //it = std::unique(active_vertices.begin(), active_vertices.end());
-                        //active_vertices.resize(std::distance(active_vertices.begin(), it)); 
-                        Integer_Type* JA_SRC_R_NNZ_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_SRC_R_NNZ_C;
-                        for(Integer_Type j: active_vertices) {
-                            Integer_Type k = j * 2;
-                            for(uint32_t i = JA_SRC_R_NNZ_C[k]; i < JA_SRC_R_NNZ_C[k + 1]; i++) {
-                                #ifdef HAS_WEIGHT
-                                combiner(y_data[IA[i]], x_data[j], A[i]);
-                                #else
-                                combiner(y_data[IA[i]], x_data[j]);
-                                #endif
-                            }
-                        } 
-                        
-                        
-                        
-                        //printf("Not implemented\n");
-                        //Env::barrier();
-                        //Env::exit(0);
-                        
-                    }
-                    */
+
                 }             
             }
             else {
@@ -1845,60 +1471,36 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::spmv_n
         JA   = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA;    
         ncols = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->nnzcols;        
     }
- /*
-    if(ordering_type == _ROW_) {
-        if(compression_type == _TCSC_) {
-            if((not check_for_convergence) or (check_for_convergence and not converged)) {
-                if(activity_filtering and activity_statuses[tile.cg]) {
-                    Integer_Type* JA_REG_R_NNZ_C = static_cast<TCSC_BASE<Weight, Integer_Type>*>(tile.compressor)->JA_REG_R_NNZ_C;
-                    Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
-                    Integer_Type j = 0;
-                    for(Integer_Type k = 0; k < s_nitems; k++) {
-                        j = xi_data[k] * 2;
-                        active_vertices.push_back(xi_data[k]);
-                        for(uint32_t i = JA_REG_R_NNZ_C[j]; i < JA_REG_R_NNZ_C[j + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], xv_data[k], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], xv_data[k]);
-                            #endif
-                            t_data[IA[i]] = 1;
-                        }
-                    } 
-                }                
+    
+    if(activity_filtering and activity_statuses[tile.cg]) {
+        Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
+        Integer_Type j = 0;
+        for(Integer_Type k = 0; k < s_nitems; k++) {
+            j = xi_data[k];
+            for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                #ifdef HAS_WEIGHT
+                combiner(y_data[IA[i]], xv_data[k], A[i]);
+                #else
+                combiner(y_data[IA[i]], xv_data[k]);
+                #endif
+                t_data[IA[i]] = 1;
             }
         }
-        else {
-        */    
-            if(activity_filtering and activity_statuses[tile.cg]) {
-                Integer_Type s_nitems = msgs_activity_statuses[tile.jth] - 1;
-                Integer_Type j = 0;
-                for(Integer_Type k = 0; k < s_nitems; k++) {
-                    j = xi_data[k];
-                    for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-                        #ifdef HAS_WEIGHT
-                        combiner(y_data[IA[i]], xv_data[k], A[i]);
-                        #else
-                        combiner(y_data[IA[i]], xv_data[k]);
-                        #endif
-                        t_data[IA[i]] = 1;
-                    }
+    }
+    else {
+        for(uint32_t j = 0; j < ncols; j++) {
+            if(x_data[j] != infinity()) {
+                for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
+                    #ifdef HAS_WEIGHT
+                    combiner(y_data[IA[i]], x_data[j], A[i]);
+                    #else
+                    combiner(y_data[IA[i]], x_data[j]);
+                    #endif
+                    t_data[IA[i]] = 1;
                 }
             }
-            else {
-                for(uint32_t j = 0; j < ncols; j++) {
-                    if(x_data[j] != infinity()) {
-                        for(uint32_t i = JA[j]; i < JA[j + 1]; i++) {
-                            #ifdef HAS_WEIGHT
-                            combiner(y_data[IA[i]], x_data[j], A[i]);
-                            #else
-                            combiner(y_data[IA[i]], x_data[j]);
-                            #endif
-                            t_data[IA[i]] = 1;
-                        }
-                    }
-                }
-            }
+        }
+    }
         //}
     //}
 }
@@ -2146,25 +1748,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                         j = iv_data[i];    
                         C[i] = applicator(state, y_data[j], iteration);
                     }
-
-                    /*
-                    auto& iv_data = (*IV)[yi];
-                    Integer_Type j = 0;
-                    auto& regular_rows = (*rowgrp_regular_rows);
-                    for(Integer_Type i: regular_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];    
-                        C[i] = applicator(state, y_data[j], iteration);
-                    }
-
-                    auto& source_rows = (*rowgrp_source_rows);
-                    j = 0;
-                    for(Integer_Type i: source_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];
-                        C[i] = applicator(state, y_data[j], iteration);
-                    }
-                    */
                 }
             }
             else {
@@ -2194,135 +1777,11 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::apply_
                         j = iv_data[i];    
                         C[i] = applicator(state, y_data[j]);
                     }
-                    
-                    /*
-                    auto& iv_data = (*IV)[yi];
-                    Integer_Type j = 0;
-
-                    auto& regular_rows = (*rowgrp_regular_rows);
-                    for(Integer_Type i: regular_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];    
-                        C[i] = applicator(state, y_data[j]);
-                    }
-
-                    auto& source_rows = (*rowgrp_source_rows);
-                    j = 0;
-                    for(Integer_Type i: source_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];
-                        C[i] = applicator(state, y_data[j]);
-                    }
-                    */
                 }
             }
         //}            
     }
-    /*
-    else {
-        if(apply_depends_on_iter)
-        {
-            if(iteration == 0)
-            {
-                auto &i_data = (*I)[yi];
-                auto &iv_data = (*IV)[yi];
-                for(uint32_t i = 0; i < v_nitems; i++)
-                {
-                    Vertex_State &state = V[i];
-                    if(i_data[i])
-                        C[i] = applicator(state, y_data[iv_data[i]], iteration);
-                    else
-                        C[i] = applicator(state);    
-                }
-            }
-            else
-            {
-                
-                //Integer_Type j = 0;
-                //auto& iv_data = (*IV)[yi];
-                //auto& IR = (*rowgrp_nnz_rows);
-                //Integer_Type IR_nitems = IR.size();
-                //Integer_Type i = 0;
-                //for(Integer_Type i: IR) {
-                //    Vertex_State &state = V[i];
-                //    j = iv_data[i];    
-                //    C[i] = applicator(state, y_data[j], iteration);
-                //}
-                
-                auto& iv_data = (*IV)[yi];
-                Integer_Type j = 0;
-                if((not check_for_convergence) or (check_for_convergence and not converged)) {
-                    auto& regular_rows = (*rowgrp_regular_rows);            
-                    for(Integer_Type i: regular_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];    
-                        C[i] = applicator(state, y_data[j], iteration);
-                    }
-                }
-                if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
-                    auto& source_rows = (*rowgrp_source_rows);
-                    j = 0;
-                    for(Integer_Type i: source_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];
-                        C[i] = applicator(state, y_data[j], iteration);
-                    }
-                }
-            }
-        }
-        else {
-            if(iteration == 0)
-            {
-                auto &i_data = (*I)[yi];
-                auto &iv_data = (*IV)[yi];
-                for(uint32_t i = 0; i < v_nitems; i++)
-                {
-                    Vertex_State &state = V[i];
-                    if(i_data[i])
-                        C[i] = applicator(state, y_data[iv_data[i]]);
-                    else
-                        C[i] = applicator(state);    
-                }
-               
-            }
-            else
-            {
-                
-                //Integer_Type j = 0;
-                //auto& iv_data = (*IV)[yi];
-                //auto& IR = (*rowgrp_nnz_rows);
-                //Integer_Type IR_nitems = IR.size();
-                //Integer_Type i = 0;
-                //for(Integer_Type i: IR) {
-                //    Vertex_State &state = V[i];
-                //    j = iv_data[i];    
-                //    C[i] = applicator(state, y_data[j]);
-                //}
-                
-                
-                auto& iv_data = (*IV)[yi];
-                Integer_Type j = 0;
-                if((not check_for_convergence) or (check_for_convergence and not converged)) {
-                    auto& regular_rows = (*rowgrp_regular_rows);            
-                    for(Integer_Type i: regular_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];    
-                        C[i] = applicator(state, y_data[j]);
-                    }
-                }
-                if(((not check_for_convergence) and ((iteration + 1) == num_iterations)) or (check_for_convergence and converged)) {
-                    auto& source_rows = (*rowgrp_source_rows);
-                    j = 0;
-                    for(Integer_Type i: source_rows) {
-                        Vertex_State &state = V[i];
-                        j = iv_data[i];
-                        C[i] = applicator(state, y_data[j]);
-                    }
-                }
-            }
-        }  
-    }
-    */
+
     if(not gather_depends_on_apply and not apply_depends_on_iter) {
         for(uint32_t i = 0; i < rank_nrowgrps; i++) {
             for(uint32_t j = 0; j < Y[i].size(); j++) {
@@ -2454,128 +1913,12 @@ bool Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::has_co
                     c_sum_local = 1;
                 else
                     c_sum_local = 0;
-            //}
-           // else {
-                /*
-                uint32_t yi = accu_segment_row;
-                auto& iv_data = (*IV)[yi];
-                auto& regular_rows = (*rowgrp_regular_rows);
-                Integer_Type r_nitems = regular_rows.size();
-                for(Integer_Type i: regular_rows) {
-                    if(not C[i]) 
-                        c_sum_local++;
-                }
-                if(c_sum_local == r_nitems)
-                    c_sum_local = 1;
-                else
-                    c_sum_local = 0;
-                */
-                
-                
-                /*
-                auto& IR = (*rowgrp_nnz_rows);
-                Integer_Type IR_nitems = IR.size();
-                Integer_Type i = 0;
-                for(Integer_Type i: IR) {
-                    if(not C[i]) 
-                        c_sum_local++;
-                }
-                
-                if(c_sum_local == IR_nitems)
-                    c_sum_local = 1;
-                else
-                    c_sum_local = 0;
-                */
-               
-            //}
-            
-            
-            /*
-            uint32_t yi = accu_segment_row;
-            auto& iv_data = (*IV)[yi];
-            auto& regular_rows = (*rowgrp_regular_rows);
-            Integer_Type r_nitems = regular_rows.size();
-            for(Integer_Type i: regular_rows) {
-                if(not C[i]) 
-                    c_sum_local++;
-            }
-            if(c_sum_local == r_nitems)
-                c_sum_local = 1;
-            else
-                c_sum_local = 0;
-        
-            if(not stationary and c_sum_local) {
-                c_sum_local = 0;
-                auto& source_rows = (*rowgrp_source_rows);
-                Integer_Type s_nitems = source_rows.size();
-                for(Integer_Type i: source_rows) {
-                    if(not C[i]) 
-                        c_sum_local++;
-                }
-                if(c_sum_local == s_nitems)
-                    c_sum_local = 1;
-                else
-                    c_sum_local = 0;
-            }
-            */
-                //MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-                //if(c_sum_gloabl == (uint64_t) Env::nranks)
-                //    converged = true;
+
         }
         MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
         if(c_sum_gloabl == (uint64_t) Env::nranks)
             converged = true;
-    //}
-    //else {
-        /*
-            uint64_t c_sum_local = 0, c_sum_gloabl = 0;
-            Integer_Type c_nitems = C.size();   
-            for(uint32_t i = 0; i < c_nitems; i++)
-            {
-                if(not C[i]) 
-                    c_sum_local++;
-            }
-            MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, MPI_UNSIGNED_LONG, MPI_SUM, Env::MPI_WORLD);
-            if(c_sum_gloabl == (tile_height * Env::nranks))
-                converged = true;
-        */
-        
-        
-        /*
-        Integer_Type c_sum_local = 0, c_sum_gloabl = 0;
-        uint32_t yi = accu_segment_row;
-        auto& iv_data = (*IV)[yi];
-        auto& regular_rows = (*rowgrp_regular_rows);
-        Integer_Type r_nitems = regular_rows.size();
 
-        
-        for(Integer_Type i: regular_rows) {
-            Vertex_State &state = V[i];
-            if(not C[i]) 
-                c_sum_local++;
-        }
-        //if(c_sum_local == r_nitems) {
-            auto& source_rows = (*rowgrp_source_rows);
-            Integer_Type s_nitems = source_rows.size();
-            for(Integer_Type i: source_rows) {
-                Vertex_State &state = V[i];
-                if(not C[i]) 
-                    c_sum_local++;
-            }
-            printf("%d %d %d %d %d\n", Env::rank, c_sum_local, r_nitems, s_nitems, (r_nitems + s_nitems));
-            if(c_sum_local == (r_nitems + s_nitems))
-                c_sum_local = 1;
-            else
-                c_sum_local = 0;
-        //} 
-        //else 
-            //c_sum_local = 0;
-        
-        MPI_Allreduce(&c_sum_local, &c_sum_gloabl, 1, TYPE_INT, MPI_SUM, Env::MPI_WORLD);
-        if(c_sum_gloabl == (Integer_Type) Env::nranks)
-            converged = true;
-        */
-    //}        
     return(converged);   
 }
 
@@ -2772,15 +2115,6 @@ void Vertex_Program<Weight, Integer_Type, Fractional_Type, Vertex_State>::checks
         
     }
     Env::barrier();
-    
-    
-    
-
-   
-    //double sq_sum = std::inner_product(sq_vec.begin(), sq_vec.end(), sq_vec.begin(), 0.0);
-    
-    
-    
     
 }
 
