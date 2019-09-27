@@ -11,7 +11,9 @@
 
 ##
 Mohammad Hasanzadeh Mofrad, Rami Melhem, Yousuf Ahmad and Mohammad Hammoud.
+
 [“Efficient Distributed Graph Analytics using Triply Compressed Sparse Format.”](http://people.cs.pitt.edu/~hasanzadeh/files/papers/PID6084671.pdf)
+
 In proceedings of IEEE Cluster, Albuquerque, NM USA, 2019
 
 ## Contact
